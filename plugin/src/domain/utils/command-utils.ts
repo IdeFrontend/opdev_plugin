@@ -1,4 +1,28 @@
+import { createHash } from 'crypto';
+
 import { shellQuoteBash } from '@plugin/domain/utils/shell-env-exports';
+
+/**
+ * Deterministic VS Code command id for a single tree row.
+ *
+ * Tree rows that used to carry their identity in `TreeItem.command.arguments`
+ * cannot do so anymore (VS Code caches the argument-carrying command in the
+ * tree node's disposable store and drops it on every refresh), so the identity
+ * moves into the command id itself: one command per row, registered by the
+ * provider that renders the row. The digest keeps the id opaque, bounded in
+ * length and unique per key — the same key always yields the same id, which is
+ * what makes re-registration idempotent across refreshes.
+ *
+ * Callers must normalize the key first (e.g. `normalizeProjectPath` for paths).
+ */
+export function stableCommandId(prefix: string, key: string): string {
+  const digest = createHash('sha256')
+    .update(key)
+    .digest('hex')
+    .slice(0, 16);
+
+  return `${prefix}.${digest}`;
+}
 
 /**
  * Command generation configuration options

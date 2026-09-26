@@ -9,8 +9,6 @@ export const COMMAND_OPEN = `${COMMAND_PREFIX}.open`;
 
 export const COMMAND_WELCOME = `${COMMAND_PREFIX}.welcome`;
 
-export const COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW = `${COMMAND_PREFIX}.open-dump-tensor-panel-view`;
-
 export const COMMAND_CREATE_OPERATOR_IN_WORKSPACE = `${COMMAND_PREFIX}.createOperatorInWorkspace`;
 
 export const COMMAND_TOGGLE_OPS_OPERATE = `${COMMAND_PREFIX}.toggleOpsOperate`;
@@ -60,8 +58,6 @@ export const VIEW_HOME = 'home';
 export const VIEW_NEW_PROJECT = 'new-project';
 
 export const VIEW_WELCOME = 'welcome';
-
-export const VIEW_DUMP_TENSOR_DATA = 'dump-tensor-data';
 
 export const VIEW_OPTIONS_SIMULATOR = 'options-simulator';
 
@@ -255,6 +251,30 @@ export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED = `${COMMAND_PREFI
 export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL = `${COMMAND_PREFIX}.sidebar.performance.report.showAll`;
 
 export const COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN = `${COMMAND_PREFIX}.sidebar.performance.file.open`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.copyPath`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.download`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.mark`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.unmark`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SORT_TIME = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.sortTime`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_FILTER_MARKED = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.filterMarked`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SHOW_ALL = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.showAll`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN = `${COMMAND_PREFIX}.sidebar.dumpTensor.file.open`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH = `${COMMAND_PREFIX}.sidebar.dumpTensor.file.compareWith`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE = `${COMMAND_PREFIX}.sidebar.dumpTensor.compare`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_START = `${COMMAND_PREFIX}.sidebar.dumpTensor.compare.start`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_CANCEL = `${COMMAND_PREFIX}.sidebar.dumpTensor.compare.cancel`;
 
 export const INSIGHT_VERSION_MAPPINGS = [
   {

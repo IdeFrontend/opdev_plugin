@@ -1,6 +1,6 @@
 # Operator sidebar — native tree views (current state)
 
-Canonical description of the plugin’s **activity-bar sidebar trees** (Home, Actions, Operators, Sanitizer results, Performance results). Feature-specific run/data flows are documented in [`sanitizer.md`](sanitizer.md) and [`performance.md`](performance.md); build/run/debug entry points in [`build-integration.md`](build-integration.md), [`run-integration.md`](run-integration.md), [`debug-integration.md`](debug-integration.md).
+Canonical description of the plugin’s **activity-bar sidebar trees** (Home, Actions, Operators, Sanitizer results, Performance results, Dump tensor results). Feature-specific run/data flows are documented in [`sanitizer.md`](sanitizer.md), [`performance.md`](performance.md), and [`dump-tensor.md`](dump-tensor.md); build/run/debug entry points in [`build-integration.md`](build-integration.md), [`run-integration.md`](run-integration.md), [`debug-integration.md`](debug-integration.md).
 
 All sidebar data is rendered in native VS Code `TreeView`s; no webview sidebar participates at runtime.
 
@@ -24,17 +24,20 @@ flowchart TB
     Ops[opdevtoolsOperatorProjectsTree]
     San[opdevtoolsSanitizerResultsTree]
     Perf[opdevtoolsPerformanceResultsTree]
+    Dump[opdevtoolsDumpTensorSidebarView]
   end
   HC --> HT
   HC --> OT
   OT --> San
   OT --> Perf
+  OT --> Dump
   OT --> OP
   Home --> HomeTP[HomeTreeProvider]
   Actions --> FlowTP[OperateTreeProvider flow]
   Ops --> OpsTP[OperateTreeProvider operatorProjects]
   San --> FlowTP
   Perf --> FlowTP
+  Dump --> FlowTP
 ```
 
 ---
@@ -48,6 +51,7 @@ flowchart TB
 | `opdevtoolsOperatorProjectsTree` | Operators | `opDevtools.showOperatorProjects` |
 | `opdevtoolsSanitizerResultsTree` | Sanitizer results | `opDevtools.showOperateTree` |
 | `opdevtoolsPerformanceResultsTree` | Performance results | `opDevtools.showOperateTree` |
+| `opdevtoolsDumpTensorSidebarView` | Dump tensor results | `opDevtools.showOperateTree` |
 
 ### Context switching (`extension.ts` → `refreshSidebarContexts`)
 
@@ -82,9 +86,9 @@ Additional contexts are updated from tree state (sanitizer group-by, marked-only
 | Visibility / project metadata | `refreshState()` → `homeMethods`, `OperatorPluginRegistry` |
 | Flow actions from webviews | `OperateTreeProvider.runFlowActionFromWebview*` (registered flow instance) |
 | Queued build-like actions | `plugin/src/helpers/operator-action-queue.ts` + `task-method-dispatch.ts` |
-| Post-activate data load | `plugin/src/helpers/post-activate-bootstrap.ts` — `refreshSanitizerReports`, `refreshPerformanceReports`, focus `opdevtoolsOperateTree` |
+| Post-activate data load | `plugin/src/helpers/post-activate-bootstrap.ts` — `refreshSanitizerReports`, `refreshPerformanceReports`, `refreshDumpTensorReports`, focus `opdevtoolsOperateTree` |
 
-`OperateTreeProvider` holds in-memory sidebar state: project type/template, operator list/selection, sanitizer report list + selection/grouping, performance report list + selection. Sanitizer/performance **results trees** reuse the same provider via delegated `getChildren` / `getSanitizerResultsPanelNodes` / `getPerformanceResultsPanelNodes`.
+`OperateTreeProvider` holds in-memory sidebar state: project type/template, operator list/selection, sanitizer report list + selection/grouping, performance report list + selection, dump tensor report list + compare/selection state. Sanitizer/performance/dump-tensor **results trees** reuse the same provider via delegated `getChildren` / `getSanitizerResultsPanelNodes` / `getPerformanceResultsPanelNodes` / `getDumpTensorResultsPanelNodes`.
 
 Icons: themed SVG assets under extension `tree-icons/svg/` (`getAssetIcon`), refreshed on `onDidChangeActiveColorTheme`.
 
@@ -106,7 +110,7 @@ Root nodes are built in `getFlowRootNodes()` when `hasDevtoolConfig` and project
 | `onboard` | `huawei-op-devtools.sidebar.onboard` | Gear → on-board settings / quick panel (see [`workspace-settings.md`](workspace-settings.md#opening-settings)) |
 | `simulation` | `huawei-op-devtools.sidebar.simulation` | Gear → simulation settings / quick panel (see [`workspace-settings.md`](workspace-settings.md#opening-settings)) |
 | `utTest` | `huawei-op-devtools.sidebar.utTest` | Standard-custom + build-capable projects |
-| `dumpTensor` | `huawei-op-devtools.sidebar.dumpTensor` | Opens dump-tensor panel webview |
+| `dumpTensor` | `huawei-op-devtools.sidebar.dumpTensor` | Enqueues a dump-tensor run; results appear in `opdevtoolsDumpTensorSidebarView` (newest report revealed when the run completes) |
 
 **Visibility rules (current):**
 
@@ -209,7 +213,7 @@ Second `OperateTreeProvider` instance (`operatorProjects`). Visible only when `o
 - Selection persists as **paths** in `cache.project.selectedOperatorPaths` (`homeMethods.setSelectedOperators` → `createProject` re-keys ids to paths; `getSelectedOperatorIds` resolves them back against the scan entries by normalized path).
 - Default: the first operator **by name** is selected once per workspace session for standard-custom projects — applied on the first refresh once the operator list is actually known (`hasAppliedDefaultSelection` in `OperateTreeProvider.refreshState`), so a scan state that arrives late still triggers the default.
 - Title-bar: select all, clear selection, clear search.
-- Item context: toggle operator (`huawei-op-devtools.sidebar.toggleOperator`) → `setSelectedOperators` → scan-state-backed path selection.
+- Item context: toggle operator → `setSelectedOperators` → scan-state-backed path selection. Each row carries its own command id, `huawei-op-devtools.sidebar.toggleOperator.<hash>` (hash = first 16 hex chars of the SHA-256 of the normalized operator project path): `OperateTreeProvider.registerOperatorToggleCommands` registers one such command per rendered row and disposes it when the operator leaves the list. Row identity must live in the command id — a `TreeItem.command` carrying `arguments` is converted by VS Code into a synthetic `<command> /NN` id cached per tree node, which every refresh discards, so a click in flight fails with "command not found".
 
 Flow tree reads `selectedOperatorIds` for multi-operator disable rules and dispatches build/run with `homeMethods.getSelectedOperators()`.
 
@@ -241,12 +245,45 @@ Details: [`performance.md`](performance.md).
 
 ---
 
+## Dump tensor results tree (`opdevtoolsDumpTensorSidebarView`)
+
+Adapter `TreeDataProvider` in `extension.ts` with a separate `onDidChangeDumpTensorTreeData` (same pattern as performance): roots from `getDumpTensorResultsPanelNodes()`, children for `dumpTensorReportItem` / `dumpTensorFolder` via shared `getChildren`.
+
+- `refreshDumpTensorReports()` → `dumpTensorMethods.getDumpTensorData`; run after dump-tensor flows and `.bin` imports (`huawei-op-devtools.flashDumpTensorData`), sorted in memory (`sortOrder` asc/desc, default `desc`), no rescan on sort/filter.
+- Empty state: a single placeholder row (`web.dump.noData`) without inline actions.
+
+| Node (`nodeId`) | `contextValue` | Notes |
+|-----------------|----------------|-------|
+| `dumpTensorReportItem` | `dumpTensorReportItem.marked` / `.unmarked` | Report row; stable `id` `dump-tensor-report:<encoded-key>`; marked rows render the `flag-filled` product icon |
+| `dumpTensorFolder` | `dumpTensorFolder` | Nested folder under a report; `id` `dump-tensor-folder:<reportKey>:<encoded-segments>` |
+| `dumpTensorFile` | `dumpTensorFile.bin` | `.bin` leaf; click opens the companion `.txt`, or toggles compare selection while compare mode is on |
+
+- Title-bar: import `.bin`, compare / start / cancel, sort time, marked-only filter.
+- Report row inline: copy path, download (zip), mark/unmark. File leaf: open companion `.txt`, **Compare with…**.
+
+State (`OperateSidebarState.dumpTensor`):
+
+| Field | Purpose |
+|-------|---------|
+| `reports` | Loaded execution records from `DumpTensorData` |
+| `sortOrder` | `asc` / `desc` by timestamp (in-memory resort) |
+| `markedOnly` | Filter to marked reports (`opDevtools.dumpTensorMarkedOnly`) |
+| `selectedReportKey` | Expand/reveal target |
+| `compareMode` | Two-file compare active (`opDevtools.dumpTensorComparing`) |
+| `compareSelectedFilePaths` | Up to two `.bin` paths; labels show `(1/2)`, `(2/2)` |
+
+Storage: reports are the subdirectories of `<project>/.vscode/DumpTensor/<report-key>/`; leaves are `.bin` files and opening/comparing uses the companion `.txt` file. Marks persist in `PermanentStorage` under `marked_dump_tensor_records`.
+
+Details: [`dump-tensor.md`](dump-tensor.md).
+
+---
+
 ## Commands and menus
 
 Primary wiring is in `package.json`:
 
-- **`view/title`** — per-tree navigation (project config, new project, stop-all queue, sanitizer/performance toolbars, operator search/select).
-- **`view/item/context`** — inline gear (debug/sanitizer/onboard/simulation settings), stop running flow task, sanitizer/performance report actions.
+- **`view/title`** — per-tree navigation (project config, new project, stop-all queue, sanitizer/performance/dump-tensor toolbars, operator search/select).
+- **`view/item/context`** — inline gear (debug/sanitizer/onboard/simulation settings), stop running flow task, sanitizer/performance/dump-tensor report actions, dump-tensor file open/compare.
 
 Sidebar commands are registered in `extension.ts` and call `operateTreeProvider.runFlowAction(...)` then `dispatchStartBuild`, `taskMethods`, etc.
 
@@ -259,9 +296,9 @@ Webview **quick options** panels (simulator/on-board/sanitizer) use `ops` only f
 | Event | Effect |
 |-------|--------|
 | `refreshSidebarContexts()` | Project type, visibility contexts, `refreshState` on both provider instances |
-| Build/sanitizer/performance completion | `refreshSanitizerReports`, `refreshPerformanceReports`, compile flags on operators |
+| Build/sanitizer/performance/dump-tensor completion | `refreshSanitizerReports`, `refreshPerformanceReports`, `refreshDumpTensorReports`, compile flags on operators |
 | User commands | Sort/filter/group-by mutate state + `fire` tree change |
-| Post-activate bootstrap | Auto-open workspace project, initial sanitizer/performance scan |
+| Post-activate bootstrap | Auto-open workspace project, initial sanitizer/performance/dump-tensor scan |
 
 ---
 
@@ -272,6 +309,7 @@ Webview **quick options** panels (simulator/on-board/sanitizer) use `ops` only f
 | Sanitizer run + results UX | [`sanitizer.md`](sanitizer.md) |
 | msAgent AI fix on findings | [`msagent.md`](msagent.md) |
 | Profiling run + results + Insight | [`performance.md`](performance.md) |
+| Dump tensor run + results + compare | [`dump-tensor.md`](dump-tensor.md) |
 | Workspace `op-devtools.*` settings | [`workspace-settings.md`](workspace-settings.md), `package.json` |
 
 ---

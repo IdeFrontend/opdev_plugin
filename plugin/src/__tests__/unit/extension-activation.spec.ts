@@ -21,7 +21,6 @@ const mockWatcherState = {
 };
 const mockGateUiHandlers: Array<(state: unknown)=> void> = [];
 const mockFlowPreemptHandlers: Array<()=> void> = [];
-const mockDumpTensorWebview = { postMessage: jest.fn(async () => undefined) };
 
 type MockTreeViewState = {
   viewId: string;
@@ -223,7 +222,10 @@ jest.mock('@plugin/class/st-test-run-history-tree-provider', () => {
     setTreeView = jest.fn();
     dispose = jest.fn();
 
-    constructor(public getWorkspaces: unknown) {
+    constructor(public dependencies: {
+      getWorkspaces?: unknown;
+      openRecord?: (entry: unknown)=> Promise<void>;
+    }) {
       MockStTestRunHistoryTreeProvider.instances.push(this);
     }
   }
@@ -288,8 +290,25 @@ jest.mock('@plugin/class/operate-tree-provider', () => {
     setPerformanceMarkedOnly = jest.fn();
     openPerformanceFile = jest.fn(async () => undefined);
     togglePerformanceSortOrder = jest.fn();
+    setDumpTensorResultsTreeView = jest.fn();
+    onDidChangeDumpTensorTreeData = jest.fn(() => ({ dispose: jest.fn() }));
+    getDumpTensorResultsPanelNodes = jest.fn(() => []);
+    getDumpTensorTreeParent = jest.fn(() => undefined);
+    refreshDumpTensorReports = jest.fn(async () => undefined);
+    getDumpTensorReportByKey = jest.fn(() => undefined);
+    toggleDumpTensorReportMark = jest.fn(async () => undefined);
+    copyDumpTensorReportPath = jest.fn(async () => undefined);
+    downloadDumpTensorReport = jest.fn(async () => undefined);
+    toggleDumpTensorSortOrder = jest.fn();
+    setDumpTensorMarkedOnly = jest.fn();
+    isDumpTensorMarkedOnlyEnabled = jest.fn(() => false);
+    isDumpTensorCompareModeEnabled = jest.fn(() => false);
+    setDumpTensorCompareMode = jest.fn();
+    beginDumpTensorCompareWithFile = jest.fn();
+    startDumpTensorCompare = jest.fn(async () => undefined);
+    openDumpTensorFile = jest.fn(async () => undefined);
     setSearchKeyword = jest.fn();
-    toggleOperator = jest.fn(async () => undefined);
+    registerOperatorToggleCommands = jest.fn();
     selectAllOperators = jest.fn(async () => undefined);
     toggleCompiledAll = jest.fn(async () => undefined);
     togglePreparedAll = jest.fn(async () => undefined);
@@ -316,23 +335,6 @@ jest.mock('@plugin/core/api-server', () => {
 
   return { ApiServer: MockApiServer };
 });
-
-jest.mock('@plugin/core/view/view-server', () => {
-  class MockViewServer {
-    static instances: MockViewServer[] = [];
-    onViewActivated = jest.fn();
-    onViewDisposed = jest.fn();
-    dispose = jest.fn();
-
-    constructor(public routes: unknown, public context: unknown) {
-      MockViewServer.instances.push(this);
-    }
-  }
-
-  return { ViewServer: MockViewServer };
-});
-
-jest.mock('@plugin/routes', () => ({ routes: [] }));
 
 jest.mock('@plugin/api-routes', () => ({ apis: {} }));
 
@@ -406,14 +408,6 @@ jest.mock('@plugin/service/ms-agent-bridge.service', () => ({
     isMsAgentIntegrationAvailable: jest.fn(async () => true),
     fixMsAgentProblem: jest.fn(async () => undefined),
   },
-}));
-
-jest.mock('@plugin/class/dump-tensor-panel-view', () => ({
-  getDumpTensorPanelViewProvider: jest.fn(() => ({
-    dumpTensorPanelView: { dispose: jest.fn() },
-    openDumpTensorDisposable: { dispose: jest.fn() },
-    getWebview: jest.fn(() => mockDumpTensorWebview),
-  })),
 }));
 
 jest.mock('@plugin/service/insight-service', () => ({
@@ -528,6 +522,7 @@ import * as constants from '@plugin/constants';
 
 import {
   CONTEXT_PREFIX,
+  DUMP_TENSOR_SIDEBAR_VIEW_ID,
   EXTENSION_ID,
   TREE_VIEW_HOME,
   TREE_VIEW_OPERATE,
@@ -562,7 +557,7 @@ import { buildService } from '@plugin/service/build-service';
 import { resetCurrentProjectConfiguration } from '@plugin/service/config-reset-service';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 import { importLegacyWorkspaceState } from '@plugin/helpers/legacy-state-importer';
-import { getDumpTensorPanelViewProvider } from '@plugin/class/dump-tensor-panel-view';
+import { getOperatorToolOutputChannel } from '@plugin/helpers/output-channel';
 import { startPostActivateBootstrap } from '@plugin/helpers/post-activate-bootstrap';
 import { createMainConfigWatcher } from '@plugin/helpers/main-config-watch';
 import { OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
@@ -573,7 +568,6 @@ import { StTestRunHistoryTreeProvider } from '@plugin/class/st-test-run-history-
 import { StTestResultsPanel } from '@plugin/class/st-test-results-panel';
 import { OperateTreeProvider } from '@plugin/class/operate-tree-provider';
 import { ApiServer } from '@plugin/core/api-server';
-import { ViewServer } from '@plugin/core/view/view-server';
 import { registerOperatorPlugins } from '@plugin/domain/plugins';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
@@ -635,8 +629,25 @@ type MockOperateTreeProviderShape = {
   togglePerformanceReportMark: jest.Mock;
   openPerformanceFile: jest.Mock;
   togglePerformanceSortOrder: jest.Mock;
+  setDumpTensorResultsTreeView: jest.Mock;
+  onDidChangeDumpTensorTreeData: jest.Mock;
+  getDumpTensorResultsPanelNodes: jest.Mock;
+  getDumpTensorTreeParent: jest.Mock;
+  refreshDumpTensorReports: jest.Mock;
+  getDumpTensorReportByKey: jest.Mock;
+  toggleDumpTensorReportMark: jest.Mock;
+  copyDumpTensorReportPath: jest.Mock;
+  downloadDumpTensorReport: jest.Mock;
+  toggleDumpTensorSortOrder: jest.Mock;
+  setDumpTensorMarkedOnly: jest.Mock;
+  isDumpTensorMarkedOnlyEnabled: jest.Mock;
+  isDumpTensorCompareModeEnabled: jest.Mock;
+  setDumpTensorCompareMode: jest.Mock;
+  beginDumpTensorCompareWithFile: jest.Mock;
+  startDumpTensorCompare: jest.Mock;
+  openDumpTensorFile: jest.Mock;
   setSearchKeyword: jest.Mock;
-  toggleOperator: jest.Mock;
+  registerOperatorToggleCommands: jest.Mock;
   selectAllOperators: jest.Mock;
   toggleCompiledAll: jest.Mock;
   togglePreparedAll: jest.Mock;
@@ -655,19 +666,18 @@ const WebviewProviderMock = WebviewProvider as unknown as {
 };
 const ApiServerMock = ApiServer as unknown as { instances: Array<{ addWebview: jest.Mock;
   removeWebview: jest.Mock }> };
-const ViewServerMock = ViewServer as unknown as {
-  instances: Array<{ onViewActivated: jest.Mock;
-    onViewDisposed: jest.Mock }>;
-};
 const StTestHistoryProviderMock = StTestRunHistoryTreeProvider as unknown as {
   instances: Array<{ getRecord: jest.Mock;
     refresh: jest.Mock;
     clear: jest.Mock;
-    setTreeView: jest.Mock }>;
+    setTreeView: jest.Mock;
+    dependencies: { openRecord: (entry: unknown)=> Promise<void> } }>;
 };
 
 const flowProvider = (): MockOperateTreeProviderShape => OperateTreeProviderMock.instances[0];
 const operatorProjectsProvider = (): MockOperateTreeProviderShape => OperateTreeProviderMock.instances[1];
+/** Open handler the history provider got from activation — one per resolved record. */
+const openStTestHistoryRecord = (): ((entry: unknown)=> Promise<void>) => StTestHistoryProviderMock.instances[0].dependencies.openRecord;
 
 type MockContext = {
   subscriptions: Array<{ dispose: ()=> unknown }>;
@@ -738,7 +748,6 @@ describe('extension activation', () => {
     OperateTreeProviderMock.instances.length = 0;
     WebviewProviderMock.instances.length = 0;
     ApiServerMock.instances.length = 0;
-    ViewServerMock.instances.length = 0;
     StTestHistoryProviderMock.instances.length = 0;
     (configService.checkDevtoolConfig as jest.Mock).mockResolvedValue(false);
     (ConfigService.writeOpDevtoolsDottedSettings as jest.Mock).mockResolvedValue(false);
@@ -763,11 +772,6 @@ describe('extension activation', () => {
       isOperatorProject: true,
       isMultiProject: false,
       projectType: 'cann',
-    });
-    (getDumpTensorPanelViewProvider as jest.Mock).mockReturnValue({
-      dumpTensorPanelView: { dispose: jest.fn() },
-      openDumpTensorDisposable: { dispose: jest.fn() },
-      getWebview: jest.fn(() => mockDumpTensorWebview),
     });
     (vscode.window.showOpenDialog as jest.Mock).mockResolvedValue(undefined);
     (vscode.window.showInputBox as jest.Mock).mockResolvedValue(undefined);
@@ -1198,20 +1202,6 @@ describe('extension activation', () => {
     expect(resetCachedProject).not.toHaveBeenCalled();
   });
 
-  it('wires view activation and disposal into the api server', async () => {
-    await activateWith();
-    const viewServer = ViewServerMock.instances[0];
-    const apiServer = ApiServerMock.instances[0];
-
-    viewServer.onViewActivated.mock.calls[0][0]('panel-path', { id: 'webview-1' });
-    expect(apiServer.addWebview)
-      .toHaveBeenCalledWith('panel-path', { id: 'webview-1' });
-
-    viewServer.onViewDisposed.mock.calls[0][0]('panel-path');
-    expect(apiServer.removeWebview)
-      .toHaveBeenCalledWith('panel-path');
-  });
-
   it('creates all tree views and custom editor registrations', async () => {
     await activateWith();
 
@@ -1220,6 +1210,7 @@ describe('extension activation', () => {
       TREE_VIEW_OPERATE,
       TREE_VIEW_SANITIZER_RESULTS,
       TREE_VIEW_PERFORMANCE_RESULTS,
+      DUMP_TENSOR_SIDEBAR_VIEW_ID,
       TREE_VIEW_ST_TEST_HISTORY,
       TREE_VIEW_OPERATOR_PROJECTS,
     ]) {
@@ -1300,6 +1291,39 @@ describe('extension activation', () => {
       .toEqual([]);
   });
 
+  it('delegates dump tensor panel provider calls to the operate tree', async () => {
+    await activateWith();
+    const view = mockTreeViews.get(DUMP_TENSOR_SIDEBAR_VIEW_ID);
+    const provider = (view?.options as { treeDataProvider: {
+      onDidChangeTreeData: unknown;
+      getChildren: (element?: unknown)=> unknown;
+      getParent: (element: unknown)=> unknown;
+    } }).treeDataProvider;
+
+    // The dump tensor view no longer has a webview: its change events and the tree
+    // view instance are owned by the operate tree provider.
+    expect(provider.onDidChangeTreeData)
+      .toBe(flowProvider().onDidChangeDumpTensorTreeData);
+    expect(flowProvider().setDumpTensorResultsTreeView)
+      .toHaveBeenCalledWith(expect.objectContaining({ viewId: DUMP_TENSOR_SIDEBAR_VIEW_ID }));
+
+    flowProvider().getDumpTensorResultsPanelNodes.mockReturnValue(['dump-root']);
+    expect(provider.getChildren(undefined))
+      .toEqual(['dump-root']);
+
+    flowProvider().getChildren.mockReturnValue(['dump-child']);
+    expect(provider.getChildren({ nodeId: 'dumpTensorReportItem' }))
+      .toEqual(['dump-child']);
+    expect(provider.getChildren({ nodeId: 'dumpTensorFolder' }))
+      .toEqual(['dump-child']);
+    expect(provider.getChildren({ nodeId: 'other' }))
+      .toEqual([]);
+
+    flowProvider().getDumpTensorTreeParent.mockReturnValue({ id: 'dump-parent' });
+    expect(provider.getParent({ id: 'x' }))
+      .toEqual({ id: 'dump-parent' });
+  });
+
   it('selects a performance report from the tree selection', async () => {
     await activateWith();
     const view = mockTreeViews.get(TREE_VIEW_PERFORMANCE_RESULTS);
@@ -1346,7 +1370,7 @@ describe('extension activation', () => {
     expect(flowProvider().selectPerformanceReport).not.toHaveBeenCalled();
   });
 
-  it('registers the initial sanitizer and performance contexts', async () => {
+  it('registers the initial sanitizer, performance and dump tensor contexts', async () => {
     await activateWith();
 
     expect(vscode.commands.executeCommand)
@@ -1371,6 +1395,18 @@ describe('extension activation', () => {
       .toHaveBeenCalledWith(
         'setContext',
         `${CONTEXT_PREFIX}.performanceReportSelected`,
+        false,
+      );
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'setContext',
+        `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`,
+        false,
+      );
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'setContext',
+        `${CONTEXT_PREFIX}.dumpTensorComparing`,
         false,
       );
   });
@@ -1480,28 +1516,7 @@ describe('extension activation', () => {
         .toHaveBeenCalled();
     });
 
-    it('warns when the st test history argument is not a string', async () => {
-      await activateWith();
-
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 42);
-
-      expect(vscode.window.showWarningMessage)
-        .toHaveBeenCalled();
-      expect(StTestHistoryProviderMock.instances[0].getRecord).not.toHaveBeenCalled();
-    });
-
-    it('warns when the st test history record is missing', async () => {
-      await activateWith();
-
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'missing-key');
-
-      expect(StTestHistoryProviderMock.instances[0].getRecord)
-        .toHaveBeenCalledWith('missing-key');
-      expect(vscode.window.showWarningMessage)
-        .toHaveBeenCalled();
-    });
-
-    it('opens the st test history panel for a resolved record', async () => {
+    it('opens the st test history panel for a record the provider resolved', async () => {
       const entry = {
         workspaceRoot: tmpRoot,
         record: {
@@ -1511,9 +1526,8 @@ describe('extension activation', () => {
       };
 
       await activateWith();
-      StTestHistoryProviderMock.instances[0].getRecord.mockReturnValue(entry);
 
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'key-1');
+      await openStTestHistoryRecord()(entry);
 
       expect(StTestResultsPanel.createOrShowHistorical)
         .toHaveBeenCalledWith(
@@ -1523,36 +1537,68 @@ describe('extension activation', () => {
         );
     });
 
-    it('warns when the st test history panel fails to open', async () => {
+    it('logs the resolved st test history record to the tool channel', async () => {
+      const log = jest.fn();
+
       await activateWith();
-      StTestHistoryProviderMock.instances[0].getRecord.mockReturnValue({
+      (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockImplementation(async (
+        _context: unknown,
+        _entry: unknown,
+        writeLog: (message: string)=> void,
+      ) => {
+        writeLog('[ST history] panel ready');
+      });
+      (getOperatorToolOutputChannel as jest.Mock).mockReturnValue({ appendLine: log });
+
+      await openStTestHistoryRecord()({
         workspaceRoot: tmpRoot,
         record: {
           runId: 'r1',
           runDirectory: '/runs/r1',
         },
       });
+
+      expect(log)
+        .toHaveBeenCalledTimes(2);
+      expect(String(log.mock.calls[0][0]))
+        .toContain('runId=r1');
+      expect(String(log.mock.calls[1][0]))
+        .toContain('panel ready');
+    });
+
+    it('warns when the st test history panel fails to open', async () => {
+      await activateWith();
       (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockRejectedValue(new Error('panel boom'));
 
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'key-1');
+      await openStTestHistoryRecord()({
+        workspaceRoot: tmpRoot,
+        record: {
+          runId: 'r1',
+          runDirectory: '/runs/r1',
+        },
+      });
 
       expect(vscode.window.showWarningMessage)
         .toHaveBeenCalled();
     });
 
     it('stringifies a non-Error st test history open failure', async () => {
+      const log = jest.fn();
+
       await activateWith();
-      StTestHistoryProviderMock.instances[0].getRecord.mockReturnValue({
+      (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockRejectedValue('panel boom');
+      (getOperatorToolOutputChannel as jest.Mock).mockReturnValue({ appendLine: log });
+
+      await openStTestHistoryRecord()({
         workspaceRoot: tmpRoot,
         record: {
           runId: 'r1',
           runDirectory: '/runs/r1',
         },
       });
-      (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockRejectedValue('panel boom');
 
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'key-1');
-
+      expect(String(log.mock.calls[1][0]))
+        .toContain('panel boom');
       expect(vscode.window.showWarningMessage)
         .toHaveBeenCalled();
     });
@@ -1727,46 +1773,62 @@ describe('extension activation', () => {
         .toHaveBeenCalledWith({ focusIfNew: true });
     });
 
-    it('refreshes the dump tensor panel webview', async () => {
+    it('refreshes dump tensor reports through the operate tree provider', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_FLASH_DUMP_TENSOR_DATA, { focusIfNew: true });
+
+      expect(flowProvider().refreshDumpTensorReports)
+        .toHaveBeenCalledWith({ focusIfNew: true });
+    });
+
+    it('refreshes dump tensor reports without options when none are given', async () => {
       await activateWith();
 
       await invokeCommand(constants.COMMAND_FLASH_DUMP_TENSOR_DATA);
 
-      expect(mockDumpTensorWebview.postMessage)
-        .toHaveBeenCalledWith({ command: 'dumpTensorRefreshData' });
+      expect(flowProvider().refreshDumpTensorReports)
+        .toHaveBeenCalledTimes(1);
+      expect(flowProvider().refreshDumpTensorReports)
+        .toHaveBeenCalledWith(undefined);
     });
 
-    it('logs when the dump tensor webview is unavailable', async () => {
-      const logSpy = jest.spyOn(console, 'log')
-        .mockImplementation(() => undefined);
-
-      await activateWith();
-      const getWebview = (getDumpTensorPanelViewProvider as jest.Mock).mock.results[0].value.getWebview;
-
-      getWebview.mockReturnValue(undefined);
-
-      await invokeCommand(constants.COMMAND_FLASH_DUMP_TENSOR_DATA);
-
-      expect(logSpy)
-        .toHaveBeenCalled();
-      expect(mockDumpTensorWebview.postMessage).not.toHaveBeenCalled();
-    });
-
-    it('imports a dump tensor bin file from a uri', async () => {
+    it('imports a dump tensor bin file from a uri without a duplicate refresh', async () => {
       await activateWith();
 
       await invokeCommand(constants.COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE, { fsPath: '/bin/file.bin' });
 
+      expect(vscode.window.showOpenDialog).not.toHaveBeenCalled();
       expect(taskMethods.importDumpTensorBinFile)
         .toHaveBeenCalledWith({ binFilePath: '/bin/file.bin' });
+      // The build service refreshes the results tree internally; the command
+      // must not flash a second refresh.
+      expect(vscode.commands.executeCommand)
+        .not.toHaveBeenCalledWith(constants.COMMAND_FLASH_DUMP_TENSOR_DATA, expect.anything());
+      expect(flowProvider().refreshDumpTensorReports).not.toHaveBeenCalled();
     });
 
-    it('ignores a uri-less dump tensor import', async () => {
+    it('imports a dump tensor bin file picked from the dialog', async () => {
+      await activateWith();
+      (vscode.window.showOpenDialog as jest.Mock).mockResolvedValue([vscode.Uri.file('/bin/picked.bin')]);
+
+      await invokeCommand(constants.COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE);
+
+      expect(vscode.window.showOpenDialog)
+        .toHaveBeenCalled();
+      expect(taskMethods.importDumpTensorBinFile)
+        .toHaveBeenCalledWith({ binFilePath: '/bin/picked.bin' });
+    });
+
+    it('ignores a cancelled dump tensor import dialog', async () => {
       await activateWith();
 
       await invokeCommand(constants.COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE);
 
+      expect(vscode.window.showOpenDialog)
+        .toHaveBeenCalled();
       expect(taskMethods.importDumpTensorBinFile).not.toHaveBeenCalled();
+      expect(flowProvider().refreshDumpTensorReports).not.toHaveBeenCalled();
     });
 
     it('shows an error when the dump tensor import fails', async () => {
@@ -2448,13 +2510,13 @@ describe('extension activation', () => {
         .toHaveBeenCalledWith('');
     });
 
-    it('toggles a single operator', async () => {
+    it('hands the per-operator toggle command registry to the projects tree', async () => {
       await activateWith();
 
-      await invokeCommand(constants.COMMAND_SIDEBAR_TOGGLE_OPERATOR, 3);
-
-      expect(operatorProjectsProvider().toggleOperator)
-        .toHaveBeenCalledWith(3);
+      // Every operator row now runs its own command, so activation must give the
+      // provider the sidebar repaint callback it fires after a toggle.
+      expect(operatorProjectsProvider().registerOperatorToggleCommands)
+        .toHaveBeenCalledWith(expect.any(Function));
     });
 
     it('selects all operators', async () => {
@@ -3047,6 +3109,246 @@ describe('extension activation', () => {
       await invokeCommand(constants.COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, '/data/perf.csv', '');
 
       expect(flowProvider().openPerformanceFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sidebar dump tensor report commands', () => {
+    it('copies a dump tensor report path from a prefixed id', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH, 'dump-tensor-report:/reports/dt%20a');
+
+      expect(flowProvider().copyDumpTensorReportPath)
+        .toHaveBeenCalledWith('/reports/dt a');
+    });
+
+    it('resolves a non-string argument in the dump tensor copy command', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH, { command: { arguments: ['raw-key'] } });
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH, {});
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH, '');
+
+      expect(flowProvider().copyDumpTensorReportPath)
+        .toHaveBeenCalledWith('raw-key');
+      expect(flowProvider().copyDumpTensorReportPath)
+        .toHaveBeenCalledTimes(1);
+    });
+
+    it('downloads a dump tensor report', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD, { id: 'dump-key' });
+
+      expect(flowProvider().downloadDumpTensorReport)
+        .toHaveBeenCalledWith('dump-key');
+    });
+
+    it('skips the dump tensor download without a resolvable key', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD, '');
+
+      expect(flowProvider().downloadDumpTensorReport).not.toHaveBeenCalled();
+    });
+
+    it('marks an unmarked dump tensor report and publishes the marked context', async () => {
+      await activateWith();
+      flowProvider().getDumpTensorReportByKey.mockReturnValue({ marked: false });
+      flowProvider().isDumpTensorMarkedOnlyEnabled.mockReturnValue(true);
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK, 'run-1');
+
+      expect(flowProvider().toggleDumpTensorReportMark)
+        .toHaveBeenCalledWith('run-1');
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'setContext',
+          `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`,
+          true,
+        );
+    });
+
+    it('keeps an already-marked dump tensor report unchanged', async () => {
+      await activateWith();
+      flowProvider().getDumpTensorReportByKey.mockReturnValue({ marked: true });
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK, 'run-1');
+
+      expect(flowProvider().toggleDumpTensorReportMark).not.toHaveBeenCalled();
+    });
+
+    it('unmarks a marked dump tensor report', async () => {
+      await activateWith();
+      flowProvider().getDumpTensorReportByKey.mockReturnValue({ marked: true });
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK, 'run-1');
+
+      expect(flowProvider().toggleDumpTensorReportMark)
+        .toHaveBeenCalledWith('run-1');
+    });
+
+    it('keeps an unmarked dump tensor report unchanged', async () => {
+      await activateWith();
+      flowProvider().getDumpTensorReportByKey.mockReturnValue({ marked: false });
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK, 'run-1');
+
+      expect(flowProvider().toggleDumpTensorReportMark).not.toHaveBeenCalled();
+    });
+
+    it('toggles the dump tensor sort order', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SORT_TIME);
+
+      expect(flowProvider().toggleDumpTensorSortOrder)
+        .toHaveBeenCalled();
+    });
+
+    it('filters marked dump tensor reports and shows all of them again', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_FILTER_MARKED);
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SHOW_ALL);
+
+      expect(flowProvider().setDumpTensorMarkedOnly)
+        .toHaveBeenCalledWith(true);
+      expect(flowProvider().setDumpTensorMarkedOnly)
+        .toHaveBeenCalledWith(false);
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'setContext',
+          `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`,
+          true,
+        );
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'setContext',
+          `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`,
+          false,
+        );
+    });
+
+    it('opens a dump tensor file from a tree item id', async () => {
+      await activateWith();
+
+      await invokeCommand(
+        constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN,
+        { id: `dump-tensor-file:${encodeURIComponent('/data/dt.bin')}` },
+      );
+
+      expect(flowProvider().openDumpTensorFile)
+        .toHaveBeenCalledWith('/data/dt.bin', 'bin');
+    });
+
+    it('skips opening a dump tensor file without a resolvable item', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN, undefined);
+      await invokeCommand(
+        constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN,
+        { id: 'not-a-dump-tensor-file:whatever' },
+      );
+
+      expect(flowProvider().openDumpTensorFile).not.toHaveBeenCalled();
+    });
+
+    it('begins a dump tensor comparison from a file tree item id', async () => {
+      await activateWith();
+
+      await invokeCommand(
+        constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH,
+        'dump-tensor-file:/data/dt%20a.bin',
+      );
+
+      expect(flowProvider().beginDumpTensorCompareWithFile)
+        .toHaveBeenCalledWith('/data/dt a.bin');
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'setContext',
+          `${CONTEXT_PREFIX}.dumpTensorComparing`,
+          true,
+        );
+    });
+
+    it('begins a dump tensor comparison from a bin file command argument', async () => {
+      await activateWith();
+
+      await invokeCommand(
+        constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH,
+        {
+          command: {
+            arguments: [
+              '/data/other.bin',
+              'bin',
+            ],
+          },
+        },
+      );
+
+      expect(flowProvider().beginDumpTensorCompareWithFile)
+        .toHaveBeenCalledWith('/data/other.bin');
+    });
+
+    it('ignores non-bin and unresolvable compare-with arguments', async () => {
+      await activateWith();
+
+      await invokeCommand(
+        constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH,
+        {
+          command: {
+            arguments: [
+              '/data/report.csv',
+              'csv',
+            ],
+          },
+        },
+      );
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH, 'dump-tensor-report:/data/x.bin');
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH, {});
+
+      expect(flowProvider().beginDumpTensorCompareWithFile).not.toHaveBeenCalled();
+    });
+
+    it('enters dump tensor compare mode and cancels it again', async () => {
+      await activateWith();
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE);
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_CANCEL);
+
+      expect(flowProvider().setDumpTensorCompareMode)
+        .toHaveBeenCalledWith(true);
+      expect(flowProvider().setDumpTensorCompareMode)
+        .toHaveBeenCalledWith(false);
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'setContext',
+          `${CONTEXT_PREFIX}.dumpTensorComparing`,
+          true,
+        );
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'setContext',
+          `${CONTEXT_PREFIX}.dumpTensorComparing`,
+          false,
+        );
+    });
+
+    it('starts the dump tensor comparison and republishes the compare context', async () => {
+      await activateWith();
+      flowProvider().isDumpTensorCompareModeEnabled.mockReturnValue(false);
+
+      await invokeCommand(constants.COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_START);
+
+      expect(flowProvider().startDumpTensorCompare)
+        .toHaveBeenCalled();
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'setContext',
+          `${CONTEXT_PREFIX}.dumpTensorComparing`,
+          false,
+        );
     });
   });
 
@@ -3700,9 +4002,9 @@ describe('extension activation', () => {
     it('reads the st-test history workspaces through the registered provider', async () => {
       await activateWith();
       const getWorkspaces = (StTestHistoryProviderMock.instances[0] as unknown as {
-        getWorkspaces: { getWorkspaces: ()=> Array<{ root: string;
+        dependencies: { getWorkspaces: ()=> Array<{ root: string;
           name: string }> };
-      }).getWorkspaces.getWorkspaces;
+      }).dependencies.getWorkspaces;
 
       expect(Array.isArray(getWorkspaces()))
         .toBe(true);

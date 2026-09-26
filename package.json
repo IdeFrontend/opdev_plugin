@@ -801,19 +801,35 @@
         }
       }
     ],
+    "languages": [
+      {
+        "id": "ascend-c",
+        "aliases": [
+          "Ascend C",
+          "ascend-c"
+        ],
+        "extensions": [
+          ".asc"
+        ],
+        "icon": {
+          "light": "./out/web/branding/language-ascend-c.svg",
+          "dark": "./out/web/branding/language-ascend-c.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ascend-c",
+        "scopeName": "source.ascend-c",
+        "path": "./syntaxes/ascend-c.tmLanguage.json"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "%viewContainer.activitybar.title%",
           "icon": "out/web/branding/activitybar_logo_mono.svg"
-        }
-      ],
-      "panel": [
-        {
-          "id": "huawei-op-devtools-dump-tensor-panel-view",
-          "title": "%viewContainer.panel.dumpTensor.title%",
-          "icon": "out/web/branding/tensor.svg"
         }
       ]
     },
@@ -845,17 +861,14 @@
           "when": "opDevtools.showOperateTree"
         },
         {
+          "id": "opdevtoolsDumpTensorSidebarView",
+          "name": "%view.dumpTensorResultsTree.name%",
+          "when": "opDevtools.showOperateTree"
+        },
+        {
           "id": "opdevtoolsStTestHistoryTree",
           "name": "%view.stTestHistoryTree.name%",
           "when": "opDevtools.showStTestHistory"
-        }
-      ],
-      "huawei-op-devtools-dump-tensor-panel-view": [
-        {
-          "type": "webview",
-          "id": "opdevtoolsDumpTensorPanelView",
-          "name": "%view.dumpTensor.name%",
-          "when": "true"
         }
       ],
       "explorer": []
@@ -922,11 +935,6 @@
       {
         "command": "huawei-op-devtools.clearWelcomeCount",
         "title": "%command.clearWelcomeCount.title%",
-        "category": "%config.title%"
-      },
-      {
-        "command": "huawei-op-devtools.open-dump-tensor-panel-view",
-        "title": "%command.openDumpTensor.title%",
         "category": "%config.title%"
       },
       {
@@ -1058,6 +1066,7 @@
       {
         "command": "huawei-op-devtools.importDumpTensorBinFile",
         "title": "%command.importDumpTensorBinFile.title%",
+        "icon": "$(add)",
         "category": "%config.title%"
       },
       {
@@ -1352,6 +1361,66 @@
         "command": "huawei-op-devtools.showPerformanceHints",
         "title": "%command.showPerformanceHints.title%",
         "category": "%config.title%"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.report.copyPath",
+        "title": "%command.sidebar.dumpTensor.report.copyPath.title%",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.report.download",
+        "title": "%command.sidebar.dumpTensor.report.download.title%",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.report.mark",
+        "title": "%command.sidebar.dumpTensor.report.mark.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.report.unmark",
+        "title": "%command.sidebar.dumpTensor.report.unmark.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.report.sortTime",
+        "title": "%command.sidebar.dumpTensor.report.sortTime.title%",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.report.filterMarked",
+        "title": "%command.sidebar.dumpTensor.report.showMarkedOnly.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.report.showAll",
+        "title": "%command.sidebar.dumpTensor.report.showAll.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.file.open",
+        "title": "%command.sidebar.dumpTensor.file.open.title%",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.file.compareWith",
+        "title": "%command.sidebar.dumpTensor.file.compareWith.title%",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.compare",
+        "title": "%command.sidebar.dumpTensor.compare.title%",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.compare.start",
+        "title": "%command.sidebar.dumpTensor.compare.start.title%",
+        "icon": "$(check)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor.compare.cancel",
+        "title": "%command.sidebar.dumpTensor.compare.cancel.title%",
+        "icon": "$(close)"
       }
     ],
     "viewsWelcome": [
@@ -1635,6 +1704,54 @@
         {
           "command": "huawei-op-devtools.showPerformanceHints",
           "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.copyPath",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.download",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.mark",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.unmark",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.sortTime",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.filterMarked",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.showAll",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.file.open",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.file.compareWith",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.compare",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.start",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.cancel",
+          "when": "false"
         }
       ],
       "menuBar/file/new": [
@@ -1765,6 +1882,41 @@
           "group": "navigation@4"
         },
         {
+          "command": "huawei-op-devtools.importDumpTensorBinFile",
+          "when": "view == opdevtoolsDumpTensorSidebarView",
+          "group": "navigation@0"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.compare",
+          "when": "view == opdevtoolsDumpTensorSidebarView && !opDevtools.dumpTensorComparing",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.start",
+          "when": "view == opdevtoolsDumpTensorSidebarView && opDevtools.dumpTensorComparing",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.cancel",
+          "when": "view == opdevtoolsDumpTensorSidebarView && opDevtools.dumpTensorComparing",
+          "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.sortTime",
+          "when": "view == opdevtoolsDumpTensorSidebarView",
+          "group": "navigation@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.filterMarked",
+          "when": "view == opdevtoolsDumpTensorSidebarView && !opDevtools.dumpTensorMarkedOnly",
+          "group": "navigation@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.showAll",
+          "when": "view == opdevtoolsDumpTensorSidebarView && opDevtools.dumpTensorMarkedOnly",
+          "group": "navigation@5"
+        },
+        {
           "command": "huawei-op-devtools.sidebar.selectAllOperators",
           "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && !opDevtools.allOperatorsSelected",
           "group": "navigation@3"
@@ -1869,6 +2021,36 @@
         {
           "command": "huawei-op-devtools.showPerformanceHints",
           "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceFile\\.npu-rep/",
+          "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.copyPath",
+          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.(marked|unmarked)/",
+          "group": "inline@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.download",
+          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.(marked|unmarked)/",
+          "group": "inline@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.unmark",
+          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.marked/",
+          "group": "inline@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.report.mark",
+          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.unmarked/",
+          "group": "inline@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.file.open",
+          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorFile\\./",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.dumpTensor.file.compareWith",
+          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorFile\\.bin/",
           "group": "navigation@2"
         }
       ],
