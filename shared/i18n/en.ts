@@ -723,5 +723,15 @@ export default {
   'profilingReport.cannbotSent': 'Sent report data to CANNBot',
   'profilingReport.cannbotFailed': 'Failed to call CANNBot: {{error}}',
   'profilingReport.cannbotNotInstalled': 'Failed to call "CANNBot Analysis". Please verify whether the CANNWork plugin is installed and its version is correct:\n1. If the CANNWork extension is not installed, search for and install "CANNWork" in "Extensions" first\n2. If the CANNWork version is earlier than 2.0.0, upgrade the plugin to the latest version',
+  'profilingReport.hintsPublishedInProblems': 'Performance hints published in Problems',
+  'profilingReport.openHintsInProblems': 'Open performance hints in Problems',
+
+  // performance-hints (native diagnostics from .npu-rep)
+  'performanceHints.source': 'Performance Hints',
+  'performanceHints.origin.instruction': 'Instruction',
+  'performanceHints.origin.sourceLine': 'Source line',
+  'performanceHints.origin.kernel': 'Kernel',
+  'performanceHints.publishFailed': 'Failed to publish performance hints from {{file}}: {{error}}',
+  'performanceHints.empty': 'No performance hints found in {{file}}',
 
 };
