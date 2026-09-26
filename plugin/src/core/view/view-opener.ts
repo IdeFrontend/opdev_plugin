@@ -2,7 +2,13 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel';
-import { ProfilingReportPanel } from '@plugin/class/profiling-report-panel';
+import {
+  ProfilingReportPanel, type ProfilingReportPanelHooks,
+} from '@plugin/class/profiling-report-panel';
+import { NPU_REP_EDITOR_VIEW_TYPE } from '@plugin/constants';
+import {
+  isNpuRepFile, performanceHintsDiagnosticsService,
+} from '@plugin/service/performance-hints-diagnostics.service';
 import { CSV_VIEWER_VIEW_TYPE } from '@shared/flavor';
 
 // Track opened CSV file directories
@@ -75,10 +81,15 @@ export class ViewOpener {
   }
 
   /**
-   * Open the profiling report panel for .rep/.ncrep/.npu-rep files
-   * @param uri rep/ncrep/npu-rep file uri
+   * Open the profiling report panel for .rep/.ncrep/.npu-rep files.
+   * For `.npu-rep`, pass `hostPanel` from the custom editor so the report fills
+   * that tab; without a host, open via `vscode.openWith` (or reveal if already
+   * mounted) so Problems/Explorer share one surface.
    */
-  public static async openProfilingReport(uri: vscode.Uri): Promise<void> {
+  public static async openProfilingReport(
+    uri: vscode.Uri,
+    hostPanel?: vscode.WebviewPanel,
+  ): Promise<void> {
     const filePath = uri.fsPath;
     const context = (
       globalThis as unknown as { extensionContext: vscode.ExtensionContext }
@@ -90,11 +101,150 @@ export class ViewOpener {
       return;
     }
 
+    const isNpuRep = isNpuRepFile(filePath);
+
+    // First open of an npu-rep from command/tree: hand off to the custom editor,
+    // which re-enters with `hostPanel`. Skip when already mounted so reopen
+    // reveals without relying on resolveCustomEditor being called again.
+    if (isNpuRep && !hostPanel && !ProfilingReportPanel.isOpen(filePath)) {
+      await vscode.commands.executeCommand('vscode.openWith', uri, NPU_REP_EDITOR_VIEW_TYPE);
+
+      return;
+    }
+
+    // Reusing a retained panel must keep the webview's operator: hooks are
+    // rebuilt from scratch, and Vue will not re-emit an unchanged selection.
+    const retainedOperatorId = isNpuRep
+      ? ProfilingReportPanel.retainedOperatorId(filePath)
+      : undefined;
+
+    let panel: ProfilingReportPanel | undefined;
+    const hooks = ViewOpener.profilingReportHooks(
+      filePath,
+      isNpuRep,
+      (published) => {
+        panel?.setPerformanceHintsPublished(published);
+      },
+      retainedOperatorId,
+    );
+
     try {
-      await ProfilingReportPanel.createOrShow(context, filePath);
+      panel = hostPanel
+        ? await ProfilingReportPanel.attachTo(hostPanel, context, filePath, hooks)
+        : await ProfilingReportPanel.createOrShow(context, filePath, hooks);
     }
     catch (error) {
+      hooks.onDispose?.();
       vscode.window.showErrorMessage(t('profilingReport.loadFailed', { error: String(error) }));
+
+      return;
+    }
+
+    if (isNpuRep) {
+      const published = await ViewOpener.publishPerformanceHints(filePath, retainedOperatorId);
+
+      if (published !== undefined) {
+        panel.setPerformanceHintsPublished(published);
+      }
+    }
+  }
+
+  /**
+   * Hints follow the active profiling tab: a `.npu-rep` panel publishes its own
+   * hints while active (re-publishing on operator changes) and drops exactly
+   * those hints when it is hidden or disposed; any other report type clears the
+   * collection so hints never outlive the tab they came from. Each publish
+   * reports back through `onPublishedState` so the panel can flag whether its
+   * hints are currently visible in Problems: superseded publishes are ignored
+   * (a newer publish owns the collection), and any clear — even one triggered
+   * by another report — switches the flag off.
+   */
+  private static profilingReportHooks(
+    filePath: string,
+    isNpuRep: boolean,
+    onPublishedState: (published: boolean)=> void,
+    initialOperatorId?: string,
+  ): ProfilingReportPanelHooks {
+    if (!isNpuRep) {
+      return {
+        onActiveChanged: (active) => {
+          if (active) {
+            performanceHintsDiagnosticsService.clear();
+          }
+        },
+      };
+    }
+
+    /**
+     * Operator the webview last reported. The panel keeps the webview alive
+     * while the tab is hidden, so re-activating it must republish the very same
+     * scope instead of falling back to the report's default operator. Seeded
+     * from the retained panel when hooks are replaced on reopen.
+     */
+    let selectedOperatorId: string | undefined = initialOperatorId;
+
+    const clearSubscription = performanceHintsDiagnosticsService.onDidClear(() => {
+      onPublishedState(false);
+    });
+
+    return {
+      onActiveChanged: (active) => {
+        if (active) {
+          void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId)
+            .then((published) => {
+              if (published !== undefined) {
+                onPublishedState(published);
+              }
+            });
+
+          return;
+        }
+
+        performanceHintsDiagnosticsService.clearIfOwns(filePath);
+        onPublishedState(false);
+      },
+      onDispose: () => {
+        clearSubscription.dispose();
+        performanceHintsDiagnosticsService.clearIfOwns(filePath);
+        onPublishedState(false);
+      },
+      onOperatorChanged: (operatorId) => {
+        selectedOperatorId = operatorId ?? undefined;
+        void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId)
+          .then((published) => {
+            if (published !== undefined) {
+              onPublishedState(published);
+            }
+          });
+      },
+      onHooksReplaced: () => {
+        clearSubscription.dispose();
+      },
+    };
+  }
+
+  /**
+   * Hint publishing is auxiliary: a failure must never break panel opening or
+   * tab switching. `undefined` means the publish was superseded mid-flight by a
+   * newer publish/clear, so the caller must leave the published flag alone.
+   */
+  private static async publishPerformanceHints(filePath: string, operatorId?: string): Promise<boolean | undefined> {
+    try {
+      const result = await performanceHintsDiagnosticsService.publishFromFile(filePath, { operatorId });
+
+      if (result.stale) {
+        return undefined;
+      }
+
+      return result.published > 0;
+    }
+    catch (error) {
+      void vscode.window.showWarningMessage(t('performanceHints.publishFailed', {
+        file: filePath,
+        error: String(error),
+      }));
+
+      return false;
     }
   }
 }

@@ -14,6 +14,7 @@ import i18nResource from '@shared/i18n';
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
+import { NpuRepEditorProvider } from './class/npu-rep-editor-provider';
 import { HomeTreeProvider } from './class/home-tree-provider';
 import { StTestResultsPanel } from './class/st-test-results-panel';
 import { StTestRunHistoryTreeProvider } from './class/st-test-run-history-tree-provider';
@@ -38,6 +39,9 @@ import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ProjectManager } from './core/project/project-manager';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
+import {
+  performanceHintsDiagnosticsService, resolvePerformanceHintsFilePath,
+} from './service/performance-hints-diagnostics.service';
 import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
 import { sanitizerService } from './service/sanitizer-service';
 import { buildService } from './service/build-service';
@@ -166,6 +170,7 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
   COMMAND_OPEN_CSV,
   COMMAND_OPEN_PROFILING_REPORT,
+  COMMAND_SHOW_PERFORMANCE_HINTS,
   COMMAND_ST_TEST_HISTORY_OPEN,
 } from './constants';
 import {
@@ -363,6 +368,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Must be called before any code that uses OperatorPluginRegistry.
   registerOperatorPlugins();
   sanitizerDiagnosticsService.activate(context);
+  performanceHintsDiagnosticsService.activate(context);
   registerMsdebugTargetAutoAdapt(
     context,
     () => homeMethods.resolveDebugOperatorEntry(),
@@ -2543,6 +2549,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(csvEditorRegistration);
 
+  // Binary .npu-rep / .npu.rep: Problems/Explorer open this URI as the editor;
+  // hand off to the profiling-report panel instead of a text document.
+  const npuRepEditorRegistration = vscode.window.registerCustomEditorProvider(
+    NpuRepEditorProvider.viewType,
+    new NpuRepEditorProvider(),
+    {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: true },
+    },
+  );
+
+  context.subscriptions.push(npuRepEditorRegistration);
+
   // Register a command to open a CSV file
   const openCsvCommand = vscode.commands.registerCommand(
     COMMAND_OPEN_CSV,
@@ -2608,6 +2627,22 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(openProfilingReportCommand);
+
+  // Re-publish the performance hints of a .npu-rep file and focus the Problems view.
+  const showPerformanceHintsCommand = vscode.commands.registerCommand(
+    COMMAND_SHOW_PERFORMANCE_HINTS,
+    async (argument?: unknown) => {
+      const filePath = resolvePerformanceHintsFilePath(argument);
+
+      if (!filePath) {
+        return;
+      }
+
+      await performanceHintsDiagnosticsService.showPerformanceHintsForFile(filePath);
+    },
+  );
+
+  context.subscriptions.push(showPerformanceHintsCommand);
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,

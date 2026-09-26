@@ -1347,6 +1347,11 @@
         "command": "huawei-op-devtools.sidebar.performance.file.open",
         "title": "%command.sidebar.performance.file.open.title%",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "huawei-op-devtools.showPerformanceHints",
+        "title": "%command.showPerformanceHints.title%",
+        "category": "%config.title%"
       }
     ],
     "viewsWelcome": [
@@ -1626,6 +1631,10 @@
         {
           "command": "huawei-op-devtools.sidebar.performance.file.open",
           "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.showPerformanceHints",
+          "when": "false"
         }
       ],
       "menuBar/file/new": [
@@ -1856,6 +1865,11 @@
           "command": "huawei-op-devtools.sidebar.performance.file.open",
           "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceFile\\./",
           "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.showPerformanceHints",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceFile\\.npu-rep/",
+          "group": "navigation@2"
         }
       ],
       "editor/title": [
@@ -1974,6 +1988,19 @@
           }
         ],
         "priority": "option"
+      },
+      {
+        "viewType": "opdevtoolsNpuRepViewer",
+        "displayName": "%customEditor.npuRepViewer.displayName%",
+        "selector": [
+          {
+            "filenamePattern": "*.npu-rep"
+          },
+          {
+            "filenamePattern": "*.npu.rep"
+          }
+        ],
+        "priority": "default"
       }
     ]
   },
