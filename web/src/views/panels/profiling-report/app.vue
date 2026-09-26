@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import {
-  computed, onMounted, onUnmounted, ref, shallowRef,
+  computed, onMounted, onUnmounted, ref, shallowRef, watch,
 } from 'vue';
 import i18next, { t } from 'i18next';
 import { ProfilingReport } from '@huawei/profiling-report';
 
 import { vscode } from '@web/utils/vscode';
 import { useProfilingReportTheme } from './composables/useProfilingReportTheme';
+
+/** Members `<ProfilingReport>` exposes for the host (`defineExpose` in the library). */
+type ProfilingReportHandle = {
+  selectedOperatorId?: string | null;
+};
 
 const { theme } = useProfilingReportTheme();
 
@@ -19,6 +24,33 @@ const filePath = ref('');
 const collectedAt = ref('');
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+const reportRef = ref<ProfilingReportHandle | null>(null);
+const performanceHintsPublished = ref(false);
+
+/**
+ * The host mirrors the report's selected operator into the Problems view, so
+ * the published hints always describe the operator the user is looking at.
+ * A flat report (single operator) exposes no id and nothing has to be sent.
+ */
+watch(
+  () => reportRef.value?.selectedOperatorId,
+  (operatorId) => {
+    if (typeof operatorId !== 'string' || operatorId.length === 0) {
+      return;
+    }
+
+    try {
+      vscode.postMessage({
+        command: 'profilingReportOperatorChanged',
+        operatorId,
+      });
+    }
+    catch {
+      // Host not ready yet: the host republishes hints on its own triggers.
+    }
+  },
+  { immediate: true },
+);
 
 /** Report identity for the cannbot payload (name / absolute path / collection time). */
 const reportMeta = computed(() => ({
@@ -29,6 +61,12 @@ const reportMeta = computed(() => ({
 
 const handleMessage = (e: MessageEvent) => {
   const message = e.data;
+
+  if (message?.command === 'performanceHintsPublishedChanged' && typeof message.published === 'boolean') {
+    performanceHintsPublished.value = message.published;
+
+    return;
+  }
 
   if (message?.command === 'loadProfilingReportFailed' && typeof message.error === 'string') {
     source.value = null;
@@ -64,6 +102,22 @@ const handleMessage = (e: MessageEvent) => {
         isLoading.value = false;
       }
     })();
+  }
+};
+
+/**
+ * Host environment the library sees: hints published in Problems → vscode routing,
+ * otherwise the internal dock.
+ */
+const environment = computed(() => (performanceHintsPublished.value ? 'vscode' : 'browser'));
+
+/** 性能分析 详情 under vscode routing: ask the host to reveal the published hints in Problems. */
+const onOpenPerformanceHintsInProblems = () => {
+  try {
+    vscode.postMessage({ command: 'showPerformanceHintsInProblems' });
+  }
+  catch {
+    // Host not ready: the indicator is hidden again once the state is false.
   }
 };
 
@@ -106,14 +160,17 @@ const onCannbotRequest = (payload: unknown) => {
   <div class="profiling-report-host">
     <ProfilingReport
       v-if="source"
+      ref="reportRef"
       :source="source"
       :theme="theme"
       :locale="locale"
       :title="fileName"
       :report-meta="reportMeta"
+      :environment="environment"
       @ready="onReady"
       @error="onError"
       @cannbot-request="onCannbotRequest"
+      @open-performance-hints-in-problems="onOpenPerformanceHintsInProblems"
     />
     <div
       v-else-if="error"
