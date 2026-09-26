@@ -63,10 +63,6 @@ describe('ST test options contribution', () => {
       path.join(REPO_ROOT, 'plugin/src/class/webview-provider.ts'),
       'utf8',
     );
-    const rendererSource = fs.readFileSync(
-      path.join(REPO_ROOT, 'plugin/src/core/view/view-render.ts'),
-      'utf8',
-    );
     const appSource = fs.readFileSync(
       path.join(REPO_ROOT, 'web/src/views/panels/options-st-test/app.vue'),
       'utf8',
@@ -74,8 +70,8 @@ describe('ST test options contribution', () => {
 
     expect(providerSource)
       .toContain("'options-st-test'");
-    expect(rendererSource)
-      .toContain("'options-st-test'");
+    expect(providerSource)
+      .toContain('`panels/${router}`');
     expect(appSource)
       .toContain('useTheme');
     expect(appSource)

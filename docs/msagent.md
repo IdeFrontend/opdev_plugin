@@ -136,7 +136,7 @@ msAgent owns progress, LLM, and fix UX after that; mstt does not wrap or replace
 
 ### 4. Jump to source (independent of msAgent)
 
-`huawei-op-devtools.sidebar.sanitizer.message.jump` uses `performanceDataMethods.jumpToFile` — works without msAgent.
+`huawei-op-devtools.sidebar.sanitizer.message.jump.<hash>` (one command per message row, hash of the message id) uses `performanceDataMethods.jumpToFile` — works without msAgent.
 
 ---
 

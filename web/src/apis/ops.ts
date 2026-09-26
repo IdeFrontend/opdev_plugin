@@ -89,14 +89,6 @@ export function runSanitizer(params: { operatorNames?: string } = {}) {
   );
 }
 
-/** 导入DumpTensor二进制文件 */
-export function importDumpTensorBinFile(params: { binFilePath: string }) {
-  return request.post<{ binFilePath: string }, void>(
-    'ops/importDumpTensorBinFile',
-    params,
-  );
-}
-
 /** 获取项目环境配置 */
 export function getProjectEnv() {
   return request.post<undefined, {

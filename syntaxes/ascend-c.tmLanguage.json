@@ -1,0 +1,9 @@
+{
+  "name": "Ascend C",
+  "scopeName": "source.ascend-c",
+  "patterns": [
+    {
+      "include": "source.cpp"
+    }
+  ]
+}

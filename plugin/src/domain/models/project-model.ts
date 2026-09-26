@@ -112,7 +112,7 @@ export async function createProject(data: CreateProjectParams): Promise<void> {
       const index = id % 10000;
       const op = index >= 1000 ? experimental[index - 1000] : regular[index];
 
-      if (op?.path) {
+      if (op?.path && !paths.some((existingPath) => projectPathsEqual(existingPath, op!.path))) {
         paths.push(op.path);
       }
     }

@@ -517,6 +517,33 @@ describe('homeMethods.setSelectedOperators', () => {
       });
   });
 
+  it('deduplicates operator ids before persisting', async () => {
+    (getProjectByPath as jest.Mock).mockReturnValue(rootProject({
+      project_name: 'root',
+      project_path: '/c/root',
+    }));
+
+    await homeMethods.setSelectedOperators({
+      operatorIds: [
+        0,
+        0,
+        2,
+        '2',
+        2,
+      ],
+    });
+
+    expect(createProject)
+      .toHaveBeenCalledWith({
+        project_name: 'root',
+        project_path: '/c/root',
+        selected_operator_ids: [
+          0,
+          2,
+        ],
+      });
+  });
+
   it('resets to an empty selection when operatorIds is not an array', async () => {
     (getProjectByPath as jest.Mock).mockReturnValue(rootProject({
       project_name: 'root',
@@ -579,6 +606,22 @@ describe('homeMethods.getSelectedOperatorIds', () => {
     writeCache(tmpRoot, {
       folders: { [normalizeProjectPath(tmpRoot)]: folderState },
       project: { selectedOperatorPaths: ['/c/root/built_op'] },
+    });
+
+    await expect(homeMethods.getSelectedOperatorIds())
+      .resolves
+      .toEqual([1]);
+  });
+
+  it('deduplicates a duplicated persisted selection before resolving ids', async () => {
+    writeCache(tmpRoot, {
+      folders: { [normalizeProjectPath(tmpRoot)]: folderState },
+      project: {
+        selectedOperatorPaths: [
+          '/c/root/built_op',
+          '/c/root/built_op',
+        ],
+      },
     });
 
     await expect(homeMethods.getSelectedOperatorIds())

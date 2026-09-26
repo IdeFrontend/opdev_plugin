@@ -10,11 +10,14 @@ import type {
 } from '@shared/api-types';
 
 import { homeMethods } from '@plugin/controller/home-controller';
+import { normalizeProjectPath } from '@plugin/domain/models/project-model';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 import { parseNpuCheckStackFrame } from '@plugin/class/npu-check-parser';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { performanceDataMethods } from '@plugin/controller/performance-controller';
 import { performanceMethods } from '@plugin/controller/performance-data-controller';
+import { dumpTensorMethods } from '@plugin/controller/dump-tensor-controller';
 import { viewService } from '@plugin/service/view-service';
 import { ensureEnvironmentScriptForOperateAction } from '@plugin/helpers/environment-script-guard';
 import type { CompileRunGateUiState } from '@plugin/helpers/operator-compile-run-gate';
@@ -29,6 +32,7 @@ import {
   COMMAND_SIDEBAR_BUILD,
   COMMAND_SIDEBAR_CPU_DEBUG,
   COMMAND_SIDEBAR_DUMP_TENSOR,
+  COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN,
   COMMAND_SIDEBAR_NPU_DEBUG,
   COMMAND_SIDEBAR_ON_BOARD,
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
@@ -43,6 +47,7 @@ import {
 } from '../constants';
 import {
   CONTEXT_PREFIX,
+  DUMP_TENSOR_SIDEBAR_VIEW_ID,
   SETTINGS_PREFIX,
   TREE_VIEW_PERFORMANCE_RESULTS,
   TREE_VIEW_SANITIZER_RESULTS,
@@ -71,6 +76,9 @@ export type OperateNodeId =
   | 'performanceReportItem'
   | 'performanceFolder'
   | 'performanceFile'
+  | 'dumpTensorReportItem'
+  | 'dumpTensorFolder'
+  | 'dumpTensorFile'
   | 'selectOperators'
   | 'selectedOperators'
   | 'operatorItem';
@@ -97,6 +105,8 @@ type OperateSidebarState = {
   operators: Array<{
     id: number;
     name: string;
+    /** Scan path of the operator project — identity of its toggle command. */
+    path: string;
     hasEx: boolean;
     isCompiled: boolean;
   }>;
@@ -120,6 +130,14 @@ type OperateSidebarState = {
     sortOrder: 'asc' | 'desc';
     markedOnly: boolean;
     selectedReportKey?: string;
+  };
+  dumpTensor: {
+    reports: PerformanceExecutionRecord[];
+    sortOrder: 'asc' | 'desc';
+    markedOnly: boolean;
+    selectedReportKey?: string;
+    compareMode: boolean;
+    compareSelectedFilePaths: string[];
   };
 };
 
@@ -305,6 +323,13 @@ const INITIAL_STATE: OperateSidebarState = {
     sortOrder: 'desc',
     markedOnly: false,
   },
+  dumpTensor: {
+    reports: [],
+    sortOrder: 'desc',
+    markedOnly: false,
+    compareMode: false,
+    compareSelectedFilePaths: [],
+  },
 };
 
 export type OperateTreeKind = 'flow' | 'operatorProjects';
@@ -366,10 +391,21 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   /** Performance results panel only — not fired when the Ops Operate flow tree updates. */
   readonly onDidChangePerformanceTreeData = this.onDidChangePerformanceTreeDataEmitter.event;
 
+  private readonly onDidChangeDumpTensorTreeDataEmitter = new vscode.EventEmitter<void>();
+
+  /** Dump tensor results view only — not fired when the Ops Operate flow tree updates. */
+  readonly onDidChangeDumpTensorTreeData = this.onDidChangeDumpTensorTreeDataEmitter.event;
+
   private state: OperateSidebarState = { ...INITIAL_STATE };
 
   private selectionWorkspaceKey = '';
   private hasAppliedDefaultSelection = false;
+  // True while a selection write issued by THIS provider (toggleOperatorForPath
+  // or the default-selection persist) is awaiting its cache round-trip. While
+  // set, refreshState keeps the in-memory selection instead of adopting the
+  // on-disk snapshot, so a refresh pass that started before the click cannot
+  // clobber the fresh selection with the pre-click value.
+  private selectionWriteInFlight = false;
   private readonly themedIconCache = new Map<string, vscode.Uri>();
   private readonly sanitizerReportMessagesCache = new Map<string, SanitizerMessageRecord[]>();
   private readonly sanitizerReportDerivedCache = new Map<string, SanitizerMessageDerived[]>();
@@ -392,6 +428,29 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private sanitizerRefreshRevision = 0;
   private performanceSelectionContextRevision = 0;
   private performanceSelectionContextSync: Promise<void> = Promise.resolve();
+  private readonly dumpTensorReportRootNodesByKey = new Map<string, OperateNode>();
+  private dumpTensorResultsTreeView?: vscode.TreeView<OperateNode>;
+  private dumpTensorRefreshRevision = 0;
+
+  /**
+   * Per-row command registrations, keyed by the row's normalized identity.
+   *
+   * A tree row cannot carry its identity in `TreeItem.command.arguments`: VS Code
+   * converts such a command into a synthetic `<command> /NN` id cached in the
+   * tree node's disposable store, and every refresh disposes the node — a click
+   * in flight then fails with "command not found". Identity lives in the command
+   * id instead (see {@link stableCommandId}), so a click always executes a
+   * directly registered command.
+   */
+  private readonly operatorToggleCommandDisposables = new Map<string, vscode.Disposable>();
+
+  private operatorToggleAfterCallback: (()=> Promise<void>) | undefined;
+
+  private readonly performanceFileCommandDisposables = new Map<string, vscode.Disposable>();
+
+  private readonly sanitizerMessageCommandDisposables = new Map<string, vscode.Disposable>();
+
+  private readonly dumpTensorFileCommandDisposables = new Map<string, vscode.Disposable>();
 
   setPerformanceResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
     this.performanceResultsTreeView = treeView;
@@ -399,6 +458,20 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   setSanitizerResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
     this.sanitizerResultsTreeView = treeView;
+  }
+
+  /**
+   * Register one toggle command per operator project, with the operator path
+   * baked into the command id. `afterToggle` repaints the surrounding sidebar
+   * context — what the single `sidebar.toggleOperator` command used to do.
+   */
+  registerOperatorToggleCommands(afterToggle: ()=> Promise<void>): void {
+    this.operatorToggleAfterCallback = afterToggle;
+    this.syncOperatorToggleCommands();
+  }
+
+  setDumpTensorResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
+    this.dumpTensorResultsTreeView = treeView;
   }
 
   private invalidateSanitizerPresentationCaches(): void {
@@ -680,12 +753,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ? multipleResult.operators.map((op) => ({
         id: op.id,
         name: op.name,
+        path: op.path,
         hasEx: op.isExperimental,
         isCompiled: (op as unknown as { isCompiled?: boolean }).isCompiled ?? false,
       }))
       : [];
 
-    let selectedOperatorIds = await (isStandardCustom ? homeMethods.getSelectedOperatorIds() : undefined);
+    let selectedOperatorIds = this.selectionWriteInFlight
+      ? this.state.selectedOperatorIds
+      : await (isStandardCustom ? homeMethods.getSelectedOperatorIds() : undefined);
 
     selectedOperatorIds = selectedOperatorIds ?? [];
 
@@ -696,7 +772,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       const firstId = sorted[0]?.id;
 
       if (typeof firstId === 'number') {
-        await homeMethods.setSelectedOperators({ operatorIds: [firstId] });
+        this.selectionWriteInFlight = true;
+
+        try {
+          await homeMethods.setSelectedOperators({ operatorIds: [firstId] });
+        }
+        finally {
+          this.selectionWriteInFlight = false;
+        }
+
         selectedOperatorIds = [firstId];
       }
     }
@@ -728,6 +812,13 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         sortOrder: 'desc',
         markedOnly: false,
       },
+      dumpTensor: this.state.dumpTensor ?? {
+        reports: [],
+        sortOrder: 'desc',
+        markedOnly: false,
+        compareMode: false,
+        compareSelectedFilePaths: [],
+      },
     };
 
     if (!hasDevtoolConfig) {
@@ -738,10 +829,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.state.sanitizer.hideDuplicates = false;
       this.state.performance.reports = [];
       this.state.performance.selectedReportKey = undefined;
+      this.state.dumpTensor.reports = [];
+      this.state.dumpTensor.selectedReportKey = undefined;
+      this.state.dumpTensor.compareMode = false;
+      this.state.dumpTensor.compareSelectedFilePaths = [];
+    }
+
+    // Rows of this list carry one command each; keep the registry in step with
+    // the operator list that is about to be rendered. ONLY the operatorProjects
+    // kind renders operator rows: a second kind syncing the same registry would
+    // re-register the same command ids, and VS Code throws on duplicate
+    // registrations ('Command with id ... already exists'), silently killing
+    // the tree refresh for every view.
+    if (this.kind === 'operatorProjects') {
+      this.syncOperatorToggleCommands();
     }
 
     this.onDidChangeTreeDataEmitter.fire();
     this.onDidChangePerformanceTreeDataEmitter.fire();
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
 
     return {
       showOperatorSearch,
@@ -1489,6 +1595,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.onDidChangeTreeDataEmitter.fire();
   }
 
+  /**
+   * Command id of a sanitizer message row; registers the command when the row is
+   * first rendered. Registrations are keyed by message index and never disposed:
+   * they are bounded by the report contents and re-rendered rows reuse them.
+   */
+  private resolveSanitizerMessageCommandId(messageId: string): string {
+    if (!this.sanitizerMessageCommandDisposables.has(messageId)) {
+      this.sanitizerMessageCommandDisposables.set(messageId, vscode.commands.registerCommand(
+        stableCommandId(COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP, messageId),
+        async () => {
+          await this.jumpToSanitizerMessage(messageId);
+        },
+      ));
+    }
+
+    return stableCommandId(COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP, messageId);
+  }
+
+  /** No-op when the message is gone or carries no source location. */
   async jumpToSanitizerMessage(messageId: string): Promise<void> {
     const msg = this.state.sanitizer.selectedMessages[Number(messageId)];
 
@@ -1688,6 +1813,24 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return this.getPerformanceFolderChildNodes(reportKey, folderPath);
     }
 
+    if (element.nodeId === 'dumpTensorReportItem' && (element.id ?? '').startsWith('dump-tensor-report:')) {
+      const reportKey = decodeURIComponent((element.id ?? '').replace(/^dump-tensor-report:/, ''));
+
+      return this.getDumpTensorChildNodes(reportKey);
+    }
+
+    if (element.nodeId === 'dumpTensorFolder' && (element.id ?? '').startsWith('dump-tensor-folder:')) {
+      const encoded = (element.id ?? '').replace(/^dump-tensor-folder:/, '');
+      const [
+        encodedReportKey,
+        ...pathParts
+      ] = encoded.split(':');
+      const reportKey = decodeURIComponent(encodedReportKey ?? '');
+      const folderPath = pathParts.map((part) => decodeURIComponent(part));
+
+      return this.getDumpTensorFolderChildNodes(reportKey, folderPath);
+    }
+
     return [];
   }
 
@@ -1743,7 +1886,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.pickFlowIcon('run', runAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('run')),
       '- NPU',
       undefined,
-      undefined,
       runAction.tooltip,
     ));
 
@@ -1772,7 +1914,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         treeItemContextKey('sanitizer'),
         this.pickFlowIcon('sanitizer', sanitizerAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('check')),
         '- NPU',
-        undefined,
         undefined,
         sanitizerAction.tooltip,
       ));
@@ -1805,7 +1946,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : this.pickFlowIcon('utTest', this.getCustomProductIcon('beaker')),
         undefined,
         undefined,
-        undefined,
         utTestAction.tooltip,
       ));
     }
@@ -1826,7 +1966,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         ),
         '- NPU',
         undefined,
-        undefined,
         stTestTooltip,
       ));
     }
@@ -1842,7 +1981,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           ? disabledIcon
           : this.pickFlowIcon('dumpTensor', this.getCustomProductIcon('tensor')),
         '- NPU',
-        undefined,
         undefined,
         dumpTensorAction.tooltip,
       ));
@@ -1886,7 +2024,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : this.pickFlowIcon('cpuDebug', this.getCustomProductIcon('debug-cpu')),
         undefined,
         undefined,
-        undefined,
         cpuDebugAction.tooltip,
       ));
     }
@@ -1904,7 +2041,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           ? disabledIcon
           : this.pickFlowIcon('npuDebug', this.getCustomProductIcon('debug-npu')),
         '- NPU',
-        undefined,
         undefined,
         npuDebugAction.tooltip,
       ));
@@ -1935,7 +2071,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : this.pickFlowIcon('onboard', this.getCustomProductIcon('onboard')),
         '- NPU',
         undefined,
-        undefined,
         onboardAction.tooltip,
       ));
     }
@@ -1950,7 +2085,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         simulationAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('simulation', this.getCustomProductIcon('simulation')),
-        undefined,
         undefined,
         undefined,
         simulationAction.tooltip,
@@ -2190,6 +2324,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return this.getPerformanceReportNodes();
   }
 
+  getDumpTensorResultsPanelNodes(): OperateNode[] {
+    return this.getDumpTensorReportNodes();
+  }
+
   /** Sort `state.performance.reports` by current `sortOrder` (in-memory only). */
   private sortPerformanceReportsInPlace(): void {
     const {
@@ -2219,6 +2357,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   /** Same contract as `getPerformanceTreeParent`, for the sanitizer results view. */
   getSanitizerTreeParent(element: OperateNode): vscode.ProviderResult<OperateNode | null | undefined> {
     if (element.nodeId === 'sanitizerReportItem' && (element.id ?? '').startsWith('sanitizer-report:')) {
+      return null;
+    }
+
+    return undefined;
+  }
+
+  /** Same contract as `getPerformanceTreeParent`, for the dump tensor results view. */
+  getDumpTensorTreeParent(element: OperateNode): vscode.ProviderResult<OperateNode | null | undefined> {
+    if (element.nodeId === 'dumpTensorReportItem' && (element.id ?? '').startsWith('dump-tensor-report:')) {
       return null;
     }
 
@@ -2582,6 +2729,55 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
   }
 
+  /**
+   * Command id of a performance file row; registers the command when the row is
+   * first rendered. Registrations are keyed by path+type and never disposed:
+   * they are bounded by the report contents and re-rendered rows reuse them.
+   */
+  private resolvePerformanceFileCommandId(filePath: string, fileType: string): string | undefined {
+    if (!filePath || !fileType) {
+      return undefined;
+    }
+
+    const key = `${filePath}\n${fileType}`;
+
+    if (!this.performanceFileCommandDisposables.has(key)) {
+      this.performanceFileCommandDisposables.set(key, vscode.commands.registerCommand(
+        stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, key),
+        async () => {
+          await this.openPerformanceFile(filePath, fileType);
+        },
+      ));
+    }
+
+    return stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, key);
+  }
+
+  /**
+   * Command id of a dump tensor file row; registers the command when the row
+   * is first rendered. Registrations are keyed by path+type and never
+   * disposed: they are bounded by the report contents and re-rendered rows
+   * reuse them.
+   */
+  private resolveDumpTensorFileCommandId(filePath: string, fileType: string): string | undefined {
+    if (!filePath || !fileType) {
+      return undefined;
+    }
+
+    const key = `${filePath}\n${fileType}`;
+
+    if (!this.dumpTensorFileCommandDisposables.has(key)) {
+      this.dumpTensorFileCommandDisposables.set(key, vscode.commands.registerCommand(
+        stableCommandId(COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN, key),
+        async () => {
+          await this.openDumpTensorFile(filePath, fileType);
+        },
+      ));
+    }
+
+    return stableCommandId(COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN, key);
+  }
+
   private getVisiblePerformanceReports(): PerformanceExecutionRecord[] {
     if (!this.state.performance.markedOnly) {
       return this.state.performance.reports;
@@ -2706,16 +2902,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return this.createItem(
       'performanceFile',
       child.title,
-      COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+      this.resolvePerformanceFileCommandId(child.filePath, child.fileType),
       vscode.TreeItemCollapsibleState.None,
       `${treeItemContextKey(`performanceFile.${child.fileType}`)}`,
       undefined,
       undefined,
       `performance-file:${encodeURIComponent(child.filePath)}`,
-      [
-        child.filePath,
-        child.fileType,
-      ],
     );
   }
 
@@ -2727,6 +2919,450 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     return date.toLocaleString();
+  }
+
+  /** Sort `state.dumpTensor.reports` by current `sortOrder` (in-memory only). */
+  private sortDumpTensorReportsInPlace(): void {
+    const {
+      reports, sortOrder,
+    } = this.state.dumpTensor;
+
+    if (reports.length <= 1) {
+      return;
+    }
+
+    reports.sort((a, b) => {
+      const byTime = sortOrder === 'asc' ? a.timestamp - b.timestamp : b.timestamp - a.timestamp;
+
+      return byTime !== 0 ? byTime : a.key.localeCompare(b.key);
+    });
+  }
+
+  /**
+   * Reload dump tensor reports from disk; optionally focus and expand a newly added row.
+   */
+  async refreshDumpTensorReports(options?: { focusIfNew?: boolean }): Promise<void> {
+    const refreshRevision = ++this.dumpTensorRefreshRevision;
+    const previousKeys = new Set(this.state.dumpTensor.reports.map((item) => item.key));
+    let reports: PerformanceExecutionRecord[];
+
+    try {
+      const result = await dumpTensorMethods.getDumpTensorData({
+        sort: {
+          by: 'timestamp',
+          order: this.state.dumpTensor.sortOrder,
+        },
+      });
+
+      reports = result?.data ?? [];
+    }
+    catch (error) {
+      if (refreshRevision !== this.dumpTensorRefreshRevision) {
+        return;
+      }
+
+      console.error('Failed to load dump tensor reports:', error);
+
+      return;
+    }
+
+    if (refreshRevision !== this.dumpTensorRefreshRevision) {
+      return;
+    }
+
+    this.state.dumpTensor.reports = reports;
+    this.sortDumpTensorReportsInPlace();
+
+    const selectedReportKey = this.state.dumpTensor.selectedReportKey;
+
+    if (selectedReportKey && !this.getDumpTensorReportByKey(selectedReportKey)) {
+      this.state.dumpTensor.selectedReportKey = undefined;
+    }
+
+    for (const key of this.dumpTensorReportRootNodesByKey.keys()) {
+      if (!this.state.dumpTensor.reports.some((item) => item.key === key)) {
+        this.dumpTensorReportRootNodesByKey.delete(key);
+      }
+    }
+
+    const focusReportKey = options?.focusIfNew
+      ? this.findNewDumpTensorReportKey(previousKeys)
+      : undefined;
+
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
+
+    if (focusReportKey) {
+      await OperateTreeProvider.yieldToUi();
+
+      if (refreshRevision !== this.dumpTensorRefreshRevision) {
+        return;
+      }
+
+      await this.revealDumpTensorReport(focusReportKey, refreshRevision);
+    }
+  }
+
+  private findNewDumpTensorReportKey(previousKeys: Set<string>): string | undefined {
+    const newReports = this.state.dumpTensor.reports.filter((item) => !previousKeys.has(item.key));
+
+    if (newReports.length === 0) {
+      return undefined;
+    }
+
+    if (previousKeys.size === 0 && newReports.length > 1) {
+      return undefined;
+    }
+
+    return newReports.reduce((latest, item) => (
+      item.timestamp > latest.timestamp ? item : latest
+    )).key;
+  }
+
+  private async revealDumpTensorReport(reportKey: string, refreshRevision?: number): Promise<void> {
+    if (!this.isDumpTensorRefreshCurrent(refreshRevision) || !this.getDumpTensorReportByKey(reportKey)) {
+      return;
+    }
+
+    this.state.dumpTensor.selectedReportKey = reportKey;
+    const node = this.getDumpTensorReportNodes()
+      .find((item) => {
+        const report = this.getDumpTensorReportByKey(reportKey);
+
+        return report && item.id === `dump-tensor-report:${encodeURIComponent(report.key)}`;
+      }) ?? this.dumpTensorReportRootNodesByKey.get(reportKey);
+    const treeView = this.dumpTensorResultsTreeView;
+
+    if (!node || !treeView) {
+      return;
+    }
+
+    node.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+
+    try {
+      if (!this.isDumpTensorRefreshCurrent(refreshRevision)) {
+        return;
+      }
+
+      await vscode.commands.executeCommand(`${DUMP_TENSOR_SIDEBAR_VIEW_ID}.focus`);
+
+      if (!this.isDumpTensorRefreshCurrent(refreshRevision)) {
+        return;
+      }
+
+      await treeView.reveal(node, {
+        select: true,
+        focus: true,
+        expand: true,
+      });
+    }
+    catch (error) {
+      console.warn('[OperateTreeProvider.revealDumpTensorReport] reveal failed:', error);
+    }
+  }
+
+  private isDumpTensorRefreshCurrent(refreshRevision?: number): boolean {
+    return refreshRevision === undefined || refreshRevision === this.dumpTensorRefreshRevision;
+  }
+
+  /**
+   * Flip timestamp sort direction and reorder loaded rows only — no filesystem rescan.
+   */
+  toggleDumpTensorSortOrder(): void {
+    this.state.dumpTensor.sortOrder = this.state.dumpTensor.sortOrder === 'asc' ? 'desc' : 'asc';
+    this.sortDumpTensorReportsInPlace();
+    this.dumpTensorReportRootNodesByKey.clear();
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
+  }
+
+  setDumpTensorMarkedOnly(markedOnly: boolean): void {
+    this.state.dumpTensor.markedOnly = markedOnly;
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
+  }
+
+  isDumpTensorMarkedOnlyEnabled(): boolean {
+    return this.state.dumpTensor.markedOnly;
+  }
+
+  getDumpTensorReportByKey(reportKey: string): PerformanceExecutionRecord | undefined {
+    return this.state.dumpTensor.reports.find((item) => item.key === reportKey);
+  }
+
+  async toggleDumpTensorReportMark(reportKey: string): Promise<void> {
+    const report = this.getDumpTensorReportByKey(reportKey);
+
+    if (!report) {
+      return;
+    }
+
+    const nextMarked = !Boolean(report.marked);
+
+    report.marked = nextMarked;
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
+
+    try {
+      dumpTensorMethods.toggleRecordMark({
+        key: reportKey,
+        marked: nextMarked,
+      });
+    }
+    catch (error) {
+      report.marked = !nextMarked;
+      this.onDidChangeDumpTensorTreeDataEmitter.fire();
+      vscode.window.showErrorMessage(t('web.dump.markFailed'));
+      console.error('Failed to toggle dump tensor mark:', error);
+    }
+  }
+
+  async copyDumpTensorReportPath(reportKey: string): Promise<void> {
+    const report = this.getDumpTensorReportByKey(reportKey);
+
+    if (!report?.dirPath) {
+      return;
+    }
+
+    await vscode.env.clipboard.writeText(report.dirPath);
+    void vscode.window.showInformationMessage(t('web.perf.pathCopied'));
+  }
+
+  async downloadDumpTensorReport(reportKey: string): Promise<void> {
+    const report = this.getDumpTensorReportByKey(reportKey);
+
+    if (!report?.dirPath) {
+      return;
+    }
+
+    try {
+      await dumpTensorMethods.downloadReport({ dirPath: report.dirPath });
+    }
+    catch (error) {
+      console.error('Failed to download dump tensor report:', error);
+    }
+  }
+
+  setDumpTensorCompareMode(enabled: boolean): void {
+    this.state.dumpTensor.compareMode = enabled;
+
+    if (!enabled) {
+      this.state.dumpTensor.compareSelectedFilePaths = [];
+    }
+
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
+  }
+
+  /** Enter compare mode with one file pre-selected as 1/2. */
+  beginDumpTensorCompareWithFile(filePath: string): void {
+    this.state.dumpTensor.compareMode = true;
+    this.state.dumpTensor.compareSelectedFilePaths = [filePath];
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
+  }
+
+  isDumpTensorCompareModeEnabled(): boolean {
+    return this.state.dumpTensor.compareMode;
+  }
+
+  getDumpTensorCompareSelectedFilePaths(): string[] {
+    return [...this.state.dumpTensor.compareSelectedFilePaths];
+  }
+
+  toggleDumpTensorCompareSelection(filePath: string): void {
+    const selected = this.state.dumpTensor.compareSelectedFilePaths;
+    const index = selected.indexOf(filePath);
+
+    if (index >= 0) {
+      selected.splice(index, 1);
+    }
+    else if (selected.length < 2) {
+      selected.push(filePath);
+    }
+    else {
+      vscode.window.showWarningMessage(t('web.dump.maxSelectCount', { count: 2 }));
+
+      return;
+    }
+
+    this.onDidChangeDumpTensorTreeDataEmitter.fire();
+  }
+
+  async startDumpTensorCompare(): Promise<void> {
+    const selected = this.state.dumpTensor.compareSelectedFilePaths;
+
+    if (selected.length < 2) {
+      vscode.window.showWarningMessage(t('web.dump.selectTwoFiles'));
+
+      return;
+    }
+
+    const filePath1 = selected[0].replace(/\.bin$/, '.txt');
+    const filePath2 = selected[1].replace(/\.bin$/, '.txt');
+
+    try {
+      await dumpTensorMethods.diffFiles({
+        filePath1,
+        filePath2,
+      });
+    }
+    finally {
+      this.setDumpTensorCompareMode(false);
+    }
+  }
+
+  async openDumpTensorFile(filePath: string, fileType: string): Promise<void> {
+    if (this.state.dumpTensor.compareMode) {
+      this.toggleDumpTensorCompareSelection(filePath);
+
+      return;
+    }
+
+    const txtPath = fileType === 'bin'
+      ? filePath.replace(/\.bin$/, '.txt')
+      : filePath;
+
+    try {
+      await vscode.workspace.fs.stat(vscode.Uri.file(txtPath));
+    }
+    catch {
+      vscode.window.showErrorMessage(t('web.dump.txtCompanionMissing', { path: txtPath }));
+
+      return;
+    }
+
+    await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(txtPath));
+  }
+
+  private getVisibleDumpTensorReports(): PerformanceExecutionRecord[] {
+    if (!this.state.dumpTensor.markedOnly) {
+      return this.state.dumpTensor.reports;
+    }
+
+    return this.state.dumpTensor.reports.filter((item) => Boolean(item.marked));
+  }
+
+  private getDumpTensorReportNodes(): OperateNode[] {
+    const reports = this.getVisibleDumpTensorReports();
+
+    if (reports.length === 0) {
+      this.dumpTensorReportRootNodesByKey.clear();
+
+      return [
+        this.createItem(
+          'dumpTensorReportItem',
+          t('web.dump.noData'),
+          undefined,
+          vscode.TreeItemCollapsibleState.None,
+        ),
+      ];
+    }
+
+    return reports.map((report) => {
+      const contextValue = report.marked
+        ? treeItemContextKey('dumpTensorReportItem.marked')
+        : treeItemContextKey('dumpTensorReportItem.unmarked');
+      const description = this.formatPerformanceTimestamp(report.timestamp);
+      const nodeId = `dump-tensor-report:${encodeURIComponent(report.key)}`;
+      let node = this.dumpTensorReportRootNodesByKey.get(report.key);
+
+      if (!node) {
+        node = this.createItem(
+          'dumpTensorReportItem',
+          report.title,
+          undefined,
+          vscode.TreeItemCollapsibleState.Collapsed,
+          contextValue,
+          report.marked
+            ? this.getCustomProductIcon('flag-filled')
+            : undefined,
+          description,
+          nodeId,
+        );
+        this.dumpTensorReportRootNodesByKey.set(report.key, node);
+      }
+      else {
+        node.label = report.title;
+        node.description = description;
+        node.contextValue = contextValue;
+        node.iconPath = report.marked
+          ? this.getCustomProductIcon('flag-filled')
+          : undefined;
+
+        if (this.state.dumpTensor.selectedReportKey !== report.key) {
+          node.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+        }
+      }
+
+      return node;
+    });
+  }
+
+  private getDumpTensorChildNodes(reportKey: string): OperateNode[] {
+    const report = this.getDumpTensorReportByKey(reportKey);
+
+    if (!report) {
+      return [];
+    }
+
+    return report.children.map((child, index) => this.createDumpTensorChildNode(report.key, child, [String(index)]));
+  }
+
+  private getDumpTensorFolderChildNodes(reportKey: string, folderPath: string[]): OperateNode[] {
+    const report = this.getDumpTensorReportByKey(reportKey);
+
+    if (!report) {
+      return [];
+    }
+
+    let currentChildren: (PerformanceRunDataFolder | PerformanceRunDataFile)[] = report.children;
+
+    for (const segment of folderPath) {
+      const next = currentChildren[Number(segment)];
+
+      if (!next || !('children' in next)) {
+        return [];
+      }
+
+      currentChildren = next.children;
+    }
+
+    return currentChildren.map((child, index) => this.createDumpTensorChildNode(report.key, child, [
+      ...folderPath,
+      String(index),
+    ]));
+  }
+
+  private createDumpTensorChildNode(
+    reportKey: string,
+    child: PerformanceRunDataFolder | PerformanceRunDataFile,
+    pathSegments: string[],
+  ): OperateNode {
+    if ('children' in child) {
+      const encodedSegments = pathSegments.map((segment) => encodeURIComponent(segment));
+
+      return this.createItem(
+        'dumpTensorFolder',
+        child.title,
+        undefined,
+        vscode.TreeItemCollapsibleState.Collapsed,
+        treeItemContextKey('dumpTensorFolder'),
+        undefined,
+        undefined,
+        `dump-tensor-folder:${encodeURIComponent(reportKey)}:${encodedSegments.join(':')}`,
+      );
+    }
+
+    const selectedIndex = this.state.dumpTensor.compareSelectedFilePaths.indexOf(child.filePath);
+    const compareDescription = selectedIndex >= 0
+      ? `(${selectedIndex + 1}/2)`
+      : undefined;
+
+    return this.createItem(
+      'dumpTensorFile',
+      child.title,
+      this.resolveDumpTensorFileCommandId(child.filePath, child.fileType),
+      vscode.TreeItemCollapsibleState.None,
+      treeItemContextKey(`dumpTensorFile.${child.fileType}`),
+      undefined,
+      compareDescription,
+      `dump-tensor-file:${encodeURIComponent(child.filePath)}`,
+    );
   }
 
   private async getSanitizerMessagesForReport(reportPath: string): Promise<SanitizerMessageRecord[]> {
@@ -3159,7 +3795,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       'sanitizerMessage',
       item.title,
       canJump
-        ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
+        ? this.resolveSanitizerMessageCommandId(String(globalIndex))
         : undefined,
       vscode.TreeItemCollapsibleState.None,
       typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
@@ -3170,7 +3806,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
       description,
       nodeId,
-      canJump ? [String(globalIndex)] : undefined,
     );
 
     if (reportPath) {
@@ -3311,13 +3946,23 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.onDidChangeTreeDataEmitter.fire();
   }
 
-  async toggleOperator(operatorId: number): Promise<void> {
-    const operator = this.state.operators.find((o) => o.id === operatorId);
+  /** Toggle by operator project path — the identity baked into the row command id. */
+  async toggleOperatorForPath(operatorPath: string): Promise<void> {
+    const key = this.getOperatorIdentityKey(operatorPath);
+    const operator = key
+      ? this.state.operators.find((o) => this.getOperatorIdentityKey(o.path) === key)
+      : undefined;
 
     if (!operator) {
       return;
     }
 
+    await this.toggleOperatorRecord(operator);
+  }
+
+  private async toggleOperatorRecord(operator: { id: number;
+    hasEx: boolean }): Promise<void> {
+    const operatorId = operator.id;
     const isSelected = this.state.selectedOperatorIds.includes(operatorId);
 
     if (!isSelected && this.isOperatorDisabled(operator)) {
@@ -3331,9 +3976,81 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         operatorId,
       ];
 
-    await homeMethods.setSelectedOperators({ operatorIds: nextIds });
+    // Apply the in-memory selection synchronously and repaint BEFORE the
+    // async persist: the visible row state must not depend on the cache
+    // round-trip, and the selectionWriteInFlight flag keeps a concurrent
+    // refreshState from re-adopting the stale on-disk snapshot while this
+    // write is still in flight.
     this.state.selectedOperatorIds = nextIds;
     this.onDidChangeTreeDataEmitter.fire();
+    this.selectionWriteInFlight = true;
+
+    try {
+      await homeMethods.setSelectedOperators({ operatorIds: nextIds });
+    }
+    finally {
+      this.selectionWriteInFlight = false;
+    }
+  }
+
+  /** Normalized operator path used as the per-row command key ('' when unknown). */
+  private getOperatorIdentityKey(operatorPath: string | undefined): string {
+    return operatorPath ? normalizeProjectPath(operatorPath) : '';
+  }
+
+  /** Command id of an operator row; registers the command when first rendered. */
+  private resolveOperatorToggleCommandId(operatorPath: string): string | undefined {
+    const key = this.getOperatorIdentityKey(operatorPath);
+
+    if (!key) {
+      return undefined;
+    }
+
+    this.ensureOperatorToggleCommand(key);
+
+    return stableCommandId(COMMAND_SIDEBAR_TOGGLE_OPERATOR, key);
+  }
+
+  private ensureOperatorToggleCommand(key: string): void {
+    if (this.operatorToggleCommandDisposables.has(key)) {
+      return;
+    }
+
+    this.operatorToggleCommandDisposables.set(key, vscode.commands.registerCommand(
+      stableCommandId(COMMAND_SIDEBAR_TOGGLE_OPERATOR, key),
+      async () => {
+        await this.toggleOperatorForPath(key);
+        await this.operatorToggleAfterCallback?.();
+      },
+    ));
+  }
+
+  /** Register commands for new operators, dispose the ones that left the list. */
+  private syncOperatorToggleCommands(): void {
+    const activeKeys = new Set<string>();
+
+    for (const operator of this.state.operators) {
+      const key = this.getOperatorIdentityKey(operator.path);
+
+      if (!key) {
+        continue;
+      }
+
+      activeKeys.add(key);
+      this.ensureOperatorToggleCommand(key);
+    }
+
+    for (const [
+      key,
+      disposable,
+    ] of [...this.operatorToggleCommandDisposables]) {
+      if (activeKeys.has(key)) {
+        continue;
+      }
+
+      disposable.dispose();
+      this.operatorToggleCommandDisposables.delete(key);
+    }
   }
 
   async toggleCompiledAll(): Promise<void> {
@@ -3621,13 +4338,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'operatorItem',
         op.name,
-        isDisabled ? undefined : COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        isDisabled ? undefined : this.resolveOperatorToggleCommandId(op.path),
         vscode.TreeItemCollapsibleState.None,
         undefined,
         iconPath,
         this.buildOperatorProjectsDescription(op),
         `operator-${op.id}`,
-        isDisabled ? undefined : [op.id],
         disabledTooltip,
       ));
     }
@@ -3655,13 +4371,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'operatorItem',
         operator.name,
         // Toggle operator to remove it from the selected list.
-        COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        this.resolveOperatorToggleCommandId(operator.path),
         vscode.TreeItemCollapsibleState.None,
         undefined,
         new vscode.ThemeIcon('check'),
         this.buildOperatorProjectsDescription(operator),
         `selected-operator-${operator.id}`,
-        [id],
       ));
     }
 
@@ -3697,7 +4412,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       dark: vscode.Uri },
     description?: string,
     treeItemId?: string,
-    commandArguments?: unknown[],
     tooltip?: string | vscode.MarkdownString,
     disabled?: boolean,
   ): OperateNode {
@@ -3707,10 +4421,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     item.id = treeItemId ?? nodeId;
 
     if (commandId) {
+      // No `arguments`: they make VS Code cache a synthetic `<command> /NN` id
+      // in the tree node's disposable store, which every refresh throws away.
       item.command = {
         command: commandId,
         title: label,
-        arguments: commandArguments,
       };
     }
 
