@@ -722,5 +722,15 @@ export default {
   'profilingReport.cannbotSent': '已将报告数据发送至 CANNBot',
   'profilingReport.cannbotFailed': '调用 CANNBot 失败：{{error}}',
   'profilingReport.cannbotNotInstalled': '调用"CANNBot 分析"功能失败，请确认 CANNWork 插件是否安装以及 CANNWork 版本是否正确：\n1、如 CANNWork 扩展插件未安装，请先在"扩展"中搜索并安装 "CANNWork"\n2、如 CANNWork 版本小于 2.0.0，请升级插件到最新版本',
+  'profilingReport.hintsPublishedInProblems': '性能提示已发布到 Problems',
+  'profilingReport.openHintsInProblems': '在 Problems 中打开性能提示',
+
+  // performance-hints (native diagnostics from .npu-rep)
+  'performanceHints.source': '性能提示',
+  'performanceHints.origin.instruction': '指令',
+  'performanceHints.origin.sourceLine': '源码行',
+  'performanceHints.origin.kernel': 'Kernel',
+  'performanceHints.publishFailed': '发布 {{file}} 的性能提示失败：{{error}}',
+  'performanceHints.empty': '未在 {{file}} 中找到性能提示',
 
 };

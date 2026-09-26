@@ -30,3 +30,7 @@ docs/superpowers/
 
 # BMAD-generated directories
 _bmad-*/
+.aider*
+
+# Agent / local planning notes (not product docs)
+PLAN.md
