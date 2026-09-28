@@ -2068,7 +2068,7 @@
         {
           "command": "huawei-op-devtools.openProfilingReport",
           "group": "navigation@2",
-          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep')"
+          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep') && activeCustomEditorId != 'opdevtoolsNpuRepViewer'"
         }
       ],
       "explorer/context": [
