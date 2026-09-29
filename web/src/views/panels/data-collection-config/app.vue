@@ -387,8 +387,10 @@ onMounted(async () => {
             </div>
           </a-collapse-panel>
 
-          <!-- Metrics panel -->
+          <!-- Metrics panel: npu-compute (onboard) only — npu-emulate collect
+               currently takes no metric/section options. -->
           <a-collapse-panel
+            v-if="config.collectionType === 'onboard'"
             key="metrics"
             :header="t('web.dataCollection.metrics')"
           >
