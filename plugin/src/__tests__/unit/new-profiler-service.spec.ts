@@ -10,7 +10,6 @@
 import {
   buildNpuComputeCommand,
   buildNpuEmulateCommand,
-  NPU_EMULATE_SOC_VERSION,
 } from '@plugin/domain/services/new-profiler-service';
 import {
   NEW_TOOL_REPORT_FILENAME,
@@ -86,56 +85,36 @@ describe('buildNpuComputeCommand', () => {
 });
 
 describe('buildNpuEmulateCommand', () => {
-  it('builds "npu-emulate record <target> <args> -s <soc> -o <dir> -g" with defaults', () => {
+  it('builds "npu-emulate collect --output <report> <target>" with defaults', () => {
     const cmd = buildNpuEmulateCommand({
-      config: configWithCommandLine('simulate', '--section Memory'),
+      config: configWithSections('simulate'),
       targetFile,
       opprofRunDir,
     });
 
     expect(cmd)
-      .toBe(`npu-emulate record ${targetFile} --section Memory -s ${NPU_EMULATE_SOC_VERSION} -o ${opprofRunDir} -g`);
+      .toBe(`npu-emulate collect --output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('does not duplicate -s / -o / -g when the user already supplied them', () => {
+  it('ignores commandLine text — collect currently takes no extra args', () => {
     const cmd = buildNpuEmulateCommand({
-      config: configWithCommandLine('simulate', '-s Ascend950 -o /tmp/sim -g'),
-      targetFile,
-      opprofRunDir,
-    });
-
-    // Exactly one -g / -s / -o each (the user's), and our default -o dir is not appended.
-    expect(cmd.match(/\s-g(\s|$)/g))
-      .toHaveLength(1);
-    expect(cmd.match(/\s-s\s/g))
-      .toHaveLength(1);
-    expect(cmd)
-      .not.toContain(`-o ${opprofRunDir}`);
-  });
-
-  it('recognizes long-form --soc-version / --output / --gen-report', () => {
-    const cmd = buildNpuEmulateCommand({
-      config: configWithCommandLine('simulate', '--soc-version Ascend950 --output /tmp/sim --gen-report'),
+      config: configWithCommandLine('simulate', '--section Memory -s Ascend950 -g'),
       targetFile,
       opprofRunDir,
     });
 
     expect(cmd)
-      .not.toContain(`-s ${NPU_EMULATE_SOC_VERSION}`);
-    expect(cmd)
-      .not.toContain(`-o ${opprofRunDir}`);
-    expect(cmd)
-      .not.toMatch(/\s-g(\s|$)/);
+      .toBe(`npu-emulate collect --output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('places the compiled target as the first positional after record', () => {
+  it('omits the trailing target when it is empty', () => {
     const cmd = buildNpuEmulateCommand({
       config: configWithCommandLine('simulate', ''),
-      targetFile,
+      targetFile: '',
       opprofRunDir,
     });
 
-    expect(cmd.startsWith(`npu-emulate record ${targetFile}`))
-      .toBe(true);
+    expect(cmd)
+      .toBe(`npu-emulate collect --output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME}`);
   });
 });
