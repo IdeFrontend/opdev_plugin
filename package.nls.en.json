@@ -57,7 +57,7 @@
   "config.op-devtools.performanceTuning.simulation.showQuickOptions.description": "Show quick options",
   "config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription": "When enabled, choosing **Simulation analysis** in **Actions** opens the quick options panel; start the run from the panel. When disabled, simulation runs immediately from the tree.",
   "config.op-devtools.performanceTuning.simulation.tool.description": "Simulation tool",
-  "config.op-devtools.performanceTuning.simulation.tool.markdownDescription": "Select the simulation tool. Effective only on A5 (`ascend950`) environments. `npu-emulate` uses the new simulator and opens the data-collection config dialog; `msprof` keeps the legacy simulation flow. Note: `npu-emulate` (formerly `npusim`) is temporarily unsupported — all environments currently use `msprof`.",
+  "config.op-devtools.performanceTuning.simulation.tool.markdownDescription": "Select the simulation tool. Effective only on A5 (`ascend950`) environments. `npu-emulate` uses the new simulator and opens the data-collection config dialog; `msprof` keeps the legacy simulation flow.",
   "config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription": "Simulator type. See supported types under CANN path `ascend-toolkit/latest/tools/simulator`. If unset, a default matching the resolved SOC version is selected automatically.",
   "config.op-devtools.performanceTuning.simulation.memoryThroughputWaveform.markdownDescription": "Default: compute & move unit instruction time ratio.",
   "config.op-devtools.performanceTuning.simulation.resourceConflictRatio.markdownDescription": "Operator code hotspot (default).",

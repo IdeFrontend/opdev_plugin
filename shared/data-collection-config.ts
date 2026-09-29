@@ -15,9 +15,9 @@
  *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
  *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
  *
- * NOTE: the new simulation tool (`npu-emulate`, formerly `npusim`) is
- * temporarily unsupported on A5 — until it lands, simulation always falls back
- * to the legacy `msprof` tool (see ConfigService.getSimulationTool).
+ * `npu-emulate` is enabled on A5 (default simulation tool); its `collect`
+ * subcommand currently takes no metric/section options (see
+ * ConfigService.getSimulationTool).
  */
 
 /** On-board profiling tool: the new `npu-compute` prototype or the legacy `msprof`. */
@@ -434,7 +434,7 @@ export function mergeSavedDataCollectionConfig(
       }
       // metrics.sections is intentionally NOT restored from saved — on-board uses
       // the caller-provided sectionSelection (source of truth); simulate keeps the
-      // fresh default (npu-emulate is gated off and takes no section flags).
+      // fresh default (npu-emulate collect takes no section flags).
     }
   }
 

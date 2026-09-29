@@ -40,16 +40,32 @@ export class MindStudioPluginInstaller {
   }
 
   /**
-   * Main entrance: Check whether the target plug-in has been activated. If it is not installed, it will be automatically installed according to the current environment.
+   * Main entrance: install the bundled plugin when it is missing or when the
+   * installed version is older than the bundled one. If the installed version
+   * already matches the bundled version, this is a no-op.
+   *
+   * Note: version comparison is intentional — the previous logic only checked
+   * whether the extension was installed (regardless of version), so stale
+   * builds never got refreshed after an OP DevTools upgrade.
    */
   async installIfNeeded(): Promise<void> {
-    const { pluginId } = this.options;
+    const {
+      pluginId, pluginVersion,
+    } = this.options;
+    const existing = vscode.extensions.getExtension(pluginId);
 
-    // If the plug-in is activated, return directly
-    if (vscode.extensions.getExtension(pluginId)) {
-      console.log(`✅ ${pluginId} already active.`);
+    // Installed and version matches → nothing to do
+    if (existing && existing.packageJSON?.version === pluginVersion) {
+      console.log(`✅ ${pluginId}@${existing.packageJSON.version} already installed.`);
 
       return;
+    }
+
+    if (existing) {
+      console.log(`⬆️ ${pluginId}@${existing.packageJSON?.version ?? 'unknown'} installed, upgrading to bundled ${pluginVersion}.`);
+    }
+    else {
+      console.log(`📦 ${pluginId} not installed, installing ${pluginVersion}.`);
     }
 
     // Detect current operating environment
@@ -202,6 +218,12 @@ export class MindStudioPluginInstaller {
         return;
       }
 
+      // Upgrade path: remove directories of previously installed plugin
+      // versions before extracting the new build. Otherwise stale
+      // `${pluginId}-${oldVersion}` folders linger alongside the new one,
+      // and code-server may load the older build.
+      this.removeOldPluginVersions(extensionsDir, pluginId, pluginVersion);
+
       // Make sure the directory exists
       if (!fs.existsSync(extensionsDir)) {
         fs.mkdirSync(extensionsDir, { recursive: true });
@@ -253,6 +275,54 @@ export class MindStudioPluginInstaller {
   }
 
   /**
+   * Remove directories of previously installed plugin versions (upgrade path).
+   * Without this, `${pluginId}-${oldVersion}` folders linger alongside the new
+   * `${pluginId}-${pluginVersion}`, and code-server may load the stale build.
+   */
+  private removeOldPluginVersions(
+    extensionsDir: string,
+    pluginId: string,
+    currentVersion: string,
+  ): void {
+    if (!fs.existsSync(extensionsDir)) {
+      return;
+    }
+
+    const prefix = `${pluginId}-`;
+    let removed = 0;
+
+    for (const entry of fs.readdirSync(extensionsDir, { withFileTypes: true })) {
+      if (!entry.isDirectory() || !entry.name.startsWith(prefix)) {
+        continue;
+      }
+
+      const entryVersion = entry.name.slice(prefix.length);
+
+      if (entryVersion === currentVersion) {
+        continue;
+      }
+
+      const oldDir = path.join(extensionsDir, entry.name);
+
+      try {
+        fs.rmSync(oldDir, {
+          recursive: true,
+          force: true,
+        });
+        removed++;
+        console.log(`🧹 Removed old plugin version dir: ${entry.name}`);
+      }
+      catch (err) {
+        console.warn(`Failed to remove old version ${entry.name}:`, err);
+      }
+    }
+
+    if (removed > 0) {
+      console.log(`🧹 Removed ${removed} old plugin version directory/directories for ${pluginId}.`);
+    }
+  }
+
+  /**
    * Get the extensions directory of code-server or the current IDE server.
    */
   private getCodeServerExtensionsDir(): string {
@@ -294,13 +364,16 @@ export class MindStudioPluginInstaller {
       }
     }
 
-    // Avoid duplicate registration
-    const exists = manifest.some((ext) => ext.identifier?.id === id && ext.version === version);
+    // Remove any prior entries for this plugin (regardless of version).
+    // Otherwise multiple `pinned: true` rows for the same id coexist and
+    // code-server may load an older build after an OP DevTools upgrade.
+    const before = manifest.length;
 
-    if (exists) {
-      console.log(`✅ Extension ${id}@${version} already registered in extensions.json`);
+    manifest = manifest.filter((ext) => ext.identifier?.id !== id);
+    const removed = before - manifest.length;
 
-      return;
+    if (removed > 0) {
+      console.log(`🧹 Removed ${removed} stale extensions.json entries for ${id}.`);
     }
 
     // Constructing CodeArts-compatible entries
