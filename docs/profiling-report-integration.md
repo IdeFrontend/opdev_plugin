@@ -140,7 +140,7 @@ Constants: `VIEW_PROFILING_REPORT` and `PROFILING_REPORT_PANEL_TYPE` in [`plugin
 
 ## Context menu
 
-The `huawei-op-devtools.openProfilingReport` command is surfaced on report files via the `editor/title` toolbar button and the `explorer/context` right-click menu. Both `when` clauses gate on `resourceExtname == '.rep' || '.ncrep' || '.npu-rep'` (in [`package.json`](../../package.json)). Right-clicking a `.npu-rep` file in the Explorer offers **Open Profiling Report**.
+The `huawei-op-devtools.openProfilingReport` command is surfaced on report files via the `editor/title` toolbar button and the `explorer/context` right-click menu. Both `when` clauses gate on `resourceExtname == '.rep' || '.ncrep' || '.npu-rep'` (in [`package.json`](../../package.json)). The toolbar entry also requires `activeCustomEditorId != 'opdevtoolsNpuRepViewer'`, so it appears when a report is open as text (including “Open With… Text Editor”) but not when the `.npu-rep` custom editor is already showing the report. Right-clicking a `.npu-rep` file in the Explorer offers **Open Profiling Report**.
 
 ## i18n
 
