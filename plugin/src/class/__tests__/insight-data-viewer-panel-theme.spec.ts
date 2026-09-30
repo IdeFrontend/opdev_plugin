@@ -1,6 +1,13 @@
-jest.mock('i18next', () => ({
-  t: (key: string) => key,
-}));
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+jest.mock('i18next', () => ({ t: (key: string) => key }));
 
 jest.mock(
   'vscode',
@@ -11,18 +18,10 @@ jest.mock(
       HighContrast: 3,
       HighContrastLight: 4,
     },
-    ViewColumn: {
-      Active: 1,
-    },
-    Uri: {
-      parse: jest.fn((value: string) => ({ value })),
-    },
-    commands: {
-      executeCommand: jest.fn(),
-    },
-    env: {
-      openExternal: jest.fn(),
-    },
+    ViewColumn: { Active: 1 },
+    Uri: { parse: jest.fn((value: string) => ({ value })) },
+    commands: { executeCommand: jest.fn() },
+    env: { openExternal: jest.fn() },
     window: {
       activeColorTheme: { kind: 2 },
       createWebviewPanel: jest.fn(),
@@ -35,15 +34,9 @@ jest.mock(
   { virtual: true },
 );
 
-jest.mock('../environment-variable-reader', () => ({
-  EnvironmentVariableReader: {
-    getEnv: jest.fn(() => undefined),
-  },
-}));
+jest.mock('../environment-variable-reader', () => ({ EnvironmentVariableReader: { getEnv: jest.fn(() => undefined) } }));
 
-jest.mock('../node-webview-socket-bridge', () => ({
-  NodeWebviewSocketBridge: jest.fn(() => ({ dispose: jest.fn() })),
-}));
+jest.mock('../node-webview-socket-bridge', () => ({ NodeWebviewSocketBridge: jest.fn(() => ({ dispose: jest.fn() })) }));
 
 jest.mock('../webview-message-list', () => ({
   __esModule: true,
@@ -211,20 +204,23 @@ function createCssRuleFromText(ruleText: string): FakeCssRule {
   }
 
   const declarationText = ruleText.slice(declarationStart + 1, declarationEnd);
-  const values = declarationText.split(';').reduce<Record<string, string>>((next, part) => {
-    const separator = part.indexOf(':');
+  const values = declarationText.split(';')
+    .reduce<Record<string, string>>((next, part) => {
+      const separator = part.indexOf(':');
 
-    if (separator > 0) {
-      const name = part.slice(0, separator).trim();
-      const value = part.slice(separator + 1).trim();
+      if (separator > 0) {
+        const name = part.slice(0, separator)
+          .trim();
+        const value = part.slice(separator + 1)
+          .trim();
 
-      if (name && value) {
-        next[name] = value;
+        if (name && value) {
+          next[name] = value;
+        }
       }
-    }
 
-    return next;
-  }, {});
+      return next;
+    }, {});
 
   return {
     style: createStyle(values),
@@ -238,7 +234,8 @@ function createRuntime(options: {
   deferAsyncCallbacks?: boolean;
   initialCssRules?: string[];
 } = {}): Runtime {
-  const messageListeners: Array<(event: { data: unknown; source?: { postMessage: jest.Mock } })=> void> = [];
+  const messageListeners: Array<(event: { data: unknown;
+    source?: { postMessage: jest.Mock } })=> void> = [];
   const observerCallbacks: Array<(mutations: Array<Record<string, unknown>>)=> void> = [];
   let nextAsyncId = 1;
   const animationFrames = new Map<number, ()=> void>();
@@ -251,13 +248,12 @@ function createRuntime(options: {
   const body = createNode('BODY', {}, { className: 'theme_dark' });
   const head = createNode('HEAD');
 
-  const styleElement = createNode('STYLE', {}, {
-    id: 'insight-style',
-  });
+  const styleElement = createNode('STYLE', {}, { id: 'insight-style' });
 
   class RuntimeCSSStyleSheet extends FakeCSSStyleSheet {}
 
   const styleSheet = new RuntimeCSSStyleSheet();
+
   styleSheet.ownerNode = styleElement;
   styleElement.sheet = styleSheet;
   (options.initialCssRules ?? []).forEach((rule) => {
@@ -265,13 +261,7 @@ function createRuntime(options: {
   });
 
   const iframePostMessage = jest.fn();
-  const iframes: RuntimeNode[] = [
-    createNode('IFRAME', {}, {
-      contentWindow: {
-        postMessage: iframePostMessage,
-      },
-    }),
-  ];
+  const iframes: RuntimeNode[] = [createNode('IFRAME', {}, { contentWindow: { postMessage: iframePostMessage } })];
 
   const getElementsByTagName = (name: string): RuntimeNode[] => {
     const normalized = name.toLowerCase();
@@ -315,7 +305,9 @@ function createRuntime(options: {
     const queued = Array.from(callbacks.entries());
 
     callbacks.clear();
-    queued.forEach(([, callback]) => callback());
+    queued.forEach(([
+      , callback,
+    ]) => callback());
   };
 
   const windowObject: Record<string, unknown> = {
@@ -372,17 +364,16 @@ function createRuntime(options: {
     CSSStyleSheet: RuntimeCSSStyleSheet,
     console,
     document,
-    localStorage: {
-      setItem: localStorageSetItem,
-    },
-    MutationObserver: jest.fn().mockImplementation((callback: (mutations: Array<Record<string, unknown>>)=> void) => {
-      observerCallbacks.push(callback);
+    localStorage: { setItem: localStorageSetItem },
+    MutationObserver: jest.fn()
+      .mockImplementation((callback: (mutations: Array<Record<string, unknown>>)=> void) => {
+        observerCallbacks.push(callback);
 
-      return {
-        observe: jest.fn(),
-        disconnect: jest.fn(),
-      };
-    }),
+        return {
+          observe: jest.fn(),
+          disconnect: jest.fn(),
+        };
+      }),
     window: windowObject,
   } as Record<string, unknown>;
 
@@ -397,17 +388,16 @@ function createRuntime(options: {
     flushAnimationFrames: () => flushCallbacks(animationFrames),
     flushTimers: () => flushCallbacks(timers),
     dispatchMessage: (data: unknown, source?: { postMessage: jest.Mock }) => {
-      messageListeners.forEach((listener) => listener({ data, source }));
+      messageListeners.forEach((listener) => listener({
+        data,
+        source,
+      }));
     },
     emitMutations: (mutations: Array<Record<string, unknown>>) => {
       observerCallbacks.forEach((callback) => callback(mutations));
     },
     addIframe: (iframe?: RuntimeNode) => {
-      const nextIframe = iframe ?? createNode('IFRAME', {}, {
-        contentWindow: {
-          postMessage: jest.fn(),
-        },
-      });
+      const nextIframe = iframe ?? createNode('IFRAME', {}, { contentWindow: { postMessage: jest.fn() } });
 
       iframes.push(nextIframe);
 
@@ -425,9 +415,11 @@ function runInjectedScript(script: string, runtime: Runtime): void {
 
 function resetInjectedHtmlCache(): void {
   (InsightDataViewerPanel as unknown as {
-    htmlCache: Map<string, { html: string; sizeBytes: number }>;
+    htmlCache: Map<string, { html: string;
+      sizeBytes: number }>;
     htmlCacheSizeBytes: number;
-  }).htmlCache = new Map<string, { html: string; sizeBytes: number }>();
+  }).htmlCache = new Map<string, { html: string;
+    sizeBytes: number }>();
 
   (InsightDataViewerPanel as unknown as {
     htmlCacheSizeBytes: number;
@@ -445,27 +437,45 @@ function resetInjectedHtmlCache(): void {
       const injectedTimeline = injectThemeOverrides(timelineHtml);
       const injectedTwice = injectThemeOverrides(injectedMain);
 
-      expect(injectedMain).toContain('id="vscode-theme-overrides"');
-      expect(injectedMain).toContain('id="vscode-theme-overrides-script"');
-      expect(injectedMain).toContain('vscodeThemeVars');
-      expect(injectedMain).toContain('insightThemeVars');
-      expect(injectedMain).toContain('requestThemeFromParent');
-      expect(injectedMain).toContain('patchInsightStyleSheets');
-      expect(injectedMain).toContain('scheduleThemeFlush');
-      expect(injectedMain).toContain('.switch-theme');
-      expect(injectedMain).toContain('.ant-input-affix-wrapper');
-      expect(injectedMain).toContain('--mi-divider-color');
-      expect(injectedMain).toContain('.splitLine');
-      expect(injectedMain).toContain('padding: 0 !important');
-      expect(injectedMain).toContain('"CacheFrameTooltip"');
+      expect(injectedMain)
+        .toContain('id="vscode-theme-overrides"');
+      expect(injectedMain)
+        .toContain('id="vscode-theme-overrides-script"');
+      expect(injectedMain)
+        .toContain('vscodeThemeVars');
+      expect(injectedMain)
+        .toContain('insightThemeVars');
+      expect(injectedMain)
+        .toContain('requestThemeFromParent');
+      expect(injectedMain)
+        .toContain('patchInsightStyleSheets');
+      expect(injectedMain)
+        .toContain('scheduleThemeFlush');
+      expect(injectedMain)
+        .toContain('.switch-theme');
+      expect(injectedMain)
+        .toContain('.ant-input-affix-wrapper');
+      expect(injectedMain)
+        .toContain('--mi-divider-color');
+      expect(injectedMain)
+        .toContain('.splitLine');
+      expect(injectedMain)
+        .toContain('padding: 0 !important');
+      expect(injectedMain)
+        .toContain('"CacheFrameTooltip"');
       expect(injectedMain.indexOf('id="vscode-theme-overrides-script"'))
-        .toBeLessThan(injectedMain.toLowerCase().indexOf('</head>'));
+        .toBeLessThan(injectedMain.toLowerCase()
+          .indexOf('</head>'));
 
-      expect(injectedTimeline).toContain('MindStudio Insight Timeline');
-      expect(injectedTimeline).toContain('id="vscode-theme-overrides-script"');
+      expect(injectedTimeline)
+        .toContain('MindStudio Insight Timeline');
+      expect(injectedTimeline)
+        .toContain('id="vscode-theme-overrides-script"');
 
-      expect(countOccurrences(injectedTwice, 'id="vscode-theme-overrides"')).toBe(1);
-      expect(countOccurrences(injectedTwice, 'id="vscode-theme-overrides-script"')).toBe(1);
+      expect(countOccurrences(injectedTwice, 'id="vscode-theme-overrides"'))
+        .toBe(1);
+      expect(countOccurrences(injectedTwice, 'id="vscode-theme-overrides-script"'))
+        .toBe(1);
       expect(countOccurrences(injectedTwice, '"CacheFrameTooltip"'))
         .toBe(countOccurrences(injectedTwice, '"CacheTooltip"'));
     });
@@ -504,16 +514,24 @@ function resetInjectedHtmlCache(): void {
       });
       runtime.flushAnimationFrames();
 
-      expect(runtime.iframePostMessage).toHaveBeenCalled();
+      expect(runtime.iframePostMessage)
+        .toHaveBeenCalled();
       const forwarded = runtime.iframePostMessage.mock.calls.at(-1)?.[0];
 
-      expect(forwarded.vscodeThemeVars['--vscode-editor-background']).toBe('#123456');
-      expect(forwarded.vscodeThemeVars['--vscode-panel-border']).toBe('#aa3344');
-      expect(forwarded.insightThemeVars['--mi-bg-color-dark']).toBe('#123456');
-      expect(forwarded.insightThemeVars['--mi-text-color']).toBe('#abcdef');
-      expect(forwarded.insightThemeVars['--mi-divider-color']).toBe('#aa3344');
-      expect(runtime.documentElement.style.values['--mi-divider-color']).toBe('#aa3344');
-      expect(forwarded.themeKind).toBe('dark');
+      expect(forwarded.vscodeThemeVars['--vscode-editor-background'])
+        .toBe('#123456');
+      expect(forwarded.vscodeThemeVars['--vscode-panel-border'])
+        .toBe('#aa3344');
+      expect(forwarded.insightThemeVars['--mi-bg-color-dark'])
+        .toBe('#123456');
+      expect(forwarded.insightThemeVars['--mi-text-color'])
+        .toBe('#abcdef');
+      expect(forwarded.insightThemeVars['--mi-divider-color'])
+        .toBe('#aa3344');
+      expect(runtime.documentElement.style.values['--mi-divider-color'])
+        .toBe('#aa3344');
+      expect(forwarded.themeKind)
+        .toBe('dark');
     });
 
     it('applies only the latest generation for burst updateTheme events', () => {
@@ -562,13 +580,18 @@ function resetInjectedHtmlCache(): void {
 
       runtime.flushAnimationFrames();
 
-      expect(runtime.iframePostMessage).toHaveBeenCalledTimes(1);
+      expect(runtime.iframePostMessage)
+        .toHaveBeenCalledTimes(1);
       const forwarded = runtime.iframePostMessage.mock.calls[0][0];
 
-      expect(forwarded.themeKind).toBe('high-contrast');
-      expect(forwarded.insightThemeVars['--mi-bg-color-dark']).toBe('#333333');
-      expect(runtime.documentElement.style.values['--mi-bg-color-dark']).toBe('#333333');
-      expect(runtime.documentElement.style.values['--mi-text-color']).toBe('#cccccc');
+      expect(forwarded.themeKind)
+        .toBe('high-contrast');
+      expect(forwarded.insightThemeVars['--mi-bg-color-dark'])
+        .toBe('#333333');
+      expect(runtime.documentElement.style.values['--mi-bg-color-dark'])
+        .toBe('#333333');
+      expect(runtime.documentElement.style.values['--mi-text-color'])
+        .toBe('#cccccc');
     });
 
     it('queues CSSOM insertRule patching and applies replacements on the next frame', () => {
@@ -593,21 +616,24 @@ function resetInjectedHtmlCache(): void {
         },
       });
       runtime.flushAnimationFrames();
-      expect((runtime.context.CSSStyleSheet as any).prototype.__vscodeInsightThemeInsertRulePatched).toBe(true);
+      expect((runtime.context.CSSStyleSheet as any).prototype.__vscodeInsightThemeInsertRulePatched)
+        .toBe(true);
 
       sheet.insertRule(
         '.row { background: rgb(42, 47, 55); color: rgb(211, 220, 233); box-shadow: rgb(62, 69, 81) 0px -1px 0px 0px inset; }',
         0,
       );
 
-      expect(sheet.cssRules[0].style.values.background).toBe('rgb(42, 47, 55)');
+      expect(sheet.cssRules[0].style.values.background)
+        .toBe('rgb(42, 47, 55)');
       runtime.flushAnimationFrames();
 
-      expect(sheet.cssRules[0].style.values.background).toBe('#303132');
-      expect(sheet.cssRules[0].style.values.color).toBe('#505152');
-      expect(sheet.cssRules[0].style.values['box-shadow']).toBe(
-        '#606162 0px -1px 0px 0px inset',
-      );
+      expect(sheet.cssRules[0].style.values.background)
+        .toBe('#303132');
+      expect(sheet.cssRules[0].style.values.color)
+        .toBe('#505152');
+      expect(sheet.cssRules[0].style.values['box-shadow'])
+        .toBe('#606162 0px -1px 0px 0px inset');
     });
 
     it('handles nested dynamic style and iframe insertion from subtree mutations', () => {
@@ -626,18 +652,15 @@ function resetInjectedHtmlCache(): void {
       runtime.iframePostMessage.mockClear();
 
       const nestedIframePostMessage = jest.fn();
-      const nestedIframe = runtime.addIframe(createNode('IFRAME', {}, {
-        contentWindow: {
-          postMessage: nestedIframePostMessage,
-        },
-      }));
-      const nestedStyle = createNode('STYLE', {}, {
-        id: 'dynamic-style',
-      });
+      const nestedIframe = runtime.addIframe(createNode('IFRAME', {}, { contentWindow: { postMessage: nestedIframePostMessage } }));
+      const nestedStyle = createNode('STYLE', {}, { id: 'dynamic-style' });
       const wrapper = createNode('DIV', {}, {
         querySelectorAll: jest.fn((selector: string) => {
           if (selector === 'style,link[rel="stylesheet"],iframe') {
-            return [nestedStyle, nestedIframe];
+            return [
+              nestedStyle,
+              nestedIframe,
+            ];
           }
 
           return [];
@@ -654,11 +677,14 @@ function resetInjectedHtmlCache(): void {
 
       runtime.flushAnimationFrames();
 
-      expect(nestedIframePostMessage).toHaveBeenCalledTimes(1);
+      expect(nestedIframePostMessage)
+        .toHaveBeenCalledTimes(1);
       const forwarded = nestedIframePostMessage.mock.calls[0][0];
 
-      expect(forwarded.command).toBe('updateTheme');
-      expect(forwarded.themeKind).toBe('dark');
+      expect(forwarded.command)
+        .toBe('updateTheme');
+      expect(forwarded.themeKind)
+        .toBe('dark');
     });
 
     it('handles late stylesheet link insertion and forwards the latest theme once', () => {
@@ -676,9 +702,7 @@ function resetInjectedHtmlCache(): void {
       runtime.flushAnimationFrames();
       runtime.iframePostMessage.mockClear();
 
-      const link = createNode('LINK', {}, {
-        rel: 'stylesheet',
-      });
+      const link = createNode('LINK', {}, { rel: 'stylesheet' });
 
       runtime.emitMutations([
         {
@@ -691,8 +715,10 @@ function resetInjectedHtmlCache(): void {
       expect(runtime.iframePostMessage).not.toHaveBeenCalled();
       runtime.flushAnimationFrames();
 
-      expect(runtime.iframePostMessage).toHaveBeenCalledTimes(1);
-      expect(runtime.iframePostMessage.mock.calls[0][0].themeKind).toBe('dark');
+      expect(runtime.iframePostMessage)
+        .toHaveBeenCalledTimes(1);
+      expect(runtime.iframePostMessage.mock.calls[0][0].themeKind)
+        .toBe('dark');
     });
 
     it('reuses transformed HTML from cache on warm reads', async () => {
@@ -702,14 +728,18 @@ function resetInjectedHtmlCache(): void {
         injectThemeOverrides: jest.Mock<string, [string]>;
         readInjectedHtmlFile: (htmlPath: string, allowMissing?: boolean)=> Promise<string | null>;
       };
+
       panelLike.injectThemeOverrides = jest.fn((source: string) => `${source}\n<!-- transformed -->`);
 
       const cold = await panelLike.readInjectedHtmlFile(MAIN_HTML);
       const warm = await panelLike.readInjectedHtmlFile(MAIN_HTML);
 
-      expect(cold).toContain('<!-- transformed -->');
-      expect(warm).toBe(cold);
-      expect(panelLike.injectThemeOverrides).toHaveBeenCalledTimes(1);
+      expect(cold)
+        .toContain('<!-- transformed -->');
+      expect(warm)
+        .toBe(cold);
+      expect(panelLike.injectThemeOverrides)
+        .toHaveBeenCalledTimes(1);
     });
   },
 );
