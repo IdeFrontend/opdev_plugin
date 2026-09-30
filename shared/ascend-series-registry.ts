@@ -1,4 +1,13 @@
 /**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+/**
  * Chip Name → Ascend series → env defaults.
  * Contract: docs/ascend-env-spec.md (§1, §3–6)
  */
@@ -40,19 +49,51 @@ export type ChipPrefixRule = {
 
 /** §4.1 — exact normalized chip id → A2 + dav-1001 */
 export const EXACT_CHIP_RULES: ReadonlyArray<ExactChipRule> = [
-  { chipName: 'Ascend901A', series: 'a2', npuArch: NPU_ARCH_DAV_1001 },
-  { chipName: 'Ascend901B', series: 'a2', npuArch: NPU_ARCH_DAV_1001 },
-  { chipName: 'Ascend910PremiumA', series: 'a2', npuArch: NPU_ARCH_DAV_1001 },
-  { chipName: 'Ascend910ProA', series: 'a2', npuArch: NPU_ARCH_DAV_1001 },
-  { chipName: 'Ascend910ProB', series: 'a2', npuArch: NPU_ARCH_DAV_1001 },
+  {
+    chipName: 'Ascend901A',
+    series: 'a2',
+    npuArch: NPU_ARCH_DAV_1001,
+  },
+  {
+    chipName: 'Ascend901B',
+    series: 'a2',
+    npuArch: NPU_ARCH_DAV_1001,
+  },
+  {
+    chipName: 'Ascend910PremiumA',
+    series: 'a2',
+    npuArch: NPU_ARCH_DAV_1001,
+  },
+  {
+    chipName: 'Ascend910ProA',
+    series: 'a2',
+    npuArch: NPU_ARCH_DAV_1001,
+  },
+  {
+    chipName: 'Ascend910ProB',
+    series: 'a2',
+    npuArch: NPU_ARCH_DAV_1001,
+  },
 ];
 
 /** §4.2 — prefix order: 950 → 910_ → 910A → 910B */
 export const CHIP_PREFIX_RULES: ReadonlyArray<ChipPrefixRule> = [
-  { prefix: 'Ascend950', series: 'a5' },
-  { prefix: 'Ascend910_', series: 'a3' },
-  { prefix: 'Ascend910A', series: 'a2' },
-  { prefix: 'Ascend910B', series: 'a2' },
+  {
+    prefix: 'Ascend950',
+    series: 'a5',
+  },
+  {
+    prefix: 'Ascend910_',
+    series: 'a3',
+  },
+  {
+    prefix: 'Ascend910A',
+    series: 'a2',
+  },
+  {
+    prefix: 'Ascend910B',
+    series: 'a2',
+  },
 ];
 
 export const ASCEND_SERIES_PROFILE: Readonly<Record<AscendSeries, AscendSeriesProfile>> = {
@@ -73,12 +114,10 @@ export const ASCEND_SERIES_PROFILE: Readonly<Record<AscendSeries, AscendSeriesPr
   },
 };
 
-const EXACT_CHIP_BY_NORMALIZED = new Map<string, ExactChipRule>(
-  EXACT_CHIP_RULES.map((rule) => [
-    normalizeChipNameForMatching(rule.chipName),
-    rule,
-  ]),
-);
+const EXACT_CHIP_BY_NORMALIZED = new Map<string, ExactChipRule>(EXACT_CHIP_RULES.map((rule) => [
+  normalizeChipNameForMatching(rule.chipName),
+  rule,
+]));
 
 const SLUG_TO_SERIES: Readonly<Record<string, AscendSeries>> = {
   [CANN_SOC_ASCEND_910B]: 'a2',
