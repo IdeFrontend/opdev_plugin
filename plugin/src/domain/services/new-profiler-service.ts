@@ -89,11 +89,11 @@ export function buildNpuComputeCommand(params: NewProfilerCommandParams): string
 /**
  * Build the `npu-emulate collect` command.
  *
- * Shape: `npu-emulate collect --output <report> <target>`. `collect` runs the
- * compiled target on the SoC simulator and emits the report in one step; it
- * currently takes no metric/section options, so the deterministic report path
- * `<opprofRunDir>/result.npu-rep` is always passed via `--output` (the report
- * link scans that exact file).
+ * Shape: `npu-emulate collect --output <dir> <target>`. `collect` runs the
+ * compiled target on the SoC simulator and emits the report under the given
+ * output directory. npu-emulate creates its own sub-directory structure
+ * (`<dir>/npusim_<ts>_<pid>/{record,report}/*.npu-rep`), so `--output`
+ * must point at the per-run opprof directory only — not a full file path.
  */
 export function buildNpuEmulateCommand(params: NewProfilerCommandParams): string {
   const {
@@ -103,7 +103,7 @@ export function buildNpuEmulateCommand(params: NewProfilerCommandParams): string
   const parts = [
     'npu-emulate',
     'collect',
-    `--output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME}`,
+    `--output ${opprofRunDir}`,
   ];
 
   // The compiled target is the final positional (the app to simulate).
