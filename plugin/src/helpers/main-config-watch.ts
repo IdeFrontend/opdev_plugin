@@ -18,7 +18,11 @@ import { AsyncSingleFlight } from '@plugin/helpers/async-single-flight';
 import { isIdeSettingsFileEmpty } from '@plugin/helpers/ide-config-dir';
 import { ConfigService } from '@plugin/service/config-service';
 import type { ProjectService } from '@plugin/service/project-service';
-import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
+import {
+  ensureSimulatorFlag,
+  resolveEffectiveCannSoc,
+  stripSimulatorFlag,
+} from '@plugin/domain/utils/ascend-util';
 
 /**
  * The single `onDidChangeConfiguration` handler for `op-devtools` settings.
@@ -109,6 +113,43 @@ async function guardNewToolSelectionForNonA5(e: vscode.ConfigurationChangeEvent)
   }
 }
 
+/**
+ * Keep the `--simulator` flag in `simulationCompileCommand` consistent with the
+ * selected simulation tool:
+ *  - `npu-emulate` (A5): the CANN simulator build path is unused, so remove
+ *    `--simulator` if present.
+ *  - `msprof`: the legacy flow requires `--simulator`, so add it if missing.
+ *
+ * Runs after {@link guardNewToolSelectionForNonA5} so a non-A5 `npu-emulate`
+ * selection has already been reset to `msprof` before the flag is synced.
+ */
+async function syncSimulatorFlagWithSimulationTool(): Promise<void> {
+  const tool = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
+  const script = ConfigService.readOpDevtoolsSetting<string>('compileAndDeploy.buildConfig.simulationCompileCommand');
+
+  if (typeof script !== 'string' || !script.trim()) {
+    return;
+  }
+
+  let nextScript: string;
+
+  if (tool === 'npu-emulate') {
+    nextScript = stripSimulatorFlag(script);
+  }
+  else if (tool === 'msprof') {
+    nextScript = ensureSimulatorFlag(script);
+  }
+  else {
+    return;
+  }
+
+  if (nextScript === script) {
+    return;
+  }
+
+  await ConfigService.writeOpDevtoolsDottedSettings({ 'compileAndDeploy.buildConfig.simulationCompileCommand': nextScript });
+}
+
 export function createMainConfigHandler(deps: MainConfigWatchDeps) {
   const { logDebug } = deps;
   const onBoardOperatorMetricsSyncFlight = new AsyncSingleFlight<void>();
@@ -120,6 +161,7 @@ export function createMainConfigHandler(deps: MainConfigWatchDeps) {
     const operatorSupportAffected = e.affectsConfiguration(settingsKey('operatorSupport'));
     const envAffected = e.affectsConfiguration(settingsKey('environment'));
     const opDevtoolsAffected = e.affectsConfiguration(SETTINGS_PREFIX);
+    const simulationToolAffected = e.affectsConfiguration(settingsKey('performanceTuning.simulation.tool'));
 
     logDebug('event:onDidChangeConfiguration', {
       onBoardAffected,
@@ -128,6 +170,7 @@ export function createMainConfigHandler(deps: MainConfigWatchDeps) {
       tritonSupportAffected,
       envAffected,
       opDevtoolsAffected,
+      simulationToolAffected,
     });
 
     let shouldSyncAscendEnvFromWorkspace = false;
@@ -198,6 +241,16 @@ export function createMainConfigHandler(deps: MainConfigWatchDeps) {
       .catch((error) => {
         console.warn('[watchMainConfig] guardNewToolSelectionForNonA5 failed:', error);
       });
+
+    // Keep the `--simulator` flag in the simulation compile command in sync
+    // with the selected simulation tool (npu-emulate drops it, msprof adds it).
+    // Runs after the non-A5 guard so a reset npu-emulate → msprof is reflected.
+    if (simulationToolAffected) {
+      await syncSimulatorFlagWithSimulationTool()
+        .catch((error) => {
+          console.warn('[watchMainConfig] syncSimulatorFlagWithSimulationTool failed:', error);
+        });
+    }
 
     if (shouldSyncAscendEnvFromWorkspace) {
       logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:start');

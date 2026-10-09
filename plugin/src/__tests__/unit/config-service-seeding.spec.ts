@@ -11,7 +11,13 @@ jest.mock('i18next', () => ({ t: (key: string) => key }));
 
 jest.mock('@plugin/domain/plugins/operator-plugin.registry', () => ({ OperatorPluginRegistry: { getOpPlugin: jest.fn() } }));
 
-jest.mock('@plugin/domain/utils/ascend-util', () => ({ resolveEffectiveCannSoc: jest.fn(() => 'ascend910b') }));
+jest.mock('@plugin/domain/utils/ascend-util', () => ({
+  resolveEffectiveCannSoc: jest.fn(() => 'ascend910b'),
+  stripSimulatorFlag: (script: string) => script
+    .replace(/\s*--simulator(?:\s+\S+)?/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim(),
+}));
 
 import * as fs from 'fs';
 import * as os from 'os';

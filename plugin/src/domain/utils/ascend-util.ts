@@ -962,6 +962,38 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
 }
 
 /**
+ * Remove the `--simulator` flag (and its optional following value/placeholder,
+ * e.g. `{simulator_type}`) from a script string. Used when the simulation tool
+ * is `npu-emulate` (A5), which does not use the CANN simulator build path.
+ */
+export function stripSimulatorFlag(script: string): string {
+  return script
+    .replace(/\s*--simulator(?:\s+\S+)?/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * Append the `--simulator` flag to a script if it is not already present.
+ *
+ * For ascend/standard-custom scripts (which carry `--vendor_name=custom`), the
+ * `{simulator_type}` placeholder is appended so the simulator device directory
+ * is resolved at runtime. For cann scripts, a bare `--simulator` is appended
+ * (the simulator dir is supplied via the `SOC_VERSION` spawn env).
+ */
+export function ensureSimulatorFlag(script: string): string {
+  if (/\B--simulator\b/.test(script)) {
+    return script;
+  }
+
+  const suffix = /--vendor_name=custom/.test(script)
+    ? ' --simulator {simulator_type}'
+    : ' --simulator';
+
+  return script + suffix;
+}
+
+/**
  * Ascend variables for a single operator command. {@link executeOperatorCommand}
  * embeds them as `export … &&` prefixes (see `shell-env-exports.ts`); the plugin
  * **never** writes these back to `process.env`.
