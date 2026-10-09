@@ -13,10 +13,12 @@ import * as vscode from 'vscode';
 import {
   SETTINGS_PREFIX, settingsKey,
 } from '@shared/flavor';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 import { AsyncSingleFlight } from '@plugin/helpers/async-single-flight';
 import { isIdeSettingsFileEmpty } from '@plugin/helpers/ide-config-dir';
 import { ConfigService } from '@plugin/service/config-service';
 import type { ProjectService } from '@plugin/service/project-service';
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 
 /**
  * The single `onDidChangeConfiguration` handler for `op-devtools` settings.
@@ -71,6 +73,41 @@ const syncOnBoardOperatorMetricChildren = async (): Promise<void> => {
 
   await ConfigService.writeOpDevtoolsDottedSettings(metricWrites);
 };
+
+/**
+ * When a non-A5 environment selects npu-emulate / npu-compute, reset to msprof
+ * and warn the user. The new tools are A5-only; the runtime guards already
+ * fall back to msprof, but silently ignoring a user's deliberate choice is
+ * confusing — an explicit reset + message is clearer.
+ */
+async function guardNewToolSelectionForNonA5(e: vscode.ConfigurationChangeEvent): Promise<void> {
+  const isA5 = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc());
+
+  if (isA5) {
+    return;
+  }
+
+  const simToolKey = settingsKey('performanceTuning.simulation.tool');
+  const onBoardToolKey = settingsKey('performanceTuning.onBoard.tool');
+
+  if (e.affectsConfiguration(simToolKey)) {
+    const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
+
+    if (configured === 'npu-emulate') {
+      await ConfigService.writeOpDevtoolsDottedSettings({ 'performanceTuning.simulation.tool': 'msprof' });
+      vscode.window.showWarningMessage(t('performanceTuning.simulation.tool.notA5ResetToMsprof'));
+    }
+  }
+
+  if (e.affectsConfiguration(onBoardToolKey)) {
+    const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.onBoard.tool');
+
+    if (configured === 'npu-compute') {
+      await ConfigService.writeOpDevtoolsDottedSettings({ 'performanceTuning.onBoard.tool': 'msprof' });
+      vscode.window.showWarningMessage(t('performanceTuning.onBoard.tool.notA5ResetToMsprof'));
+    }
+  }
+}
 
 export function createMainConfigHandler(deps: MainConfigWatchDeps) {
   const { logDebug } = deps;
@@ -155,6 +192,12 @@ export function createMainConfigHandler(deps: MainConfigWatchDeps) {
           break;
       }
     }
+
+    // Guard: reset npu-emulate / npu-compute to msprof on non-A5 environments.
+    await guardNewToolSelectionForNonA5(e)
+      .catch((error) => {
+        console.warn('[watchMainConfig] guardNewToolSelectionForNonA5 failed:', error);
+      });
 
     if (shouldSyncAscendEnvFromWorkspace) {
       logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:start');
