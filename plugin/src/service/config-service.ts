@@ -31,7 +31,9 @@ import {
   resolveSanitizerToolType,
   SanitizerToolType,
 } from '@shared/cann-env-constants';
-import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
+import {
+  resolveEffectiveCannSoc, stripSimulatorFlag,
+} from '@plugin/domain/utils/ascend-util';
 import {
   ON_BOARD_METRIC_LEGACY_TO_DOTTED,
   SIMULATE_METRIC_LEGACY_TO_DOTTED,
@@ -624,6 +626,13 @@ export class ConfigService {
       const scripts = plugin.getInitialConfigScripts(op, workspaceRoot);
       const paths = plugin.getDefaultPaths(op);
       const isA5Profiler = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc());
+
+      // A5 environments default to the npu-emulate simulation tool, which does
+      // not use the CANN `--simulator` build path. Strip the flag from the
+      // seeded simulation compile command for A5; non-A5 keeps it (msprof flow).
+      if (isA5Profiler) {
+        scripts.simulateScript = stripSimulatorFlag(scripts.simulateScript);
+      }
 
       // Targets are ROOT-level for every project shape: a standard-custom
       // collection builds through ONE root operator, so the workspace-level
