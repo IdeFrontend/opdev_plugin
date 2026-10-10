@@ -8,6 +8,7 @@ Canonical references for the Huawei OP DevTools VS Code extension. User-reported
 
 | Document | Use when |
 |----------|----------|
+| [`user-guide.md`](./user-guide.md) | End-user usage guide: environment setup, operator development workflow, FAQ（中文） |
 | [`workspace-settings.md`](./workspace-settings.md) | All `op-devtools.*` keys, runtime merge |
 | [`ascend-env-spec.md`](./ascend-env-spec.md) | SOC / simulator resolution, spawn env, placeholders |
 | [`ascend-a5-support.md`](./ascend-a5-support.md) | Atlas A5 / `ascend950` behavior and profiler matrix |
