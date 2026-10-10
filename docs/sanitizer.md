@@ -1,106 +1,106 @@
-# Sanitizer (anomaly detection) — architecture
+# 异常检测（Sanitizer）架构说明
 
-This document describes how **MindStudio Sanitizer** (`mssanitizer` CLI) is integrated in Huawei OP DevTools **as implemented today**. The extension orchestrates build steps, runs the CLI, discovers log files, and shows findings in a **native VS Code tree** plus the **Problems** view. It does **not** embed the detection engine.
+本文档介绍 **MindStudio Sanitizer**（`mssanitizer` 命令行工具）在 Huawei OP DevTools 插件中的集成方式（以当前代码的实际实现为准）。插件负责编排构建步骤、执行命令行工具、发现日志文件，并在 **VS Code 树视图**和 **Problems（问题）** 面板中展示检测结果，本身**不内嵌**检测引擎。
 
-For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`, env script sourcing), see [`ascend-env-spec.md`](./ascend-env-spec.md). For workspace file artifacts, see [`generated-files-specification.md`](./generated-files-specification.md) (sanitizer log directory). For `op-devtools.sanitizer.*` keys and how they fold into the sanitizer runtime config, see [`workspace-settings.md`](./workspace-settings.md).
+关于 CANN/Ascend 的 spawn 环境（`SOC_VERSION`、`NPU_ARCH`、环境变量脚本加载），参见 [`ascend-env-spec.md`](./ascend-env-spec.md)。关于工作区文件产物（异常检测日志目录），参见 [`generated-files-specification.md`](./generated-files-specification.md)。关于 `op-devtools.sanitizer.*` 配置项及其如何合并为运行时配置，参见 [`workspace-settings.md`](./workspace-settings.md)。
 
 ---
 
-## Overview
+## 总体结构
 
-| Layer | Responsibility |
-|-------|----------------|
-| **CLI** | `mssanitizer` (external binary) performs memcheck / race / init checks |
-| **Plugin** | Pre-build, optional example build, command assembly, shell execution, log path setup |
-| **Config** | Workspace settings ([`workspace-settings.md`](./workspace-settings.md) § Sanitizer); `.vscode/cache.json` for `fileMapLists.sanitizer` and `sanitizerPythonTarget` |
-| **Results UI** | Tree view `opdevtoolsSanitizerResultsTree` (report list → grouped messages) |
+| 分层 | 职责 |
+|------|------|
+| **CLI** | `mssanitizer`（外部二进制）执行 memcheck / race / init 检测 |
+| **插件** | 前置编译、可选的 example 编译、命令拼装、Shell 执行、日志路径设置 |
+| **配置** | 工作区设置（[`workspace-settings.md`](./workspace-settings.md) § Sanitizer）；`.vscode/cache.json` 中的 `fileMapLists.sanitizer` 与 `sanitizerPythonTarget` |
+| **结果 UI** | 树视图 `opdevtoolsSanitizerResultsTree`（报告列表 → 分组后的检测结果） |
 | **Problems** | `SanitizerDiagnosticsService` → `DiagnosticCollection` `op-devtools-sanitizer` |
-| **msAgent (optional)** | See [`msagent.md`](./msagent.md) — `parseLog` / `fixProblem` bridge when enabled |
+| **msAgent（可选）** | 参见 [`msagent.md`](./msagent.md) —— 启用后的 `parseLog` / `fixProblem` 桥接 |
 
-There is **no** sanitizer sidebar webview and **no** `msSanitizer` ApiServer namespace.
+异常检测没有侧边栏 webview，也不存在 `msSanitizer` ApiServer 命名空间。
 
 ---
 
-## Workbench layout
+## 工作台布局
 
 ```mermaid
 flowchart LR
-  subgraph Operate["Operate sidebar"]
-    FlowTree["opdevtoolsOperateTree\nSanitizer action"]
-    ResultsTree["opdevtoolsSanitizerResultsTree\nReports + findings"]
+  subgraph Operate["Operate 侧边栏"]
+    FlowTree["opdevtoolsOperateTree\n异常检测操作"]
+    ResultsTree["opdevtoolsSanitizerResultsTree\n报告 + 检测结果"]
   end
-  subgraph Optional["Optional panel"]
-    Options["options-sanitizer webview\nquick options"]
+  subgraph Optional["可选面板"]
+    Options["options-sanitizer webview\n快捷选项"]
   end
   subgraph VSCode["VS Code"]
-    Problems["Problems view\ndiagnostics"]
-    Settings["Workspace Settings\nop-devtools.sanitizer.*"]
+    Problems["Problems 面板\ndiagnostics"]
+    Settings["工作区设置\nop-devtools.sanitizer.*"]
   end
 
-  FlowTree --> Run["runSanitizer pipeline"]
+  FlowTree --> Run["runSanitizer 流程"]
   Options --> Run
   Run --> CLI["mssanitizer / npu-check"]
-  CLI --> Logs["Workspace-root IDE config dir\nmindstudio_sanitizer_log (mssanitizer)\nnpu-check-log (npu-check)"]
+  CLI --> Logs["工作区根目录 IDE 配置目录\nmindstudio_sanitizer_log（mssanitizer）\nnpu-check-log（npu-check）"]
   Logs --> ResultsTree
   Run --> Problems
   ResultsTree --> Problems
   Settings --> Run
 ```
 
-- **`opdevtoolsOperateTree`**: primary **Sanitizer** action under the operate flow (same tree as build/run/debug). Gear on the sanitizer row opens workspace settings filtered to `op-devtools.sanitizer` (not the options webview).
-- **`opdevtoolsSanitizerResultsTree`**: dedicated view in the Operate container (`%view.sanitizerResultsTree.name%`). Root rows are **reports** (log files); expanding a report shows **grouped findings** (class / severity / type / file — user-selectable).
+- **`opdevtoolsOperateTree`**：操作树中的 **Sanitizer（异常检测）** 主入口（与编译/运行/调试位于同一棵树）。检测行上的齿轮图标会打开按 `op-devtools.sanitizer` 过滤后的工作区设置（而非选项 webview）。
+- **`opdevtoolsSanitizerResultsTree`**：Operate 容器中的独立视图（`%view.sanitizerResultsTree.name%`）。根节点为**报告**（日志文件），展开报告后显示**分组后的检测结果**（按 class / severity / type / file 分组，用户可选）。
 
 ---
 
-## Entry points
+## 入口
 
-### 1. Operate flow tree (default run path)
+### 1. 操作树（默认执行路径）
 
-1. User runs **Sanitizer** on `opdevtoolsOperateTree`.
-2. Unless [`sanitizer.showQuickOptions`](./workspace-settings.md#sanitizer-op-devtoolssanitizer) is `false`, opens **`options-sanitizer`** webview (`huawei-op-devtools.sanitizerOptions`); otherwise runs immediately via `operateTreeProvider.runFlowAction('sanitizer', …)` → **operator action queue** → `taskMethods.runSanitizer`.
-3. Queue: `dispatchEnqueueNativeOperatorAction('sanitizer', …)` in `task-method-dispatch.ts` (serial operator queue; see [`operator-treeview.md`](./operator-treeview.md) § Operator action queue).
+1. 用户在 `opdevtoolsOperateTree` 上执行 **Sanitizer**。
+2. 如果 [`sanitizer.showQuickOptions`](./workspace-settings.md#sanitizer-op-devtoolssanitizer) 不为 `false`，先打开 **`options-sanitizer`** webview（`huawei-op-devtools.sanitizerOptions`）；否则通过 `operateTreeProvider.runFlowAction('sanitizer', …)` 直接执行 → **算子操作队列** → `taskMethods.runSanitizer`。
+3. 队列：`task-method-dispatch.ts` 中的 `dispatchEnqueueNativeOperatorAction('sanitizer', …)`（算子串行队列，参见 [`operator-treeview.md`](./operator-treeview.md) § Operator action queue）。
 
-### 2. Options webview (`web/src/views/panels/options-sanitizer/`)
+### 2. 选项 webview（`web/src/views/panels/options-sanitizer/`）
 
-- Loads/saves form via **`ops`** API: `getSanitizerOptions`, `saveSanitizerOptions`, `runSanitizer` (see `plugin/src/api-routes.ts` → `configMethods`).
-- On confirm: `runSanitizer({ operatorNames })` then closes the editor; does **not** use a separate `msSanitizer` API.
-- Can set **“do not show again”** → `sanitizer.showQuickOptions = false` (see [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer)).
+- 通过 **`ops`** API 加载/保存表单：`getSanitizerOptions`、`saveSanitizerOptions`、`runSanitizer`（见 `plugin/src/api-routes.ts` → `configMethods`）。
+- 点击确认后执行 `runSanitizer({ operatorNames })` 并关闭编辑器；**不使用**独立的 `msSanitizer` API。
+- 可以勾选**“不再显示”** → 写入 `sanitizer.showQuickOptions = false`（参见 [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer)）。
 
-### 3. Results tree commands
+### 3. 结果树命令
 
-Registered in `plugin/src/extension.ts` (prefix `huawei-op-devtools.sidebar.sanitizer.*`), including:
+注册于 `plugin/src/extension.ts`（前缀 `huawei-op-devtools.sidebar.sanitizer.*`），包括：
 
-| Command | Role |
+| 命令 | 作用 |
 |---------|------|
-| `sidebar.sanitizer.report.select` | Select report → parse log → populate finding children |
-| `sidebar.sanitizer.report.add` | Pick external `.log` file → `addSanitizerReportFromPath` |
-| `sidebar.sanitizer.report.copyPath` | Copy log path to clipboard |
+| `sidebar.sanitizer.report.select` | 选中报告 → 解析日志 → 填充检测结果子节点 |
+| `sidebar.sanitizer.report.add` | 选择外部 `.log` 文件 → `addSanitizerReportFromPath` |
+| `sidebar.sanitizer.report.copyPath` | 复制日志路径到剪贴板 |
 | `sidebar.sanitizer.report.toggleMark` / `mark` / `unmark` | `RunDataService.toggleSanitizerMark` |
-| `sidebar.sanitizer.report.sortTime` | Toggle asc/desc on report list (in-memory) |
-| `sidebar.sanitizer.report.filterMarked` / `showAll` | Marked-only filter |
-| `sidebar.sanitizer.results.groupBy*` | Group findings: class, severity, type, file |
-| `sidebar.sanitizer.results.hideDuplicates` / `showDuplicates` | Dedupe findings in tree |
-| `sidebar.sanitizer.message.jump.<hash>` | Open source location (`performanceDataMethods.jumpToFile`). Base command registered in `extension.ts` for the menu entry; each message row carries a variant whose hash is derived from the message id, registered by `OperateTreeProvider` |
-| `sidebar.sanitizer.message.aiFix` | `msAgentBridgeService.fixMsAgentProblem(index)` when available |
-| `sidebar.sanitizer.results.openGroupFile` | Open file for file-group nodes |
+| `sidebar.sanitizer.report.sortTime` | 报告列表按时间升/降序切换（仅在内存中生效） |
+| `sidebar.sanitizer.report.filterMarked` / `showAll` | 仅看标记 / 显示全部 |
+| `sidebar.sanitizer.results.groupBy*` | 检测结果分组：class、severity、type、file |
+| `sidebar.sanitizer.results.hideDuplicates` / `showDuplicates` | 树中检测去重 |
+| `sidebar.sanitizer.message.jump.<hash>` | 跳转到源码位置（`performanceDataMethods.jumpToFile`）。基础命令注册在 `extension.ts` 中供菜单项使用；每行检测结果携带一个变体命令，其 hash 由消息 id 派生，由 `OperateTreeProvider` 注册 |
+| `sidebar.sanitizer.message.aiFix` | 可用时调用 `msAgentBridgeService.fixMsAgentProblem(index)` |
+| `sidebar.sanitizer.results.openGroupFile` | 打开 file 分组节点对应的文件 |
 
-Context keys (examples): `opDevtools.sanitizerMarkedOnly`, `opDevtools.sanitizerDuplicatesHidden`, `opDevtools.sanitizerResultsGroupBy`, `opDevtools.sanitizerAiFixAvailable`.
+上下文键（示例）：`opDevtools.sanitizerMarkedOnly`、`opDevtools.sanitizerDuplicatesHidden`、`opDevtools.sanitizerResultsGroupBy`、`opDevtools.sanitizerAiFixAvailable`。
 
-### 4. Refresh after run
+### 4. 执行后的刷新
 
-- Command: `huawei-op-devtools.flashMsSanitizerRunData`
-- Implementation: `operateTreeProvider.refreshSanitizerReports(revealLatest)` — **no** webview `postMessage`.
-- Called from `SanitizerService.runSanitizer` on success and from `post-activate-bootstrap` after auto-open project.
+- 命令：`huawei-op-devtools.flashMsSanitizerRunData`
+- 实现：`operateTreeProvider.refreshSanitizerReports(revealLatest)` —— **不使用** webview `postMessage`。
+- 由 `SanitizerService.runSanitizer` 在成功后调用，`post-activate-bootstrap` 在自动打开工程后也会调用。
 
 ---
 
-## Run pipeline (`SanitizerService.runSanitizer`)
+## 执行流程（`SanitizerService.runSanitizer`）
 
-Implementation: `plugin/src/service/sanitizer-service.ts`. Entry: `taskMethods.runSanitizer` → `ProjectManager.initProject()` + executor lifecycle in `task-controller.ts`.
+实现位于 `plugin/src/service/sanitizer-service.ts`。入口：`taskMethods.runSanitizer` → `ProjectManager.initProject()` + `task-controller.ts` 中的 executor 生命周期。
 
 ```mermaid
 sequenceDiagram
-  participant User
+  participant User as 用户
   participant Task as taskMethods.runSanitizer
   participant Svc as SanitizerService
   participant Build as executeOperatorCommand
@@ -108,144 +108,145 @@ sequenceDiagram
   participant Diag as SanitizerDiagnosticsService
   participant Tree as OperateTreeProvider
 
-  User->>Task: run (from queue / ops)
+  User->>Task: 触发执行（队列 / ops）
   Task->>Svc: runSanitizer(params)
-  Svc->>Build: getBuildOpCommand + compile
-  alt standard-custom root
-    Svc->>Build: getBuildExampleCommand + compile
+  Svc->>Build: getBuildOpCommand + 编译
+  alt 标准自定义算子工程根目录
+    Svc->>Build: getBuildExampleCommand + 编译
   end
-  Svc->>Build: getSanitizerCommand + run
-  CLI-->>Svc: exit 0 + log file
-  Svc->>Diag: publishFromLogFile(latest log)
+  Svc->>Build: getSanitizerCommand + 执行
+  CLI-->>Svc: 退出码 0 + 日志文件
+  Svc->>Diag: publishFromLogFile（最新日志）
   Svc->>Svc: msAgent tryLoadLogWithIntegration
   Svc->>Tree: flashMsSanitizerRunData
 ```
 
-Steps in detail:
+详细步骤：
 
-1. **Resolve** the sanitizer config — `resolveSanitizerBaseContext(projectPath, operatorNames)` → `ConfigService.getSanitizerConfig(projectPath, op)` (cache-only `fileMapLists.sanitizer` comes from `.vscode/cache.json`).
-2. **Build operator** — `getBuildOpCommand(resolveBuildOpBaseContext(projectPath, operatorNames), …)` via `executeOperatorCommand` (spawn env from [`operator-command-executor`](../../plugin/src/service/operator-command-executor.ts) / `resolveAscendEnv`).
-3. **Standard-custom only** — if workspace root detects `OperatorProjectType.STANDARD_CUSTOM`, also **build example** (`getBuildExampleCommand`).
-4. **`notifyBuildSucceededForSidebar`** — updates compile state for operate tree when applicable.
-5. **Ensure log directory** — `joinIdeConfigPath(workspaceRoot, getSanitizerLogDirName(tool))` → `mindstudio_sanitizer_log` (mssanitizer) or `npu-check-log` (npu-check) (see [Log files](#log-files)).
-6. **Run sanitizer** — `getSanitizerCommand(sanitizerConfigId, exampleConfigId, operatorNames)` then `executeOperatorCommand`.
-7. **On success**:
-   - Notification `sanitizer.detectionSuccess`
-   - Newest `mssanitizer_*.log` / `npu-check_*.log` via `getLatestSanitizerLogAbsPath`
+1. **解析**异常检测配置 —— `resolveSanitizerBaseContext(projectPath, operatorNames)` → `ConfigService.getSanitizerConfig(projectPath, op)`（仅缓存的 `fileMapLists.sanitizer` 来自 `.vscode/cache.json`）。
+2. **编译算子** —— 通过 `executeOperatorCommand` 执行 `getBuildOpCommand(resolveBuildOpBaseContext(projectPath, operatorNames), …)`（spawn 环境来自 [`operator-command-executor`](../../plugin/src/service/operator-command-executor.ts) / `resolveAscendEnv`）。
+3. **仅标准自定义算子工程** —— 如果工作区根目录识别为 `OperatorProjectType.STANDARD_CUSTOM`，还会**编译 example**（`getBuildExampleCommand`）。
+4. **`notifyBuildSucceededForSidebar`** —— 适用时更新操作树的编译状态。
+5. **确保日志目录存在** —— `joinIdeConfigPath(workspaceRoot, getSanitizerLogDirName(tool))` → `mindstudio_sanitizer_log`（mssanitizer）或 `npu-check-log`（npu-check）（参见[日志文件](#日志文件)）。
+6. **执行检测** —— `getSanitizerCommand(sanitizerConfigId, exampleConfigId, operatorNames)`，随后 `executeOperatorCommand`。
+7. **成功后**：
+   - 通知 `sanitizer.detectionSuccess`
+   - 通过 `getLatestSanitizerLogAbsPath` 获取最新的 `mssanitizer_*.log` / `npu-check_*.log`
    - `sanitizerDiagnosticsService.publishFromLogFile`
-   - `msAgentBridgeService.tryLoadLogWithIntegration` (if enabled)
-   - `flashMsSanitizerRunData` (refresh results tree; optional auto-select newest report when none selected)
+   - `msAgentBridgeService.tryLoadLogWithIntegration`（如启用）
+   - `flashMsSanitizerRunData`（刷新结果树；当前未选中报告时可自动选中最新报告）
 
-**PyAsc:** `PyAscCommandStrategy.buildSanitizerCommand` throws — sanitizer run is not supported for pyasc projects (operate tree should hide sanitizer when project type does not support it; see `OperatorPluginRegistry` / flow visibility).
-
----
-
-## Command generation
-
-- **Facade:** `getSanitizerCommand` in `plugin/src/domain/services/command.ts`.
-- **Strategy:** `CommandStrategyFactory.getStrategy(operator.op_type)` → `buildSanitizerCommand` on ascend / cann / triton (not pyasc).
-- **Target binary:** `strategy.getProfilerTargetFile` — the **ascend** strategy reads `exampleBuildConfig.targetFile` (workspace setting, fallback `OperatorPluginRegistry.getDefaultPaths`); **cann** / **pyasc** / **triton** read the `build_op` deploy key — [`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings)); optional `operatorNames` rewrites `test_aclnn_*` segment for standard custom.
-- **cann strategy** (`cann-strategy.ts`): builds `mssanitizer` with `tool` (`memcheck` / `racecheck` / `initcheck`), memcheck options (`leak-check` / `check-unused-memory`), `log-level`, `max-debuglog-size`, `block-id`, `--log-file` under `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log`, prefixed with CANN env sourcing + `cdBuildCmd` (`mkdir -p <op>/build && cd <op>/build`).
-- **ascend strategy** (`ascend-strategy.ts`): same option set, with `--log-file` under the **same workspace-root** `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log` (the reader only looks there; `operator.op_path` is used only when no workspace folder is known), prefixed with CANN env sourcing + `cd` to the operator path (`cdCmd`).
-
-Runtime config for the sanitizer row: the sanitizer section DAO `ConfigService.getSanitizerConfig(projectPath, op)` — keys and mapping in [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer). Cache-only fields such as **`fileMapLists.sanitizer`** and **`sanitizerPythonTarget`** stay in `.vscode/cache.json`.
+**PyAsc：** `PyAscCommandStrategy.buildSanitizerCommand` 会抛出异常 —— pyasc 工程不支持异常检测（当工程类型不支持时，操作树应隐藏该功能，参见 `OperatorPluginRegistry` / 流程可见性）。
 
 ---
 
-## Configuration
+## 命令生成
 
-Sanitizer and compile keys: **[`workspace-settings.md`](./workspace-settings.md)** (§ Sanitizer, § Compile & deploy).
+- **门面：** `plugin/src/domain/services/command.ts` 中的 `getSanitizerCommand`。
+- **策略：** `CommandStrategyFactory.getStrategy(operator.op_type)` → ascend / cann / triton 上的 `buildSanitizerCommand`（pyasc 不支持）。
+- **目标二进制：** `strategy.getProfilerTargetFile` —— **ascend** 策略读取 `exampleBuildConfig.targetFile`（工作区设置，回退到 `OperatorPluginRegistry.getDefaultPaths`）；**cann** / **pyasc** / **triton** 读取 `build_op` 的 deploy 键（[`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings)）；可选的 `operatorNames` 会为标准自定义算子重写 `test_aclnn_*` 片段。
+- **cann 策略**（`cann-strategy.ts`）：拼装 `mssanitizer` 命令，包含 `tool`（`memcheck` / `racecheck` / `initcheck`）、memcheck 选项（`leak-check` / `check-unused-memory`）、`log-level`、`max-debuglog-size`、`block-id`、位于 `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log` 的 `--log-file`，前面加 CANN 环境加载 + `cdBuildCmd`（`mkdir -p <op>/build && cd <op>/build`）。
+- **ascend 策略**（`ascend-strategy.ts`）：选项集合相同，`--log-file` 位于同一工作区根目录 `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log`（读取方只在该目录查找；仅当未知工作区目录时才使用 `operator.op_path`），前面加 CANN 环境加载 + cd 到算子路径（`cdCmd`）。
+
+异常检测行的运行时配置：sanitizer 配置 DAO `ConfigService.getSanitizerConfig(projectPath, op)` —— 配置键及其映射见 [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer)。仅缓存的字段（如 **`fileMapLists.sanitizer`** 与 **`sanitizerPythonTarget`**）保存在 `.vscode/cache.json` 中。
+
+---
+
+## 配置
+
+Sanitizer 与编译相关的配置项：**[`workspace-settings.md`](./workspace-settings.md)**（§ Sanitizer、§ Compile & deploy）。
 
 ### `.vscode/cache.json`
 
-- **`sanitizerPythonTarget`** — per-operator Python target keyed by operator name (pyasc / triton: seeded as `python3 ./<op>.py` at project creation; torch_library: `python ../run.py`); merged into the sanitizer config as the target file.
-- **`fileMapLists.sanitizer`** — `{ filePath, reportTime }` entries for extra report files (merged in `RunDataService.getSanitizerRunData`).
+- **`sanitizerPythonTarget`** —— 按算子名记录 Python 目标（pyasc / triton：工程创建时写入 `python3 ./<op>.py`；torch_library：`python ../run.py`）；合并进异常检测配置作为目标文件。
+- **`fileMapLists.sanitizer`** —— 额外报告文件的 `{ filePath, reportTime }` 条目（在 `RunDataService.getSanitizerRunData` 中合并）。
 
-### `ops` API (webview only)
+### `ops` API（仅 webview）
 
-| Method | Handler |
+| 方法 | 处理器 |
 |--------|---------|
-| `ops/getSanitizerOptions` | `configMethods.getSanitizerOptions` (dotted `sanitizer.*` settings) |
+| `ops/getSanitizerOptions` | `configMethods.getSanitizerOptions`（点号形式的 `sanitizer.*` 设置） |
 | `ops/saveSanitizerOptions` | `configMethods.saveSanitizerOptions` → `ConfigService.writeOpDevtoolsDottedSettings` |
-| `ops/runSanitizer` | `dispatchSanitizer` → queued `taskMethods.runSanitizer` |
+| `ops/runSanitizer` | `dispatchSanitizer` → 进入队列的 `taskMethods.runSanitizer` |
 
-Build/run for sanitizer are **not** exposed on `ops`; they go through the task controller / operate tree.
+Sanitizer 的编译/运行**不**通过 `ops` 暴露，而是走任务控制器 / 操作树。
 
 ---
 
-## Log files
+## 日志文件
 
-| Item | Location |
+| 项目 | 位置 |
 |------|----------|
-| Directory | `<workspaceRoot>/<ideConfigDir>/mindstudio_sanitizer_log/` — the cann, ascend and triton strategies all write under the **workspace root**; the ascend strategy falls back to `operator.op_path` only when no workspace folder is known. `ideConfigDir` is `.vscode` or `.arts` (`getIdeConfigDirName()`) |
-| New runs | `mssanitizer_<timestamp>.log` (mssanitizer) / `npu-check_<timestamp>.log` (npu-check); the report list title is the file name itself |
-| Latest after run | `getLatestSanitizerLogAbsPath(workspaceRoot)` — newest by mtime |
+| 目录 | `<workspaceRoot>/<ideConfigDir>/mindstudio_sanitizer_log/` —— cann、ascend、triton 策略均写入**工作区根目录**；仅当未知工作区目录时，ascend 策略才回退到 `operator.op_path`。`ideConfigDir` 为 `.vscode` 或 `.arts`（`getIdeConfigDirName()`） |
+| 新执行 | `mssanitizer_<timestamp>.log`（mssanitizer）/ `npu-check_<timestamp>.log`（npu-check）；报告列表标题即文件名 |
+| 执行后的最新日志 | `getLatestSanitizerLogAbsPath(workspaceRoot)` —— 按 mtime 取最新 |
 
-**Report list sources** (`RunDataService.getSanitizerRunData`):
+**报告列表来源**（`RunDataService.getSanitizerRunData`）：
 
-1. All `mssanitizer_<ts>.log` / `npu-check_<ts>.log` files in `mindstudio_sanitizer_log` (marks in `PermanentStorage` key `msSanitizer_marks`).
-2. Existing paths from sanitizer cache **`fileMapLists.sanitizer`** (ids `sanitizer_<filePath>`).
-3. **Manual add** via results tree → stored in `OperateSidebarState.sanitizer.manualReports`.
+1. `mindstudio_sanitizer_log` 目录下所有 `mssanitizer_<ts>.log` / `npu-check_<ts>.log` 文件（标记保存在 `PermanentStorage` 键 `msSanitizer_marks` 中）。
+2. sanitizer 缓存 **`fileMapLists.sanitizer`** 中已有的路径（id 为 `sanitizer_<filePath>`）。
+3. 通过结果树**手动添加**的报告，保存在 `OperateSidebarState.sanitizer.manualReports` 中。
 
-Marks persist in extension global storage (`msSanitizer_marks`), not in the log file.
+标记持久化在扩展全局存储中（`msSanitizer_marks`），不写入日志文件。
 
 ---
 
-## Results tree behavior (`OperateTreeProvider`)
+## 结果树行为（`OperateTreeProvider`）
 
-State: `OperateSidebarState.sanitizer` on the **flow** tree provider instance (`reports`, `selectedReportPath`, `selectedMessages`, `sortOrder`, `markedOnly`, `resultsGroupBy`, `hideDuplicates`, `manualReports`).
+状态保存在**操作树** provider 实例的 `OperateSidebarState.sanitizer` 上（`reports`、`selectedReportPath`、`selectedMessages`、`sortOrder`、`markedOnly`、`resultsGroupBy`、`hideDuplicates`、`manualReports`）。
 
-**Selecting a report** (`selectSanitizerReport`):
+**选中报告**（`selectSanitizerReport`）：
 
 1. `sanitizerDiagnosticsService.loadSanitizerPanelData({ path, title, timestamp })`
-2. `ExceptionParser.parseAll` → `selectedMessages` (each row gets `msAgentIndex` for AI fix ordering)
-3. Same call updates **Problems** and triggers msAgent `parseLog` when integration is on
-4. Tree children: groups (`sanitizerClass`) → messages (`sanitizerMessage`) with tooltips / inline AI fix when `opDevtools.sanitizerAiFixAvailable`
+2. `ExceptionParser.parseAll` → `selectedMessages`（每行携带 `msAgentIndex`，用于 AI 修复排序）
+3. 同一次调用会更新 **Problems** 面板，并在集成开启时触发 msAgent `parseLog`
+4. 树子节点：分组（`sanitizerClass`）→ 消息（`sanitizerMessage`），带 tooltip；当 `opDevtools.sanitizerAiFixAvailable` 时提供内联 AI 修复
 
-**Grouping modes:** `class` (error vs warning), `severity`, `type` (question text / i18n label), `file` (path groups). **Hide duplicates** uses cached dedupe keys per report.
+**分组方式：** `class`（error 与 warning）、`severity`、`type`（问题文案 / i18n 标签）、`file`（按路径分组）。**隐藏重复项**基于每个报告缓存的去重键。
 
-**Copy report** copies the **file path** (not full log contents — unlike performance report copy).
-
----
-
-## Problems view
-
-- **Collection:** `op-devtools-sanitizer` (`sanitizer-diagnostics.service.ts`).
-- **When updated:** After successful run (`publishFromLogFile`) and when user selects a report in the tree (`loadSanitizerPanelData` also publishes).
-- **Mapping:** `ExceptionParser` + `resolveSanitizerSourceFsPath` → `vscode.Diagnostic` per source line; severity from finding `type`; `source: 'sanitizer'`.
+**复制报告**仅复制**文件路径**（与性能分析报告复制全部内容不同）。
 
 ---
 
-## msAgent (optional)
+## Problems 面板
 
-Sanitizer-only integration with the separate **msAgent** extension: auto `parseLog`, **AI fix** on finding rows, and `msAgentIndex` ordering. Full detail: **[`msagent.md`](./msagent.md)**.
+- **集合：** `op-devtools-sanitizer`（`sanitizer-diagnostics.service.ts`）。
+- **更新时机：** 执行成功后（`publishFromLogFile`）以及用户在树中选中报告时（`loadSanitizerPanelData` 同样会发布）。
+- **映射：** `ExceptionParser` + `resolveSanitizerSourceFsPath` → 每个源码行一个 `vscode.Diagnostic`；严重级别取自检测结果中的 `type`；`source: 'sanitizer'`。
 
 ---
 
-## Key source files
+## msAgent（可选）
 
-| Area | Path |
+异常检测与独立的 **msAgent** 插件集成：自动 `parseLog`、检测结果行上的 **AI 修复**、`msAgentIndex` 排序。详细说明见 **[`msagent.md`](./msagent.md)**。
+
+---
+
+## 关键源码文件
+
+| 模块 | 路径 |
 |------|------|
-| Run orchestration | `plugin/src/service/sanitizer-service.ts` |
-| Task entry | `plugin/src/controller/task-controller.ts` (`runSanitizer`) |
-| Queue / ops dispatch | `plugin/src/helpers/task-method-dispatch.ts` |
-| Command line | `plugin/src/domain/services/command.ts`, `command-strategy/*-strategy.ts` |
-| Config / settings merge | `plugin/src/service/config-service.ts` |
-| Report list | `plugin/src/service/run-data-service.ts` |
-| Tree UI | `plugin/src/class/operate-tree-provider.ts` |
-| Diagnostics | `plugin/src/service/sanitizer-diagnostics.service.ts` |
-| Log parsing | `plugin/src/class/exception-parser.ts` |
-| Registration | `plugin/src/extension.ts`, `package.json` (`opdevtoolsSanitizerResultsTree`, commands) |
-| Options webview | `web/src/views/panels/options-sanitizer/app.vue`, `web/src/apis/ops.ts` |
+| 执行编排 | `plugin/src/service/sanitizer-service.ts` |
+| 任务入口 | `plugin/src/controller/task-controller.ts`（`runSanitizer`） |
+| 队列 / ops 派发 | `plugin/src/helpers/task-method-dispatch.ts` |
+| 命令拼装 | `plugin/src/domain/services/command.ts`、`command-strategy/*-strategy.ts` |
+| 配置 / 设置合并 | `plugin/src/service/config-service.ts` |
+| 报告列表 | `plugin/src/service/run-data-service.ts` |
+| 树 UI | `plugin/src/class/operate-tree-provider.ts` |
+| 诊断 | `plugin/src/service/sanitizer-diagnostics.service.ts` |
+| 日志解析 | `plugin/src/class/exception-parser.ts` |
+| 注册 | `plugin/src/extension.ts`、`package.json`（`opdevtoolsSanitizerResultsTree` 与命令） |
+| 选项 webview | `web/src/views/panels/options-sanitizer/app.vue`、`web/src/apis/ops.ts` |
+
 ---
 
-## Related documents
+## 相关文档
 
-| Document | Use for |
+| 文档 | 用途 |
 |----------|---------|
-| [`msagent.md`](./msagent.md) | msAgent bridge, AI fix, index parity |
-| [`build-integration.md`](./build-integration.md) | Shared build / executor model (sanitizer pre-build) |
-| [`ascend-env-spec.md`](./ascend-env-spec.md) | Spawn env for compile + sanitizer commands |
-| [`workspace-settings.md`](./workspace-settings.md) | All `op-devtools.*` keys and runtime merge |
-| [`generated-files-specification.md`](./generated-files-specification.md) | Log directory lifecycle |
-| [`performance.md`](./performance.md) | Simulation / on-board profiling and results tree |
+| [`msagent.md`](./msagent.md) | msAgent 桥接、AI 修复、索引对应关系 |
+| [`build-integration.md`](./build-integration.md) | 共享的编译 / 执行模型（异常检测的前置编译） |
+| [`ascend-env-spec.md`](./ascend-env-spec.md) | 编译与异常检测命令的 spawn 环境 |
+| [`workspace-settings.md`](./workspace-settings.md) | 全部 `op-devtools.*` 配置项与运行时合并 |
+| [`generated-files-specification.md`](./generated-files-specification.md) | 日志目录生命周期 |
+| [`performance.md`](./performance.md) | 仿真 / 上板性能分析与结果树 |
