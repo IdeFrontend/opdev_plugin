@@ -1,6 +1,6 @@
-# Huawei OP DevTools 使用操作文档
+# Ascend C Toolkits 使用操作文档
 
-本文档介绍如何使用 Huawei OP DevTools 插件完成算子的创建、开发、调试、异常检测与性能分析。
+本文档介绍如何使用 Ascend C Toolkits 插件完成算子的创建、开发、调试、异常检测与性能分析。
 
 ## 功能简介
 
@@ -19,15 +19,15 @@
 
 ### 方式一：使用 CANNLab 云上环境（推荐）
 
-CANNLab 是 CANN 社区的一站式算子开发平台，现已提供统一入口，无需再从具体的算子仓进入。
+[CANNLab](https://gitcode.com/org/cann/cannlab/environment) 是 CANN 社区的一站式算子开发平台。
 
-1. 进入 CANNLab 平台，进入开发者空间并选择 WebIDE。
+1. 进入[CANNLab](https://gitcode.com/org/cann/cannlab/environment)平台，进入开发者空间并选择 WebIDE。
 
-   ![CANNLab 入口](../assets/pic-cannlab-entry.png)
+   ![CANNLab 入口](assets/pic-cannlab-entry.png)
 
-2. 连接 workspace 后，在 IDE 右侧工具栏中选择 Huawei OP DevTools 插件。
+2. 连接 workspace 后，在 IDE 右侧工具栏中选择 Ascend C Toolkits 插件。
 
-   ![插件入口](../assets/pic-plugin-entry.png)
+   ![插件入口](assets/pic-plugin-entry.png)
 
 ### 方式二：本地部署
 
@@ -54,9 +54,9 @@ docker run -itd --network=bridge --cap-add=SYS_PTRACE --security-opt seccomp=unc
 
 其中 `<容器名>` 为容器名称，`<镜像下载地址>` 为容器镜像的完整下载地址。
 
-![容器启动效果](../assets/pic1.png)
+![容器启动效果](assets/pic1.png)
 
-![容器启动效果](../assets/pic2.png)
+![容器启动效果](assets/pic2.png)
 
 #### 步骤二：配置环境变量
 
@@ -74,16 +74,16 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:/home
 
 打开本地 VS Code，在插件市场中搜索并安装 Remote - SSH 插件，并配置与远端开发环境的 SSH 连接。
 
-![安装 Remote - SSH 插件](../assets/pic4.png)
+![安装 Remote - SSH 插件](assets/pic4.png)
 
-#### 步骤四：安装 Huawei OP DevTools 插件
+#### 步骤四：安装 Ascend C Toolkits 插件
 
-使用 Remote - SSH 打开远端开发环境，并在新打开的 VS Code 窗口中安装 Huawei OP DevTools 插件，支持以下两种方式：
+使用 Remote - SSH 打开远端开发环境，并在新打开的 VS Code 窗口中安装 Ascend C Toolkits 插件，支持以下两种方式：
 
-- 在插件市场中搜索 “Huawei OP DevTools” 并安装。
+- 在插件市场中搜索 “Ascend C Toolkits” 并安装。
 - 从[插件发布仓](https://gitcode.com/opdevtools/plugin_release/releases)下载最新版本的插件安装包，再通过本地方式安装。
 
-![安装插件](../assets/pic5.png)
+![安装插件](assets/pic5.png)
 
 完成安装后即可进行算子开发，后续操作与云上环境一致。
 
@@ -99,26 +99,26 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:/home
 
 1. 点击插件工具栏中的 “+” 按钮，或者在资源管理器中右键选择创建算子。
 
-   ![通过工具栏创建](../assets/pic-new-project-plus.png)
+   ![通过工具栏创建](assets/pic-new-project-plus.png)
 
-   ![通过右键菜单创建](../assets/pic-new-project-context.png)
+   ![通过右键菜单创建](assets/pic-new-project-context.png)
 
 2. 在标准自定义算子工程的工程目录下，只支持创建标准自定义算子。
 
-   ![仅支持创建标准自定义算子](../assets/pic-standard-custom-only.png)
+   ![仅支持创建标准自定义算子](assets/pic-standard-custom-only.png)
 
 3. 算子标记功能：插件会根据工程目录结构，自动识别当前工程下包含的算子。当工程目录结构与默认约定不一致时，自动识别结果可能存在遗漏，此时可以右键目录手动标记：
 
    - 右键选择“标记为算子工程集合”，会将所选目录下的所有子目录标记为算子目录。
    - 右键选择“标记为算子工程”，会将当前目录标记为单个算子目录。
 
-   ![手动标记算子目录](../assets/pic-operator-mark.png)
+   ![手动标记算子目录](assets/pic-operator-mark.png)
 
 #### 新建其他类型的工程
 
 如果要创建算子直调工程、PyAsc 算子工程等其他类型的工程，需先关闭当前打开的 ops-math 工程，然后通过插件新建工程。
 
-![新建其他类型的工程](../assets/pic-create-other-project.png)
+![新建其他类型的工程](assets/pic-create-other-project.png)
 
 #### 填写工程配置
 
@@ -136,13 +136,13 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:/home
 
 在生成的算子代码工程中编写 Ascend C 代码，完成算子开发。插件提供语法高亮和代码跳转等功能。
 
-![编写算子代码](../assets/pic-write-code.png)
+![编写算子代码](assets/pic-write-code.png)
 
 #### 编译算子
 
 点击操作面板中的“编译部署算子”按钮。
 
-![编译算子](../assets/pic-build.png)
+![编译算子](assets/pic-build.png)
 
 编译成功后，会在 build 目录下生成与算子工程名称一致的可执行文件。
 
@@ -150,7 +150,7 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:/home
 
 点击操作面板中的“运行”按钮，运行编译生成的算子可执行文件。对于标准自定义算子，插件会先编译算子的 example，再运行 example 的可执行文件。
 
-![运行算子](../assets/pic-run.png)
+![运行算子](assets/pic-run.png)
 
 ### 第三步：调试算子
 
@@ -158,15 +158,15 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:/home
 
 - CPU 调试：点击操作面板中的“CPU 调试”按钮，在 CPU 环境中进行孪生调试，适用于没有 NPU 资源的场景。
 
-  ![CPU 调试](../assets/pic-cpu-debug.png)
+  ![CPU 调试](assets/pic-cpu-debug.png)
 
 - NPU 调试：点击操作面板中的“NPU 调试”按钮，插件会自动拉起所需的编译过程，在带 NPU 的环境中进行上板打断点单步调试，并支持查看相关变量等信息。
 
-  ![NPU 调试](../assets/pic-npu-debug.png)
+  ![NPU 调试](assets/pic-npu-debug.png)
 
 ### 第四步：异常检测
 
-> 版本要求：本功能需要使用 Huawei OP DevTools 1.5.4 及以上版本。如果环境中还安装有旧版插件（如 Ascend C Toolkit），请先卸载，再从[插件发布仓](https://gitcode.com/opdevtools/plugin_release/releases/download/1.5.4-beta/ascend-c-toolkit-1.5.4-beta7.vsix)下载并安装 1.5.4 及以上版本。
+> 版本要求：本功能需要使用 Ascend C Toolkits 1.5.4 及以上版本。如果环境中还安装有旧版插件（如 Ascend C Toolkit），请先卸载，再从[插件发布仓](https://gitcode.com/opdevtools/plugin_release/releases/download/1.5.4-beta/ascend-c-toolkit-1.5.4-beta7.vsix)下载并安装 1.5.4 及以上版本。
 
 #### 使用 msSanitizer 检测
 
@@ -174,12 +174,12 @@ msSanitizer 用于检测算子的潜在问题（内存、竞争、未初始化�
 
 1. 点击操作面板中的“异常检测”按钮，插件会提示选择需要检测的内容。如果每次检测的内容不变，可以勾选“不再显示”。
 
-   ![选择检测内容](../assets/pic-sanitizer-options.png)
+   ![选择检测内容](assets/pic-sanitizer-options.png)
 
 2. 点击“立即开始”，插件会自动拉起所需的编译过程并进行检测。
 3. 检测完成后，点击操作面板中“异常检测结果”下的执行记录，即可查看异常检测报告，支持查看详情和代码行跳转。
 
-   ![查看检测报告](../assets/pic-sanitizer-result.png)
+   ![查看检测报告](assets/pic-sanitizer-result.png)
 
 4. 根据检测结果修复代码中的问题。
 
@@ -193,17 +193,17 @@ msSanitizer 用于检测算子的潜在问题（内存、竞争、未初始化�
 
 1. 点击操作面板中的“异常检测”按钮，在“异常检测快速选项”页面选择工具“npu-check”。该工具目前提供“内存检测”和“同步检测”两个检测选项。
 
-   ![选择 npu-check](../assets/pic-npu-check1.png)
+   ![选择 npu-check](assets/pic-npu-check1.png)
 
 2. 勾选所需的检测选项后点击“立即开始”，插件会自动拉起所需的编译过程并进行检测。检测完成后，点击操作面板中“异常检测结果”下的执行记录，即可查看异常检测报告，支持查看详情和代码行跳转。
 
-   ![查看 npu-check 报告](../assets/pic-npu-check2.png)
+   ![查看 npu-check 报告](assets/pic-npu-check2.png)
 
 3. 点击“异常检测”功能右侧的“齿轮”按钮，可以配置该功能的默认选项。
 
-   ![配置默认选项](../assets/pic-npu-check3.png)
+   ![配置默认选项](assets/pic-npu-check3.png)
 
-   ![配置默认选项](../assets/pic-npu-check4.png)
+   ![配置默认选项](assets/pic-npu-check4.png)
 
 ### 第五步：性能分析
 
@@ -213,9 +213,9 @@ msSanitizer 用于检测算子的潜在问题（内存、竞争、未初始化�
 
 点击“上板分析”或“仿真分析”功能右侧的“齿轮”按钮，在工程配置中选择默认使用的分析工具，可选工具包括 npu-compute（上板分析）、npu-emulate（仿真分析）和 msprof（上板分析、仿真分析均支持）。
 
-![配置上板分析工具](../assets/pic-npu-compute3.png)
+![配置上板分析工具](assets/pic-npu-compute3.png)
 
-![配置仿真分析工具](../assets/pic-npu-emulate3.png)
+![配置仿真分析工具](assets/pic-npu-emulate3.png)
 
 > 说明：npu-compute 和 npu-emulate 目前仅随 Ascend 950 环境的 CANN 包发布，因此仅在该环境下生效。未配置时，Ascend 950 环境默认使用 npu-compute 和 npu-emulate，其他环境默认使用 msprof。
 
@@ -229,37 +229,37 @@ msSanitizer 用于检测算子的潜在问题（内存、竞争、未初始化�
 
 1. 创建或者打开一个算子工程（如下图，以 addn 工程为例）。
 
-   ![打开算子工程](../assets/pic-create-other-project.png)
+   ![打开算子工程](assets/pic-create-other-project.png)
 
 2. 点击操作面板中“性能调优”下的“上板分析”或“仿真分析”按钮，弹出“数据采集配置”页面。
 
-   ![数据采集配置](../assets/pic-npu-compute1.png)
+   ![数据采集配置](assets/pic-npu-compute1.png)
 
    - Collection type 选择“上板”或“仿真”（从“上板分析”或“仿真分析”入口进入时默认已选中）。
    - Common 区域可配置报告输出文件（Output File，后缀为 .npu-rep）和是否强制覆盖已有报告（Force Overwrite）；Target Processes、Replay Mode、Application Replay Buffer、Application Replay Mode 在当前版本提供固定选项。
    - Metrics 区域支持按 set（单选预设组合）或 section（多选单项指标）选择采集内容，并支持在过滤框中输入关键字快速检索。
 
-   ![选择采集指标](../assets/pic-npu-compute1b.png)
+   ![选择采集指标](assets/pic-npu-compute1b.png)
 
    - Command Line 文本框会根据上述选择自动生成工具参数（每个指标展开为一个 --section 参数），也支持手动编辑，最终执行时以该文本框中的内容为准。
 
 3. 点击“确认”，插件会先自动拉起所需的编译过程，再调用 npu-compute 或 npu-emulate 进行数据采集。采集结束后会自动打开性能分析报告；也可以点击操作面板中的“性能调优结果可视化”菜单，在执行记录中重新打开报告。
 
-   ![性能分析报告](../assets/pic-npu-compute2.png)
+   ![性能分析报告](assets/pic-npu-compute2.png)
 
 #### 查看性能分析报告
 
 - 通过插件创建的算子工程：工程框架与插件自动生成的分析配置一致，执行性能分析后会自动打开可视化报告。
 
-  ![自动打开报告演示](../assets/tool.gif)
+  ![自动打开报告演示](assets/tool.gif)
 
 - 已有 .npu-rep 报告文件：在 IDE 资源管理器中右键该报告文件，选择 Open Profiling Report 打开。
 
-  ![手动打开报告演示](../assets/manual.gif)
+  ![手动打开报告演示](assets/manual.gif)
 
 - 用户自有算子工程：如果工程框架与插件自动生成的配置不匹配（例如编译命令、编译产物路径不同），需要先在 VS Code 设置中修改上板编译命令和编译产物路径，然后执行上板分析，插件会自动生成并打开报告。
 
-  ![自有工程配置演示](../assets/self.png)
+  ![自有工程配置演示](assets/self.png)
 
 ##### 可视化报告功能特性
 
@@ -267,77 +267,77 @@ msSanitizer 用于检测算子的潜在问题（内存、竞争、未初始化�
 
 - 指令流水图：支持放大、缩小查看；单击流水图中的指令节点，即可在详情区查看对应指令的详细信息。
 
-  ![报告缩放查看演示](../assets/report-zoom.gif)
+  ![报告缩放查看演示](assets/report-zoom.gif)
 
-  ![报告详情查看演示](../assets/report-detail.gif)
+  ![报告详情查看演示](assets/report-detail.gif)
 
 - 报告统计信息。
 
-  ![报告统计信息](../assets/statistical-report.png)
+  ![报告统计信息](assets/statistical-report.png)
 
 - 计算负载分析：支持与 CANNBot 联动分析报告，并可查看检测项的详细数据。
 
-  ![计算负载分析](../assets/compute-load-analysis.png)
+  ![计算负载分析](assets/compute-load-analysis.png)
 
-  ![计算负载分析详情](../assets/compute-load-analysis-detail1.png)
+  ![计算负载分析详情](assets/compute-load-analysis-detail1.png)
 
-  ![计算负载分析详情](../assets/compute-load-analysis-detail2.png)
+  ![计算负载分析详情](assets/compute-load-analysis-detail2.png)
 
-  ![计算负载分析详情](../assets/compute-load-analysis-detail3.png)
+  ![计算负载分析详情](assets/compute-load-analysis-detail3.png)
 
 - 内存负载分析：支持全屏查看、放大缩小，支持与 CANNBot 联动分析报告；可在报告中勾选 L2Cache、MemoryL1、MemoryL0、MemoryUB 等检测项，查看对应的详细数据。
 
-  ![内存负载分析](../assets/memory-load-analysis.png)
+  ![内存负载分析](assets/memory-load-analysis.png)
 
-  ![内存负载分析详情](../assets/memory-load-analysis-detail1.png)
+  ![内存负载分析详情](assets/memory-load-analysis-detail1.png)
 
-  ![内存负载分析详情](../assets/memory-load-analysis-detail2.png)
+  ![内存负载分析详情](assets/memory-load-analysis-detail2.png)
 
-  ![内存负载分析详情](../assets/memory-load-analysis-detail3.png)
+  ![内存负载分析详情](assets/memory-load-analysis-detail3.png)
 
-  ![内存负载分析详情](../assets/memory-load-analysis-detail4.png)
+  ![内存负载分析详情](assets/memory-load-analysis-detail4.png)
 
 - Roofline 瓶颈分析：开发中。
 
 - 与 CANNBot 联动分析：点击报告中的 CANNBot 图标，可以将报告信息发送至 CANNBot 进行智能分析。
 
-  ![CANNBot 联动演示](../assets/gif-cannbot.gif)
+  ![CANNBot 联动演示](assets/gif-cannbot.gif)
 
 #### 使用 msprof 采集性能数据
 
 1. 点击操作面板中“性能调优”下的“上板分析”按钮，在工程配置中选择需要收集的数据指标，默认全部收集。如果每次收集的内容不变，可以选择“不再显示”。
 
-   ![msprof 采集配置](../assets/pic-msprof-config.png)
+   ![msprof 采集配置](assets/pic-msprof-config.png)
 
 2. 点击操作面板中的“性能调优结果可视化”菜单，查看和分析性能数据。
 
-   ![msprof 报告查看](../assets/pic-msprof-view.png)
+   ![msprof 报告查看](assets/pic-msprof-view.png)
 
 ## 常见问题
 
 ### 插件重复安装导致右键菜单选项重复或报告打开失败
 
-“Huawei OP DevTools”“Huawei OP DevTools”“Ascend C Toolkit”三个插件重复安装时，会导致右键菜单中出现重复的选项，或者打开性能分析报告时报错。
+“Huawei OP DevTools”、“Ascend C Toolkits”、“Ascend C Toolkit”三个插件重复安装时，会导致右键菜单中出现重复的选项，或者打开性能分析报告时报错。
 
-![重复安装示例](../assets/pic-install-repeat1.png)
+![重复安装示例](assets/pic-install-repeat1.png)
 
-![重复安装示例](../assets/pic-install-repeat2.png)
+![重复安装示例](assets/pic-install-repeat2.png)
 
-![重复安装示例](../assets/pic-install-repeat3.png)
+![重复安装示例](assets/pic-install-repeat3.png)
 
-解决方法：检查插件列表，正常情况下只需安装 “Huawei OP DevTools” 即可。“Ascend C Toolkits”“Ascend C Toolkit” 为其他发布形态或旧版插件，不应同时安装；如发现重复安装，可将其卸载，卸载完成后刷新页面即可恢复。
+解决方法：检查插件列表，正常情况下只需安装 “Ascend C Toolkits” 即可。“Huawei OP DevTools”、“Ascend C Toolkit” 为其他发布形态或旧版插件，不应同时安装；如发现重复安装，可将其卸载，卸载完成后刷新页面即可恢复。
 
 ### 点击“CANNBot 分析”按钮报错：调用“CANNBot 分析”功能失败
 
 问题现象：
 
-![CANNBot 报错](../assets/pic-cannbot1.png)
+![CANNBot 报错](assets/pic-cannbot1.png)
 
 原因：“CANNBot 分析”功能由 CANNWork 插件提供，使用前需要安装 CANNWork 插件并完成登录。
 
 解决方法：在“扩展”中搜索并安装 CANNWork 插件的最新版本（版本号需大于等于 2.0.0）。
 
-![安装 CANNWork](../assets/pic-cannbot2.png)
+![安装 CANNWork](assets/pic-cannbot2.png)
 
 ### 插件图标显示异常
 

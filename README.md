@@ -6,7 +6,7 @@ Huawei OP DevTools（华为算子一站式开发工具）是一款面向 Ascend 
 
 ### 功能定位
 
-本仓库是 Huawei OP DevTools 插件的源码仓库。插件基于 VS Code 扩展机制实现，本身不携带算子编译与仿真运行时，而是负责工程管理和流程编排：根据用户选择的工程类型和操作，自动生成并执行 CANN 工具链命令，最后将执行结果以树视图和报告页面的形式呈现。
+本仓库是Huawei OP DevTools插件的源码仓库。插件基于VS Code扩展机制实现，本身不携带算子编译与仿真运行时，而是负责工程管理和流程编排：根据用户选择的工程类型和操作，自动生成并执行CANN工具链命令，最后将执行结果以树视图和报告页面的形式呈现。
 
 ### 主要功能
 
@@ -56,7 +56,7 @@ flowchart LR
 
 支持以下两种环境，任选其一即可，详细步骤请参见《[使用操作文档](docs/user-guide.md)》：
 
-- 云上环境（推荐）：访问 CANNLab 平台（CANN 社区一站式开发平台，已提供统一入口），进入开发者空间并打开 WebIDE，即可直接使用插件。
+- 云上环境（推荐）：在[CANNLab](https://gitcode.com/org/cann/cannlab/environment)创建并启动连接云上环境，即可直接使用插件。
 - 本地环境：准备一台已安装 CANN 的 Linux 环境（物理机或容器均可），Windows 本机通过 VS Code 的 Remote - SSH 插件连接远端环境。
 
 ### 开发流程
@@ -71,7 +71,6 @@ flowchart LR
 
 ## 相关资源
 
-- [CANN 社区（CANNLab 平台入口）](https://gitcode.com/cann)
 - [算子样例仓 ops-math](https://gitcode.com/cann/ops-math)
 - [插件发布仓](https://gitcode.com/opdevtools/plugin_release/releases)
 - [问题反馈](https://gitcode.com/opdevtools/plugin_release/issues)
