@@ -1,7 +1,7 @@
 # 插件「上板分析 / 仿真分析」交互说明
 
 > 适用范围：Huawei OP DevTools 插件 Operate 侧边栏的**性能调优**功能——仿真分析（simulation）与上板分析（onboard）。
-> 内容依据当前分支代码与仓库内既有文档整理。仿真工具为 `npu-emulate`（早期 CANN 版本中名为 `npusim`，请以环境中实际的命令为准），其 `collect` 子命令已在 Ascend 950 环境启用并作为默认仿真工具；可通过设置切换为 msprof。Ascend 950 环境的 npu-compute / npu-emulate 工具说明见第五、六节。
+> 仿真工具为 `npu-emulate`（CANN 旧版本中名为 `npusim`，请以环境中实际的命令为准），其 `collect` 子命令已在 Ascend 950 环境启用并作为默认仿真工具；可通过设置切换为 msprof。Ascend 950 环境的 npu-compute / npu-emulate 工具说明见第五、六节。
 
 **术语约定：**
 
