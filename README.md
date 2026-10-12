@@ -57,7 +57,7 @@ flowchart LR
 支持以下两种环境，任选其一即可，详细步骤请参见《[使用操作文档](docs/user-guide.md)》：
 
 - 云上环境（推荐）：在[CANNLab](https://gitcode.com/org/cann/cannlab/environment)创建并启动连接云上环境，即可直接使用插件。
-- 本地环境：准备一台已安装 CANN 的 Linux 环境（物理机或容器均可），Windows 本机通过 VS Code 的 Remote - SSH 插件连接远端环境。
+- 本地环境：准备一台已安装 CANN 的 Linux 环境（物理机或容器均可），可通过 VS Code 的 Remote - SSH 插件从 Windows 本机连接远端环境，或使用 CANNLab 提供的 VS Code 本地连接方式直接接入。
 
 ### 开发流程
 
