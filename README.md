@@ -45,7 +45,6 @@ flowchart LR
 ├── profiling-report/    # 性能分析报告可视化组件
 ├── syntaxes/            # 语法高亮定义
 ├── docs/                # 功能设计与使用文档
-├── assets/              # 文档图片资源
 ├── flavors/             # 多形态构建配置
 ├── scripts/             # 构建与发布脚本
 └── testdata/            # 测试数据
