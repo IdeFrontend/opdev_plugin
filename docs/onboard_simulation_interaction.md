@@ -5,12 +5,11 @@
 
 **术语约定：**
 
-- SOC：指 CANN 中的 soc version 配置（如 `ascend950`），用于标识算子运行环境对应的芯片系列。
-- 命令策略：插件为不同算子类型生成命令的实现。`ascend` 对应标准自定义算子工程，`cann` 对应 CANN 样例工程，`pyasc`、`triton` 对应 PyAsc、Triton 工程。
+- SOC：指 CANN 中的 soc_series 配置（如 `ascend950`），用于标识算子运行环境对应的芯片系列。
+- 命令行模板：插件为不同算子类型生成工程命令。支持标准自定义算子工程和 PyAsc 工程。
 
 **相关文档：**
 
-- [performance.md](./performance.md)：上板/仿真交互架构主文档（英文）
 - [simulator-options-spec.md](./simulator-options-spec.md)：仿真快捷选项与各 SOC 支持的指标范围说明（英文）
 - [run-integration.md](./run-integration.md)：「运行算子」功能，与性能分析共用执行栈
 - [ascend-env-spec.md](./ascend-env-spec.md)：SOC 解析与 spawn 环境
@@ -80,7 +79,7 @@ Operate 侧边栏 → **性能调优（Performance tuning）** 分组（`nodeId 
 2. **前置编译/部署**（依工程插件的 `buildBehavior.requiresBuildBeforeAnalysis`）：
    - CANN / Ascend 类工程：先编译算子工程（标准自定义算子还要编译示例并部署 `.run` 包）；
    - PyAsc / Triton：无编译步骤，但要求当前活动编辑器为 `.py` 文件（PyAsc 会把 `python3 <相对路径>` 写入 deploy 目标）。仿真活动文件检查失败会**抛错**，上板则**提前返回**（二者行为不对称）。
-3. **命令生成**：命令门面 `getSimulateCommand` / `getOnBoardCommand` → `CommandStrategyFactory.getStrategy(op_type)`（按算子类型选择命令策略）→ `ProfilerFactory` 生成 msprof 命令，拼接 CANN 环境 source 与 `cd` 命令。
+3. **命令生成**：命令门面 `getSimulateCommand` / `getOnBoardCommand` → `CommandStrategyFactory.getStrategy(op_type)`（按算子类型选择命令行模板）→ `ProfilerFactory` 生成 msprof 命令，拼接 CANN 环境 source 与 `cd` 命令。
 4. **执行**：仿真 `msprof op simulator`、上板 `msprof op`，输出统一落到 **`<workspaceRoot>/<ideDir>/opprof/<runId>`**（所有算子共用这一个根目录，每次运行建一个子目录）。
 5. **输出通道**：仿真写 `Huawei OP DevTools: simulate`，上板写 `Huawei OP DevTools: onboard`；**前置编译步骤的全部输出也写入同一通道**（不写 `compile` 通道），通道内容跨运行追加。
 6. **成功后**：成功提示 + `flashPerformanceRunData`（`refreshPerformanceReports({ focusIfNew: true })`）刷新性能结果树，可自动聚焦并展开最新报告。
@@ -179,7 +178,7 @@ msopprof 会按 `--soc-version` 校验 `--aic-metrics`，平台不支持的指�
 | PyAsc | `pyasc` | `pyasc` | 活动 `.py` 门禁；`python3 <file>` 包裹 msprof |
 | Triton | `triton`（需 `op-devtools.operatorSupport.triton`） | `triton` | 同 PyAsc 模型；执行前探测 Python 依赖；插件能力位不含仿真/上板时树中隐藏 |
 
-注意区分两个字段：**`project_type`** 决定配置行（`build_op` / `build_example`）与 UI 门禁；**`op_type`** 决定 Shell 命令策略。生成命令时始终以算子记录的 `op_type` 为准。
+注意区分两个字段：**`project_type`** 决定配置行（`build_op` / `build_example`）与 UI 门禁；**`op_type`** 决定 Shell 命令行模板。生成命令时始终以算子记录的 `op_type` 为准。
 
 ---
 
@@ -261,7 +260,7 @@ flowchart TD
 | 队列派发 | `plugin/src/helpers/task-method-dispatch.ts` |
 | 命令门面 | `plugin/src/domain/services/command.ts`（`getSimulateCommand` / `getOnBoardCommand`） |
 | msprof 策略 | `plugin/src/domain/services/profiler-service.ts`（`SimulatorStrategy` / `OnBoardStrategy`） |
-| 按 op_type 命令策略 | `plugin/src/domain/services/command-strategy/*-strategy.ts` |
+| 按 op_type 命令行模板 | `plugin/src/domain/services/command-strategy/*-strategy.ts` |
 | 设置合并 / 各 section DAO | `plugin/src/service/config-service.ts` |
 | 报告磁盘扫描 | `plugin/src/core/performance/performance-run-data.ts` |
 | 结果树 UI 与状态 | `plugin/src/class/operate-tree-provider.ts` |
