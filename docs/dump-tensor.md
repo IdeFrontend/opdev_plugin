@@ -1,6 +1,6 @@
 # Dump tensor — architecture
 
-This document describes how **DumpTensor** is integrated in Huawei OP DevTools **as implemented today**: queued runs from the Actions tree, `.bin` import, output under the IDE config directory, and a **native VS Code tree** for browsing and comparing results.
+This document describes how **DumpTensor** is integrated in Ascend C Toolkits **as implemented today**: queued runs from the Actions tree, `.bin` import, output under the IDE config directory, and a **native VS Code tree** for browsing and comparing results.
 
 For build/run orchestration (`startDumpTensor`, `show_kernel_debug_data`), see [`build-integration.md`](./build-integration.md) § DumpTensor Behavior Note. For sidebar tree patterns shared with sanitizer/performance, see [`operator-treeview.md`](./operator-treeview.md). For the shared download/diff helpers, see [`performance.md`](./performance.md).
 

@@ -1,6 +1,6 @@
 # Build Tools Integration Architecture
 
-This document describes how **operator compilation** (编译算子 / 编译示例) is integrated in the Huawei OP DevTools VS Code extension: entry points, config model, command generation, and execution.
+This document describes how **operator compilation** (编译算子 / 编译示例) is integrated in the Ascend C Toolkits VS Code extension: entry points, config model, command generation, and execution.
 
 **Related:** [`workspace-settings.md`](./workspace-settings.md) (compile scripts, deploy target), [`ascend-env-spec.md`](./ascend-env-spec.md) (spawn env), [`operator-treeview.md`](./operator-treeview.md) (Actions tree — build is **not** queued), [`run-integration.md`](./run-integration.md), [`debug-integration.md`](./debug-integration.md).
 
