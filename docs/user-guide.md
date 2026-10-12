@@ -49,10 +49,15 @@ docker tag swr.cn-north-4.myhuaweicloud.com/ci_cann/cann-pod-python3.12:1.0.0 ca
 容器启动命令参考：
 
 ```shell
-docker run -itd --network=bridge --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 0.0.0.0:8886:8888 -p 0.0.0.0:8866:22 --device=/dev/davinci4 --device=/dev/davinci_manager --device=/dev/devmm_svm --device=/dev/drv_debug --device=/dev/hisi_hdc -v /usr/local/Ascend/driver:/usr/local/Ascend/driver -v /etc/ascend_install.info:/etc/ascend_install.info -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi --name <容器名> <镜像下载地址> /start_docker.sh
+docker run -itd --network=bridge --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 0.0.0.0:<宿主机端口1>:8888 -p 0.0.0.0:<宿主机端口2>:22 --device=/dev/davinci<N> --device=/dev/davinci_manager --device=/dev/devmm_svm --device=/dev/drv_debug --device=/dev/hisi_hdc -v /usr/local/Ascend/driver:/usr/local/Ascend/driver -v /etc/ascend_install.info:/etc/ascend_install.info -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi --name <容器名> <镜像下载地址> /start_docker.sh
 ```
 
-其中 `<容器名>` 为容器名称，`<镜像下载地址>` 为容器镜像的完整下载地址。
+其中各参数含义如下：
+
+- `<容器名>`：容器名称，可自行指定。
+- `<镜像下载地址>`：容器镜像的完整下载地址。
+- `<N>`：NPU 设备号，需根据宿主机实际可用设备填写，可通过 `ls /dev/davinci*` 或 `npu-smi info` 查询（如 `davinci0`）。
+- `<宿主机端口1>`、`<宿主机端口2>`：宿主机映射端口，可自行指定，需避免与本机已占用端口冲突（如分别填 `8886`、`8866`）。
 
 ![容器启动效果](assets/pic1.png)
 
