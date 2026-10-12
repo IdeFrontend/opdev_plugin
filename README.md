@@ -74,7 +74,7 @@ flowchart LR
 
 - [算子样例仓 ops-math](https://gitcode.com/cann/ops-math)
 - [插件发布仓](https://gitcode.com/opdevtools/plugin_release/releases)
-- [问题反馈](https://gitcode.com/opdevtools/plugin_release/issues)
+- 问题反馈：[asc-vscode](https://gitcode.com/cann/asc-vscode/issues)（推荐）或[plugin_release](https://gitcode.com/opdevtools/plugin_release/issues)
 - [npu-check 用户手册](https://gitcode.com/cann/asc-tools/blob/experimental/npu_tools/npu_check/npu_check.md)
 - [npu-compute 使用文档](https://gitcode.com/cann/asc-tools/blob/experimental/docs/06_npu_compute.md)
 - [性能分析报告功能说明](./profiling-report.md)

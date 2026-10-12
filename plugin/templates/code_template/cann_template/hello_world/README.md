@@ -8,7 +8,7 @@
 
 ## A4 vs A5（910B-class vs Ascend 950 / Atlas A5）
 
-从 **Huawei OP DevTools** 侧边栏编译/运行时，扩展会在子进程中自动注入 `SOC_VERSION`、`NPU_ARCH` 等芯片环境变量（`CMakeLists.txt` 通过 `$ENV{NPU_ARCH}` 读取）。
+从 **Ascend C Toolkits** 侧边栏编译/运行时，扩展会在子进程中自动注入 `SOC_VERSION`、`NPU_ARCH` 等芯片环境变量（`CMakeLists.txt` 通过 `$ENV{NPU_ARCH}` 读取）。
 
 | 环境 | spawn 注入（扩展） | 手动终端 `bash build.sh` |
 |------|-------------------|-------------------------|

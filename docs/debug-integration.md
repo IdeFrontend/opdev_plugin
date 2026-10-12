@@ -1,6 +1,6 @@
 # Debug integration (current state)
 
-How debugging works in the Huawei OP DevTools VS Code extension: entry points, build-then-launch flow, launch configs, and delegation to the **MindStudio Debug** extension (`ascend.mindstudio-debug-vscode-plugin`).
+How debugging works in the Ascend C Toolkits VS Code extension: entry points, build-then-launch flow, launch configs, and delegation to the **MindStudio Debug** extension (`ascend.mindstudio-debug-vscode-plugin`).
 
 Sidebar Actions tree behavior (visibility, multi-operator rules, gear icon): [`operator-treeview.md`](operator-treeview.md).
 

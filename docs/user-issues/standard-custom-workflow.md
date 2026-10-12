@@ -106,7 +106,7 @@ Copy-paste helper: [`plugin/templates/snippets/deploy_run_package.sh`](../../plu
 
 If you cannot change `build.sh` immediately, set the **full** build script for the on-board (or simulation) pre-profiling step in workspace settings ([`workspace-settings.md`](../workspace-settings.md) — `onBoardCompileCommand` / `simulationCompileCommand`).
 
-**Settings → Extensions → Huawei OP DevTools → Compile & Deploy**, or edit `.vscode/settings.json`:
+**Settings → Extensions → Ascend C Toolkits → Compile & Deploy**, or edit `.vscode/settings.json`:
 
 ```json
 {

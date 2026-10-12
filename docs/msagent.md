@@ -1,6 +1,6 @@
 # msAgent integration (mstt)
 
-This document describes how **Huawei OP DevTools** (`mstt`) integrates with the separate **msAgent** VS Code extension for sanitizer (anomaly detection) workflows. mstt does not ship msAgent and does not implement AI fix or log parsing itself — it bridges VS Code commands and keeps **finding order** aligned with msAgent’s `fixProblem(index)` contract.
+This document describes how **Ascend C Toolkits** (`mstt`) integrates with the separate **msAgent** VS Code extension for sanitizer (anomaly detection) workflows. mstt does not ship msAgent and does not implement AI fix or log parsing itself — it bridges VS Code commands and keeps **finding order** aligned with msAgent’s `fixProblem(index)` contract.
 
 For the full sanitizer run, results tree, and Problems view, see [`sanitizer.md`](./sanitizer.md).
 
