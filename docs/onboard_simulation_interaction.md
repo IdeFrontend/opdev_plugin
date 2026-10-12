@@ -1,7 +1,7 @@
 # 插件「上板分析 / 仿真分析」交互说明
 
 > 适用范围：Huawei OP DevTools 插件 Operate 侧边栏的**性能调优**功能——仿真分析（simulation）与上板分析（onboard）。
-> 仿真工具为 `npu-emulate`（CANN 旧版本中名为 `npusim`，请以环境中实际的命令为准），其 `collect` 子命令已在 Ascend 950 环境启用并作为默认仿真工具；可通过设置切换为 msprof。Ascend 950 环境的 npu-compute / npu-emulate 工具说明见第五、六节。
+> 仿真工具为 `npu-emulate`（曾用名 `npusim`，请以环境中实际的命令为准），其 `collect` 子命令已在 Ascend 950 环境启用并作为默认仿真工具；可通过设置切换为 msprof。Ascend 950 环境的 npu-compute / npu-emulate 工具说明见第五、六节。
 
 **术语约定：**
 
@@ -25,7 +25,7 @@
 
 | 分层 | 职责 |
 |------|------|
-| CLI 工具 | 仿真用 `msprof op simulator`；上板用 `msprof op`（均在算子环境中运行） |
+| CLI 工具 | Ascend 950 环境默认使用 `npu-compute`（上板）/ `npu-emulate`（仿真）；其他环境以及 Ascend 950 切换工具后使用 msprof：仿真 `msprof op simulator`、上板 `msprof op`（均在算子环境中运行） |
 | 插件 | 可选的前置编译/示例编译/部署（依工程类型）、命令组装、Shell 执行 |
 | 配置 | workspace 设置（`op-devtools.performanceTuning.*`）；`.vscode/cache.json` 的 `fileMapLists` 记录外部报告路径 |
 | 结果 UI | 树视图 `opdevtoolsPerformanceResultsTree`（报告 → 文件夹/文件叶子节点） |
@@ -44,22 +44,22 @@ flowchart LR
     BoardOpts["上板选项 webview<br/>options-on-board"]
   end
   subgraph Runtime["算子环境"]
-    Msprof["msprof op<br/>(simulator)"]
+    CliTool["分析命令<br/>npu-compute / npu-emulate（Ascend 950 默认）<br/>msprof op（全环境通用）"]
     Opprof["workspaceRoot / ideConfig / opprof / runId"]
   end
 
   SimOpts --> FlowTree
   BoardOpts --> FlowTree
-  FlowTree -->|组装并执行命令| Msprof
-  Msprof -->|写出报告| Opprof
+  FlowTree -->|组装并执行命令| CliTool
+  CliTool -->|写出报告| Opprof
   Opprof -->|扫描发现| ResultsTree
 ```
 
 ---
 
-## 二、入口与标准交互链路（msprof 工具）
+## 二、入口与 msprof 分析流程（全环境通用）
 
-> msprof 适用于所有环境。在 Ascend 950 环境中，插件默认使用 npu-compute / npu-emulate（见第五节），可通过工具开关切换回本节描述的 msprof 链路。
+> **工具如何选择**：Ascend 950 环境默认（推荐）使用 npu-compute（上板）/ npu-emulate（仿真），详见第五节；msprof 全环境可用，是 Ascend 910C、Ascend 910B 等其他环境唯一支持的分析工具，Ascend 950 环境也可通过工具开关切换为 msprof，流程见本节。
 
 ### 1. 入口
 
@@ -74,7 +74,7 @@ Operate 侧边栏 → **性能调优（Performance tuning）** 分组（`nodeId 
 - 对应命令：`sidebar.simulation`、`sidebar.onboard`（命令前缀以 flavor.json 的 `commandPrefix` 为准）。
 - 齿轮图标可打开 workspace 设置或快捷选项面板。
 
-### 2. 标准流程
+### 2. 执行步骤
 
 1. **点击节点**：若 `simulation.showQuickOptions` / `onBoard.showQuickOptions` 未设为 `false`，先弹出**选项 webview**（仿真 `options-simulator`、上板 `options-on-board`），配置通过 `getSimulateOptions/saveSimulateOptions`（上板同理）读写，持久化到 workspace 设置 `op-devtools.*`，确认后调用 `startSimulate`/`startOnBoard` 并关闭编辑器。
 2. **前置编译/部署**（依工程插件的 `buildBehavior.requiresBuildBeforeAnalysis`）：
@@ -82,12 +82,12 @@ Operate 侧边栏 → **性能调优（Performance tuning）** 分组（`nodeId 
    - PyAsc / Triton：无编译步骤，但要求当前活动编辑器为 `.py` 文件（PyAsc 会把 `python3 <相对路径>` 写入 deploy 目标）。仿真活动文件检查失败会**抛错**，上板则**提前返回**（二者行为不对称）。
 3. **命令生成**：命令门面 `getSimulateCommand` / `getOnBoardCommand` → `CommandStrategyFactory.getStrategy(op_type)`（按算子类型选择命令策略）→ `ProfilerFactory` 生成 msprof 命令，拼接 CANN 环境 source 与 `cd` 命令。
 4. **执行**：仿真 `msprof op simulator`、上板 `msprof op`，输出统一落到 **`<workspaceRoot>/<ideDir>/opprof/<runId>`**（所有算子共用这一个根目录，每次运行建一个子目录）。
-5. **输出通道**：仿真写 `Op Dev Tools: simulate`，上板写 `Op Dev Tools: onboard`；**前置编译步骤的全部输出也写入同一通道**（不写 `compile` 通道），通道内容跨运行追加。
+5. **输出通道**：仿真写 `Huawei OP DevTools: simulate`，上板写 `Huawei OP DevTools: onboard`；**前置编译步骤的全部输出也写入同一通道**（不写 `compile` 通道），通道内容跨运行追加。
 6. **成功后**：成功提示 + `flashPerformanceRunData`（`refreshPerformanceReports({ focusIfNew: true })`）刷新性能结果树，可自动聚焦并展开最新报告。
 
 ### 交互时序图
 
-下图的目的是说明标准链路中插件各模块的分工与执行顺序。
+下面的时序图说明 msprof 流程中各模块的分工和执行顺序。
 
 ```mermaid
 sequenceDiagram
@@ -110,7 +110,7 @@ sequenceDiagram
 - 性能结果树是**独立视图** `opdevtoolsPerformanceResultsTree`，报告行只出现在这里，不在 `power` 节点下。
 - 数据来源：扫描 opprof 根目录的子目录 + `cache.json` 中“添加可视化”的外部路径（键为 `simulate_<path>` / `onboard_<path>`）。
 - 无报告时显示单个空占位行。
-- **标题栏操作**：添加可视化、按时间排序、仅看标记、刷新结果（排序仅在内存中进行，不重新扫描磁盘）。
+- **标题栏操作**：添加可视化、按时间排序、仅看标记、刷新结果（排序只在内存中完成，不重新扫描磁盘）。
 - **报告行操作**：复制（拼接报告下所有文件内容到剪贴板）、下载（打 zip）、标记/取消标记。
 - 无文件系统 watcher/轮询，手动刷新以一次完整快照替换当前列表，磁盘上已删除的报告/文件会从树中消失。
 
@@ -146,22 +146,24 @@ flowchart TD
 | 维度 | 仿真分析 | 上板分析 |
 |------|----------|----------|
 | CLI | `msprof op simulator --soc-version=<仿真器目录> --output=.../opprof --aic-metrics=... <target>` | `msprof op --output=.../opprof --aic-metrics=... <target>`（不带 `--soc-version`） |
-| 环境 | 必须传**仿真器目录名**（Ascend 950 环境为 `Ascend950PR_9589`，其他环境如 `Ascend910C`、`Ascend910B3`），**不是** CANN slug | 真实 NPU 硬件；SOC 取自 `resolveAscendEnv({ isSimulator: false })`；需通过 NPU 环境检查 |
+| 环境 | 必须传**仿真器目录名**（`$ASCEND_HOME_PATH/tools/simulator/` 下与当前环境对应的目录名，以实际安装的 CANN 版本为准），**不是** CANN slug（如 `ascend950`） | 真实 NPU 硬件；SOC 取自 `resolveAscendEnv({ isSimulator: false })`；需通过 NPU 环境检查 |
 | 基础指标 | `PipeUtilization`（默认始终采集） | 依 SOC 矩阵选择；Ascend 950 使用 `PCSampling`（其他环境使用 `MemoryDetail`） |
 | 可选指标 | `ResourceConflictRatio`（默认开，与基础项**互斥**，开启后替换 `PipeUtilization`）；`PMSampling`（可追加，如 `ResourceConflictRatio,PMSampling`） | 见上板指标矩阵（`isAscendA5ProfilerCannSoc()` 区分 Ascend 950 与其他环境） |
 | 指标准入 | 可选指标必须经真机 CLI 验证后加入 `SIMULATOR_OPTIONAL_METRIC_SOCS` 白名单才在 UI 放行；陈旧 workspace 值在非白名单 SOC 上不会产生该指标 | 上板指标随 SOC 矩阵切换 |
 | 配置 DAO | `ConfigService.getSimulateConfig(projectPath)` | `ConfigService.getOnBoardConfig(projectPath)` |
-| 目标二进制 | ascend 策略取 `exampleBuildConfig.targetFile`（回退默认 `build/test_aclnn_<op>`）；cann/pyasc/triton 策略取 deploy 键 `deployCommandOrRunCommand`（回退 `build_out/*.run` 等） | 同左（统一走 `strategy.getProfilerTargetFile`） |
+| 目标二进制 | ascend 策略取 `exampleBuildConfig.targetFile`（回退默认 `build/test_aclnn_<op>`）；cann/pyasc/triton 策略取 deploy 键 `deployCommandOrRunCommand`（回退 `build_out/*.run` 等） | 同左（统一调用 `strategy.getProfilerTargetFile`） |
 
 ### SOC 白名单机制（GC-22）
 
 msopprof 会按 `--soc-version` 校验 `--aic-metrics`，平台不支持的指标直接报错 `Unexpected argument … maybe in wrong soc platform`。因此：
 
-| 环境 | CANN slug | 仿真器目录 | PipeUtilization | ResourceConflictRatio | PMSampling |
-|------|-----------|------------|-----------------|-----------------------|------------|
-| Ascend 950 | `ascend950` | `Ascend950PR_9589` | 支持（基础） | **已验证支持** | **已验证支持** |
-| Ascend 910C | `ascend910_93` | `Ascend910C` | 支持（基础） | **明确禁用** | 未验证 |
-| Ascend 910B | `ascend910b` | `Ascend910B3` | 支持（基础） | 未验证 | 未验证 |
+| 环境 | soc_version（CANN slug） | PipeUtilization | ResourceConflictRatio | PMSampling |
+|------|--------------------------|-----------------|-----------------------|------------|
+| Ascend 950 | `ascend950` | 支持（基础） | **已验证支持** | **已验证支持** |
+| Ascend 910C | `ascend910_93` | 支持（基础） | **明确禁用** | 未验证 |
+| Ascend 910B | `ascend910b` | 支持（基础） | 未验证 | 未验证 |
+
+仿真命令的 `--soc-version` 不填写上表中的 soc_version 值，而需填写 `$ASCEND_HOME_PATH/tools/simulator/` 下与环境对应的仿真器目录名，具体名称以实际安装的 CANN 版本为准。
 
 指标从“未验证”升级为“支持”必须有真实 `msprof op simulator` 跑通记录（退出码 0）并随 PR 留存 CANN 版本、目标算子等信息。
 
@@ -173,24 +175,24 @@ msopprof 会按 `--soc-version` 校验 `--aic-metrics`，平台不支持的指�
 |------------|----------------------|------------------|------|
 | CANN | `cann` | `cann` | 示例编译后，将 `deployCommandOrRunCommand` 设为可执行产物；从 `<op>/build` 目录运行 |
 | 标准自定义 | `ascend` | `cann`（集合扫描算子）/ `ascend`（插件创建） | 需示例编译 + `.run` 包部署；多选算子时 Run/分析受限 |
-| Ascend C / Torch library（检测型） | 打开工程后存为 `cann` | 多为 `cann` | 走 CANN 策略 |
+| Ascend C / Torch library（检测型） | 打开工程后存为 `cann` | 多为 `cann` | 使用 CANN 策略 |
 | PyAsc | `pyasc` | `pyasc` | 活动 `.py` 门禁；`python3 <file>` 包裹 msprof |
 | Triton | `triton`（需 `op-devtools.operatorSupport.triton`） | `triton` | 同 PyAsc 模型；执行前探测 Python 依赖；插件能力位不含仿真/上板时树中隐藏 |
 
-两个不要混淆的轴：**`project_type`** 决定配置行（`build_op` / `build_example`）与 UI 门禁；**`op_type`** 决定 Shell 命令策略。命令生成始终以算子记录的 `op_type` 为准。
+注意区分两个字段：**`project_type`** 决定配置行（`build_op` / `build_example`）与 UI 门禁；**`op_type`** 决定 Shell 命令策略。生成命令时始终以算子记录的 `op_type` 为准。
 
 ---
 
 ## 五、Ascend 950 环境的性能分析工具（npu-compute 与 npu-emulate）
 
-> 以下内容基于 `ascend-c-toolkit` 分支。上板工具 npu-compute 与仿真工具 npu-emulate 的工具开关、「数据采集配置」弹窗、命令拼装与报告链路均已实现，并在 Ascend 950（ascend950）环境中默认生效；可通过对应的工具开关切换为 msprof。
+> 以下内容基于 `ascend-c-toolkit` 分支。该分支已提供 npu-compute（上板）和 npu-emulate（仿真）的工具开关、「数据采集配置」弹窗、命令拼装和报告展示，在 Ascend 950（ascend950）环境中默认启用；也可以通过工具开关改用 msprof。
 
 ### 工具选择逻辑
 
 ```mermaid
 flowchart TD
   Click["点击 上板分析 / 仿真分析"] --> IsA5{"解析 SOC<br/>是否为 Ascend 950（ascend950）？"}
-  IsA5 -->|否| Old["msprof 链路：msprof op [simulator]"]
+  IsA5 -->|否| Old["使用 msprof：msprof op [simulator]"]
   IsA5 -->|是| ToolCfg{"工具开关设置<br/>onBoard.tool / simulation.tool"}
   ToolCfg -->|msprof| Old
   ToolCfg -->|npu-compute / npu-emulate（Ascend 950 默认）| Dialog["弹出「数据采集配置」弹窗<br/>预选对应 Collection type"]
@@ -206,22 +208,22 @@ flowchart TD
   Report --> AutoOpen["openProfilingReport 自动打开 + 刷新结果树"]
 ```
 
-**设计要点**（上板、仿真均已实现）：
+**设计要点**（上板与仿真均支持）：
 
-1. **两个工具开关**：`op-devtools.performanceTuning.onBoard.tool`（`npu-compute`/`msprof`）、`simulation.tool`（`npu-emulate`/`msprof`）；未配置时，Ascend 950 默认使用 npu-compute / npu-emulate，其他环境默认使用 msprof；非 Ascend 950 环境一律走 msprof 链路。
+1. **两个工具开关**：`op-devtools.performanceTuning.onBoard.tool`（`npu-compute`/`msprof`）、`simulation.tool`（`npu-emulate`/`msprof`）；未配置时，Ascend 950 默认使用 npu-compute / npu-emulate，其他环境默认使用 msprof；非 Ascend 950 环境只能使用 msprof。
 2. **统一「数据采集配置」弹窗**：
    - 顶部 Collection type 切换（仿真/上板），从哪个入口打开就预选对应项；
    - Common 面板：Output File 文件选择、Force Overwrite、Target Processes（固定 All）、Replay Mode（固定 Application）、Application Replay Buffer（固定 File）、Application Replay Mode（固定 Balanced）、command Line 文本域；
-   - Metrics 面板：section/set 下拉选择（非 radio）、过滤输入、Name/Description 表格；section 与 set 选择做联动一致性校验；该面板仅在选择上板（npu-compute）时显示——仿真 collect 暂不支持任何指标参数。
+   - Metrics 面板：section/set 下拉选择（非 radio）、过滤输入、Name/Description 表格；选择 section 与 set 时会校验二者是否一致；该面板仅在选择上板（npu-compute）时显示——仿真 collect 暂不支持任何指标参数。
    - **command Line 文本域为最终执行命令的唯一依据**（结构化选择只用于自动同步文本，用户可再手改，插件不反解析用户 shell 文本）。
    - 约束：所有 section 均可选（Ascend 950 的 npu-compute 已全部支持）；detailed、hccl、roofline 三个 set 仍可见不可选（无展开定义）。
-3. **执行流程**：确认后**先按现有逻辑编译**，再交由所选工具执行；npu-compute 把所选 set 展开为多个 `--section <id>`（不用逗号/空格拼接，不加 `--set`）；npu-emulate 以 `collect --output <opprofRunDir>/result.npu-rep <产物路径>` 一步完成仿真与报告导出；报告仍输出到同层 opprof 目录，**保留 `.npu-rep` 扩展名**；成功后用 `openProfilingReport` 自动打开，并刷新结果树（不重复自动打开）。
-4. **报告类型区分**：以报告目录中是否包含 `.rep`/`.npu-rep` 文件区分——有则走 ProfilingReportPanel，仅有 bin/json/csv 的报告走 Insight/CSV，无需判断工具来源。
+3. **执行流程**：确认后**先按现有逻辑编译**，再由所选工具执行；npu-compute 把所选 set 展开为多个 `--section <id>`（不用逗号/空格拼接，不加 `--set`）；npu-emulate 通过 `collect --output <opprofRunDir>/result.npu-rep <产物路径>` 一次完成仿真和报告导出；报告同样输出到 opprof 目录，**保留 `.npu-rep` 扩展名**；成功后调用 `openProfilingReport` 自动打开，并刷新结果树（不重复打开）。
+4. **报告类型区分**：报告目录中含 `.rep` 或 `.npu-rep` 文件时，用 ProfilingReportPanel 打开；只含 bin/json/csv 文件时，用 Insight 或 CSV 打开。插件不需要判断报告来自哪个工具。
 
-**当前分支实现状态（以 `ascend-c-toolkit` 分支为准）**：
+**`ascend-c-toolkit` 分支上的实现情况**：
 
-- 上板工具链路**已实现**：`package.json` 已提供 `performanceTuning.onBoard.tool` / `performanceTuning.simulation.tool` 两个开关；Ascend 950（ascend950）环境默认使用 `npu-compute`，点击上板分析会弹出「数据采集配置」面板（`web/src/views/panels/data-collection-config/`），对应实现见 `ConfigService.shouldUseNewOnBoardTool()`、`buildNpuComputeCommand()`。
-- 仿真工具链路**已实现**：Ascend 950（ascend950）环境默认使用 `npu-emulate`，点击仿真分析弹出同一个「数据采集配置」面板（Metrics 面板隐藏）；确认后先编译，再执行 `npu-emulate collect --output <opprofRunDir>/result.npu-rep <产物路径>`，报告自动打开；对应实现见 `ConfigService.shouldUseNewSimulationTool()`、`buildNpuEmulateCommand()`。设置 `simulation.tool=msprof` 可切回第二、三节描述的 msprof 链路。
+- 上板分析：`package.json` 已提供 `performanceTuning.onBoard.tool` / `performanceTuning.simulation.tool` 两个开关；Ascend 950（ascend950）环境默认使用 `npu-compute`，点击上板分析会弹出「数据采集配置」面板（`web/src/views/panels/data-collection-config/`），实现见 `ConfigService.shouldUseNewOnBoardTool()`、`buildNpuComputeCommand()`。
+- 仿真分析：Ascend 950（ascend950）环境默认使用 `npu-emulate`，点击仿真分析弹出同一个「数据采集配置」面板（Metrics 面板隐藏）；确认后先编译，再执行 `npu-emulate collect --output <opprofRunDir>/result.npu-rep <产物路径>`，报告自动打开；实现见 `ConfigService.shouldUseNewSimulationTool()`、`buildNpuEmulateCommand()`。设置 `simulation.tool=msprof` 可改用第二、三节描述的 msprof 流程。
 
 ---
 
@@ -244,8 +246,8 @@ flowchart TD
 
 - **定位**：SoC 级芯片仿真，与板上二进制兼容；同一 kernel 可在仿真器与真实芯片运行。支持**精度仿真**（bit 级结果）与**性能仿真**（指令流水图/IPC/roofline）。
 - **限制**：仅支持 Linux 与 CANN 环境（Windows 无法运行仿真）；处理器为 Ascend 950；支持 aarch64 与 x86_64 架构。
-- **插件使用的命令**：`npu-emulate collect --output <报告文件路径> <编译产物路径>`——运行编译产物进行 SoC 仿真并一步导出 `.npu-rep` 报告；当前不支持指标/section 类附加参数。
-- **历史版本说明**：早期版本的仿真工具（当时名为 NPUSim）提供 Python CLI（`record` / `report` 子命令）；当前随 CANN 分发的版本以 `collect` 子命令为准。
+- **插件使用的命令**：`npu-emulate collect --output <报告文件路径> <编译产物路径>`——运行编译产物完成 SoC 仿真，并直接导出 `.npu-rep` 报告；当前不支持指标/section 类附加参数。
+- **NPUSim 说明**：名为 NPUSim 的版本提供 Python CLI（`record` / `report` 子命令）；当前随 CANN 分发的 `npu-emulate` 以 `collect` 子命令为准。
 - **安装要点**：随 CANN 分发；使用仓库代码时须打 wheel 并 `pip install dist/*.whl --upgrade -t ${install_path}/python/site-packages/` **覆盖安装**，否则会被 CANN 自带版本优先加载。
 
 ---
