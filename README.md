@@ -1,6 +1,6 @@
 # asc-vscode
 
-本仓库是 **Huawei OP DevTools（华为算子一站式开发工具）** 插件的源码仓库。Huawei OP DevTools 是一款面向 Ascend C 算子开发的一站式 VS Code 插件，覆盖算子工程创建、代码开发、编译部署、运行调试、异常检测和性能分析的全流程，支持 CANNLab 云上开发环境和本地开发环境两种使用方式。
+本仓库是 **Ascend C Toolkits（Ascend C Toolkits）** 插件的源码仓库。Ascend C Toolkits 是一款面向 Ascend C 算子开发的一站式 VS Code 插件，覆盖算子工程创建、代码开发、编译部署、运行调试、异常检测和性能分析的全流程，支持 CANNLab 云上开发环境和本地开发环境两种使用方式。
 
 ## 概述
 
@@ -12,7 +12,6 @@
 
 | 功能 | 说明 |
 |------|------|
-| 算子工程管理 | 创建、打开标准自定义算子工程、算子直调工程、PyAsc 算子工程、Triton 算子工程等多种工程类型。 |
 | 算子代码开发 | 提供 Ascend C 语法高亮、代码跳转等编辑能力。 |
 | 编译部署与运行 | 一键完成算子编译、部署与运行。 |
 | 算子调试 | 支持 CPU 孪生调试和 NPU 上板调试。 |
@@ -26,7 +25,7 @@
 ```mermaid
 flowchart LR
   subgraph IDE["VS Code / WebIDE"]
-    UI["Huawei OP DevTools 插件<br/>（工程管理、编译运行、调试、异常检测、性能调优）"]
+    UI["Ascend C Toolkits 插件<br/>（工程管理、编译运行、调试、异常检测、性能调优）"]
     View["结果展示<br/>（树视图、报告页面）"]
   end
   subgraph Env["算子开发环境（已安装 CANN）"]
