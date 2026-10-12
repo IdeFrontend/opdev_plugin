@@ -1,6 +1,6 @@
-# Huawei OP DevTools - VS Code Extension
+# Ascend C Toolkits - VS Code Extension
 
-**Huawei OP DevTools** is a Visual Studio Code extension for Ascend operator development. It supports project creation, build and deploy, run validation, CPU/NPU debug, sanitizer checks, performance profiling, and result visualization inside one editor workflow.
+**Ascend C Toolkits** is a Visual Studio Code extension for Ascend operator development. It supports project creation, build and deploy, run validation, CPU/NPU debug, sanitizer checks, performance profiling, and result visualization inside one editor workflow.
 
 **Current user guide:** this packaged README is the installable guide. When viewing the source repository, additional documentation is available under `docs/`. The previous discussion page at <https://gitcode.com/org/cann/discussions/54> is now marked as outdated; use this README and `docs/` as the current guidance.
 
@@ -9,7 +9,6 @@
 ## Features
 
 - One-stop VS Code workflow for operator development.
-- Supports Ascend C, CANN standard-custom operators, PyAsc, Triton, and related project types.
 - Build/deploy, run, CPU/NPU debug, sanitizer, on-board profiling, and simulation profiling.
 - Handles common environment values, SoC / NPU_ARCH resolution, `.asc` highlighting, and debug configuration.
 - Native sidebars for operators, actions, sanitizer reports, and performance reports.
@@ -22,7 +21,7 @@
 
 ## Quick Start
 
-1. Install **Huawei OP DevTools** from the VS Code Extensions view.
+1. Install **Ascend C Toolkits** from the VS Code Extensions view.
 2. Open an operator repository or a workspace where you want to create a project.
 3. In the **Operator One-Stop Development Panel**, choose **New Operator Project** or **Open Operator Project**.
 4. When creating a project, select the template, target directory, project name, and open mode. **Open in current window** reuses the current VS Code window.
