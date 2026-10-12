@@ -1,6 +1,6 @@
 # Documentation index (`docs/`)
 
-Canonical references for the Huawei OP DevTools VS Code extension. User-reported issues are tracked under [`user-issues/`](./user-issues/readme.md) (excluded from this index).
+Canonical references for the Ascend C Toolkits VS Code extension. User-reported issues are tracked under [`user-issues/`](./user-issues/readme.md) (excluded from this index).
 
 ---
 

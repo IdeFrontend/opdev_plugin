@@ -35,33 +35,7 @@
 
 #### 步骤一：安装并启动 CANN 镜像
 
-> 如果当前环境已经能够正常编译运行算子，可跳过本步骤。
-
-镜像下载地址：[CANN 镜像库](https://digital.hicann.cn/#/Image-library)。
-
-容器镜像下载命令参考：
-
-```shell
-docker pull swr.cn-north-4.myhuaweicloud.com/ci_cann/cann-pod-python3.12:1.0.0
-docker tag swr.cn-north-4.myhuaweicloud.com/ci_cann/cann-pod-python3.12:1.0.0 cann_0214
-```
-
-容器启动命令参考：
-
-```shell
-docker run -itd --network=bridge --cap-add=SYS_PTRACE --security-opt seccomp=unconfined -p 0.0.0.0:<宿主机端口1>:8888 -p 0.0.0.0:<宿主机端口2>:22 --device=/dev/davinci<N> --device=/dev/davinci_manager --device=/dev/devmm_svm --device=/dev/drv_debug --device=/dev/hisi_hdc -v /usr/local/Ascend/driver:/usr/local/Ascend/driver -v /etc/ascend_install.info:/etc/ascend_install.info -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi --name <容器名> <镜像下载地址> /start_docker.sh
-```
-
-其中各参数含义如下：
-
-- `<容器名>`：容器名称，可自行指定。
-- `<镜像下载地址>`：容器镜像的完整下载地址。
-- `<N>`：NPU 设备号，需根据宿主机实际可用设备填写，可通过 `ls /dev/davinci*` 或 `npu-smi info` 查询（如 `davinci0`）。
-- `<宿主机端口1>`、`<宿主机端口2>`：宿主机映射端口，可自行指定，需避免与本机已占用端口冲突（如分别填 `8886`、`8866`）。
-
-![容器启动效果](assets/pic1.png)
-
-![容器启动效果](assets/pic2.png)
+[安装教程](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)
 
 #### 步骤二：配置环境变量
 
@@ -332,13 +306,13 @@ msSanitizer 用于检测算子的潜在问题（内存、竞争、未初始化�
 
 解决方法：检查插件列表，正常情况下只需安装 “Ascend C Toolkits” 即可。“Huawei OP DevTools”、“Ascend C Toolkit” 为其他发布形态或旧版插件，不应同时安装；如发现重复安装，可将其卸载，卸载完成后刷新页面即可恢复。
 
-### 点击“CANNBot 分析”按钮报错：调用“CANNBot 分析”功能失败
+### 点击“CANNWork 分析”按钮报错：调用“CANNWork 分析”功能失败
 
 问题现象：
 
 ![CANNBot 报错](assets/pic-cannbot1.png)
 
-原因：“CANNBot 分析”功能由 CANNWork 插件提供，使用前需要安装 CANNWork 插件并完成登录。
+原因：“CANNWork 分析”功能由 CANNWork 插件提供，使用前需要安装 CANNWork 插件并完成登录。
 
 解决方法：在“扩展”中搜索并安装 CANNWork 插件的最新版本（版本号需大于等于 2.0.0）。
 

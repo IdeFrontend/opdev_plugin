@@ -1,18 +1,17 @@
 # 插件「上板分析 / 仿真分析」交互说明
 
-> 适用范围：Huawei OP DevTools 插件 Operate 侧边栏的**性能调优**功能——仿真分析（simulation）与上板分析（onboard）。
-> 仿真工具为 `npu-emulate`（曾用名 `npusim`，请以环境中实际的命令为准），其 `collect` 子命令已在 Ascend 950 环境启用并作为默认仿真工具；可通过设置切换为 msprof。Ascend 950 环境的 npu-compute / npu-emulate 工具说明见第五、六节。
+> 适用范围：Ascend C Toolkits 插件 Operate 侧边栏的**性能调优**功能——仿真分析（simulation）与上板分析（onboard）。
+> 仿真工具为 `npu-emulate`，其 `collect` 子命令已在 Ascend 950 环境启用并作为默认仿真工具；可通过设置切换为 msprof。Ascend 950 环境的 npu-compute / npu-emulate 工具说明见第五、六节。
 
 **术语约定：**
 
-- SOC：指 CANN 中的 soc_series 配置（如 `ascend950`），用于标识算子运行环境对应的芯片系列。
 - 命令行模板：插件为不同算子类型生成工程命令。支持标准自定义算子工程和 PyAsc 工程。
 
 **相关文档：**
 
-- [simulator-options-spec.md](./simulator-options-spec.md)：仿真快捷选项与各 SOC 支持的指标范围说明（英文）
+- [simulator-options-spec.md](./simulator-options-spec.md)：仿真快捷选项与各 soc_series 支持的指标范围说明（英文）
 - [run-integration.md](./run-integration.md)：「运行算子」功能，与性能分析共用执行栈
-- [ascend-env-spec.md](./ascend-env-spec.md)：SOC 解析与 spawn 环境
+- [ascend-env-spec.md](./ascend-env-spec.md)：soc_series 解析与 spawn 环境
 - [workspace-settings.md](./workspace-settings.md)：`op-devtools.performanceTuning.*` 全部配置项
 - npu-compute 与 npu-emulate 的完整工具手册未随本仓库分发，本文第五、六节收录了其关键命令与参数说明
 
@@ -77,11 +76,11 @@ Operate 侧边栏 → **性能调优（Performance tuning）** 分组（`nodeId 
 
 1. **点击节点**：若 `simulation.showQuickOptions` / `onBoard.showQuickOptions` 未设为 `false`，先弹出**选项 webview**（仿真 `options-simulator`、上板 `options-on-board`），配置通过 `getSimulateOptions/saveSimulateOptions`（上板同理）读写，持久化到 workspace 设置 `op-devtools.*`，确认后调用 `startSimulate`/`startOnBoard` 并关闭编辑器。
 2. **前置编译/部署**（依工程插件的 `buildBehavior.requiresBuildBeforeAnalysis`）：
-   - CANN / Ascend 类工程：先编译算子工程（标准自定义算子还要编译示例并部署 `.run` 包）；
+   - AscendC 工程：先编译算子工程（标准自定义算子还要编译示例并部署 `.run` 包）；
    - PyAsc / Triton：无编译步骤，但要求当前活动编辑器为 `.py` 文件（PyAsc 会把 `python3 <相对路径>` 写入 deploy 目标）。仿真活动文件检查失败会**抛错**，上板则**提前返回**（二者行为不对称）。
 3. **命令生成**：命令门面 `getSimulateCommand` / `getOnBoardCommand` → `CommandStrategyFactory.getStrategy(op_type)`（按算子类型选择命令行模板）→ `ProfilerFactory` 生成 msprof 命令，拼接 CANN 环境 source 与 `cd` 命令。
 4. **执行**：仿真 `msprof op simulator`、上板 `msprof op`，输出统一落到 **`<workspaceRoot>/<ideDir>/opprof/<runId>`**（所有算子共用这一个根目录，每次运行建一个子目录）。
-5. **输出通道**：仿真写 `Huawei OP DevTools: simulate`，上板写 `Huawei OP DevTools: onboard`；**前置编译步骤的全部输出也写入同一通道**（不写 `compile` 通道），通道内容跨运行追加。
+5. **输出通道**：仿真写 `Ascend C Toolkits: simulate`，上板写 `Ascend C Toolkits: onboard`；**前置编译步骤的全部输出也写入同一通道**（不写 `compile` 通道），通道内容跨运行追加。
 6. **成功后**：成功提示 + `flashPerformanceRunData`（`refreshPerformanceReports({ focusIfNew: true })`）刷新性能结果树，可自动聚焦并展开最新报告。
 
 ### 交互时序图
@@ -145,14 +144,14 @@ flowchart TD
 | 维度 | 仿真分析 | 上板分析 |
 |------|----------|----------|
 | CLI | `msprof op simulator --soc-version=<仿真器目录> --output=.../opprof --aic-metrics=... <target>` | `msprof op --output=.../opprof --aic-metrics=... <target>`（不带 `--soc-version`） |
-| 环境 | 必须传**仿真器目录名**（`$ASCEND_HOME_PATH/tools/simulator/` 下与当前环境对应的目录名，以实际安装的 CANN 版本为准），**不是** CANN slug（如 `ascend950`） | 真实 NPU 硬件；SOC 取自 `resolveAscendEnv({ isSimulator: false })`；需通过 NPU 环境检查 |
-| 基础指标 | `PipeUtilization`（默认始终采集） | 依 SOC 矩阵选择；Ascend 950 使用 `PCSampling`（其他环境使用 `MemoryDetail`） |
+| 环境 | 必须传**仿真器目录名**（`$ASCEND_HOME_PATH/tools/simulator/` 下与当前环境对应的目录名，以实际安装的 CANN 版本为准），**不是** CANN slug（如 `ascend950`） | 真实 NPU 硬件；soc_series 取自 `resolveAscendEnv({ isSimulator: false })`；需通过 NPU 环境检查 |
+| 基础指标 | `PipeUtilization`（默认始终采集） | 依 soc_series 矩阵选择；Ascend 950 使用 `PCSampling`（其他环境使用 `MemoryDetail`） |
 | 可选指标 | `ResourceConflictRatio`（默认开，与基础项**互斥**，开启后替换 `PipeUtilization`）；`PMSampling`（可追加，如 `ResourceConflictRatio,PMSampling`） | 见上板指标矩阵（`isAscendA5ProfilerCannSoc()` 区分 Ascend 950 与其他环境） |
-| 指标准入 | 可选指标必须经真机 CLI 验证后加入 `SIMULATOR_OPTIONAL_METRIC_SOCS` 白名单才在 UI 放行；陈旧 workspace 值在非白名单 SOC 上不会产生该指标 | 上板指标随 SOC 矩阵切换 |
+| 指标准入 | 可选指标必须经真机 CLI 验证后加入 `SIMULATOR_OPTIONAL_METRIC_SOCS` 白名单才在 UI 放行；陈旧 workspace 值在非白名单 soc_series 上不会产生该指标 | 上板指标随 soc_series 矩阵切换 |
 | 配置 DAO | `ConfigService.getSimulateConfig(projectPath)` | `ConfigService.getOnBoardConfig(projectPath)` |
 | 目标二进制 | ascend 策略取 `exampleBuildConfig.targetFile`（回退默认 `build/test_aclnn_<op>`）；cann/pyasc/triton 策略取 deploy 键 `deployCommandOrRunCommand`（回退 `build_out/*.run` 等） | 同左（统一调用 `strategy.getProfilerTargetFile`） |
 
-### SOC 白名单机制（GC-22）
+### soc_series 白名单机制（GC-22）
 
 msopprof 会按 `--soc-version` 校验 `--aic-metrics`，平台不支持的指标直接报错 `Unexpected argument … maybe in wrong soc platform`。因此：
 
@@ -190,7 +189,7 @@ msopprof 会按 `--soc-version` 校验 `--aic-metrics`，平台不支持的指�
 
 ```mermaid
 flowchart TD
-  Click["点击 上板分析 / 仿真分析"] --> IsA5{"解析 SOC<br/>是否为 Ascend 950（ascend950）？"}
+  Click["点击 上板分析 / 仿真分析"] --> IsA5{"解析 soc_series<br/>是否为 Ascend 950（ascend950）？"}
   IsA5 -->|否| Old["使用 msprof：msprof op [simulator]"]
   IsA5 -->|是| ToolCfg{"工具开关设置<br/>onBoard.tool / simulation.tool"}
   ToolCfg -->|msprof| Old

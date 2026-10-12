@@ -1,6 +1,6 @@
 # 异常检测（Sanitizer）架构说明
 
-本文档介绍 **MindStudio Sanitizer**（`mssanitizer` 命令行工具）在 Huawei OP DevTools 插件中的集成方式（以当前代码的实际实现为准）。插件负责编排构建步骤、执行命令行工具、发现日志文件，并在 **VS Code 树视图**和 **Problems（问题）** 面板中展示检测结果，本身**不内嵌**检测引擎。
+本文档介绍 **MindStudio Sanitizer**（`mssanitizer` 命令行工具）在 Ascend C Toolkits 插件中的集成方式（以当前代码的实际实现为准）。插件负责编排构建步骤、执行命令行工具、发现日志文件，并在 **VS Code 树视图**和 **Problems（问题）** 面板中展示检测结果，本身**不内嵌**检测引擎。
 
 关于 CANN/Ascend 的 spawn 环境（`SOC_VERSION`、`NPU_ARCH`、环境变量脚本加载），参见 [`ascend-env-spec.md`](./ascend-env-spec.md)。关于工作区文件产物（异常检测日志目录），参见 [`generated-files-specification.md`](./generated-files-specification.md)。关于 `op-devtools.sanitizer.*` 配置项及其如何合并为运行时配置，参见 [`workspace-settings.md`](./workspace-settings.md)。
 
