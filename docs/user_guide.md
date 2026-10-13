@@ -35,7 +35,7 @@
 
 #### 步骤一：安装并启动CANN镜像
 
-详细教程请参考“[安装CANN官方Docker镜像](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)”
+详细教程请参考[安装CANN官方Docker镜像](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)。
 
 #### 步骤二：配置环境变量
 
@@ -226,7 +226,7 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
    ![性能分析报告](assets/pic-npu-compute2.png)
 
-#### 查看性能分析报告
+##### 查看性能分析报告
 
 - 通过插件创建的算子工程：工程框架与插件自动生成的分析配置一致，执行性能分析后会自动打开可视化报告。
 
@@ -240,7 +240,7 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
   ![自有工程配置演示](assets/self.png)
 
-##### 可视化报告功能特性
+###### 可视化报告功能特性
 
 详细功能说明请参见《[性能分析报告功能说明](../profiling-report.md)》。
 
