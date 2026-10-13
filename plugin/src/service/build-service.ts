@@ -55,6 +55,7 @@ import {
   resolveAscendEnv, resolveEffectiveCannSoc,
 } from '@plugin/domain/utils/ascend-util';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+import { isNewProfilerToolSupportedForProject } from '@shared/cann-env-constants';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import {
   buildNpuComputeCommand,
@@ -284,6 +285,30 @@ export class BuildService {
 
     if (!OperatorPluginRegistry.isProjectTypeSupported(detectedType)) {
       vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: detectedType || 'unknown' }));
+
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * New-tool (npu-compute / npu-emulate) eligibility guard for the execution
+   * path. The sidebar / context-menu entries already route non-eligible
+   * projects to the msprof flow; this blocks direct API invocation
+   * (e.g. a stale data-collection panel) so the new tools can only ever run on
+   * ascend950 (A5) inside a <<<>>> (kernel direct-call) operator project.
+   */
+  private async guardNewProfilerToolSupportedForCurrentProject(): Promise<boolean> {
+    const projectPath = getFirstWorkspaceFolderPath();
+    const project = projectPath ? getProjectByPath(projectPath) : null;
+    const detectedType = readWorkspaceProjectTypeSetting()
+      ?? project?.project_type
+      ?? (await homeMethods.getProjectType()).projectType
+      ?? '';
+
+    if (!isNewProfilerToolSupportedForProject(resolveEffectiveCannSoc(), detectedType)) {
+      vscode.window.showErrorMessage(t('build.newProfilerToolUnsupported'));
 
       return false;
     }
@@ -1022,6 +1047,12 @@ export class BuildService {
     compileOption?: string;
   }): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
+    // npu-compute / npu-emulate only run on ascend950 in <<<>>> operator
+    // projects; everything else must use the msprof flow.
+    if (!(await this.guardNewProfilerToolSupportedForCurrentProject())) {
       return;
     }
 

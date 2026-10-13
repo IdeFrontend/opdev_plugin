@@ -271,6 +271,7 @@ export default {
   'build.compileFailedThrow': '编译算子失败: {{output}}',
   'build.executeFailedThrow': '执行失败: {{output}}',
   'build.simulationFailedThrow': '执行仿真分析失败: {{output}}',
+  'build.newProfilerToolUnsupported': 'npu-compute / npu-emulate 仅支持 ascend950 环境的 <<<>>>（内核调用符直调）算子工程，当前工程请使用 msprof 上板/仿真流程。',
   'performanceTuning.simulation.tool.notA5ResetToMsprof': '当前环境不支持 npu-emulate 仿真工具，已自动切换为 msprof。npu-emulate 仅在 A5（ascend950）环境下可用。',
   'performanceTuning.onBoard.tool.notA5ResetToMsprof': '当前环境不支持 npu-compute 上板工具，已自动切换为 msprof。npu-compute 仅在 A5（ascend950）环境下可用。',
 

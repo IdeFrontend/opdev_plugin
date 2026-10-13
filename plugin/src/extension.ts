@@ -1019,9 +1019,12 @@ export async function activate(context: vscode.ExtensionContext) {
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
 
-      // A5 + npu-compute: open the unified data-collection dialog instead of the
-      // legacy quick-options panel / direct msprof flow.
-      if (ConfigService.shouldUseNewOnBoardTool()) {
+      // A5 (ascend950) + <<<>>> operator project + npu-compute: open the
+      // unified data-collection dialog instead of the legacy quick-options
+      // panel / direct msprof flow. Other project types keep the msprof flow.
+      const onboardProjectType = (await homeMethods.getProjectType()).projectType;
+
+      if (ConfigService.shouldUseNewOnBoardTool(onboardProjectType)) {
         setPendingDataCollectionType('onboard');
         await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
 
@@ -1073,9 +1076,13 @@ export async function activate(context: vscode.ExtensionContext) {
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
 
-      // A5 + npu-emulate (formerly npusim): open the unified data-collection
-      // dialog instead of the legacy quick-options panel / direct msprof flow.
-      if (ConfigService.shouldUseNewSimulationTool()) {
+      // A5 (ascend950) + <<<>>> operator project + npu-emulate (formerly
+      // npusim): open the unified data-collection dialog instead of the legacy
+      // quick-options panel / direct msprof flow. Other project types keep the
+      // msprof flow.
+      const simulationProjectType = (await homeMethods.getProjectType()).projectType;
+
+      if (ConfigService.shouldUseNewSimulationTool(simulationProjectType)) {
         setPendingDataCollectionType('simulate');
         await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
 
