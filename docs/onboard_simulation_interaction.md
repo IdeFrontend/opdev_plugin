@@ -9,10 +9,10 @@
 
 **相关文档：**
 
-- [simulator-options-spec.md](./simulator-options-spec.md)：仿真快捷选项与各soc_series支持的指标范围说明（英文）
-- [run-integration.md](./run-integration.md)：「运行算子」功能，与性能分析共用执行栈
-- [ascend-env-spec.md](./ascend-env-spec.md)：soc_series解析与spawn环境
-- [workspace-settings.md](./workspace-settings.md)：`op-devtools.performanceTuning.*` 全部配置项
+- [simulator-options-spec.md](../design-docs/simulator-options-spec.md)：仿真快捷选项与各soc_series支持的指标范围说明（英文）
+- [run-integration.md](../design-docs/run-integration.md)：「运行算子」功能，与性能分析共用执行栈
+- [ascend-env-spec.md](../design-docs/ascend-env-spec.md)：soc_series解析与spawn环境
+- [workspace-settings.md](../design-docs/workspace-settings.md)：`op-devtools.performanceTuning.*` 全部配置项
 - npu-compute与npu-emulate的完整工具手册未随本仓库分发，本文第五、六节收录了其关键命令与参数说明
 
 ---

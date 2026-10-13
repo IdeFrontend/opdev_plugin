@@ -63,7 +63,7 @@ RegisterProfileCallback, callback type is 5
 | `plugin/src/domain/utils/global-env-snapshot.ts` | Frozen env at activation |
 | `plugin/src/service/build-service.ts` | Sets `ASCEND_GLOBAL_LOG_LEVEL` for some builds |
 | `plugin/src/controller/welcome-controller.ts` | Sources `/etc/profile` on auto-open |
-| `docs/ascend-env-spec.md` | Documented spawn env contract |
+| `design-docs/ascend-env-spec.md` | Documented spawn env contract |
 
 ### Open questions
 

@@ -44,7 +44,7 @@
   The picker entry is an option, not a replacement for C++ tooling.
 - **`.cce` is not listed** as an Ascend C extension: `.cce` files are
   Triton-generated kernel sources in the Triton cache, debugged via MindStudio
-  (see `docs/debug-integration.md`), not user-authored files.
+  (see `design-docs/debug-integration.md`), not user-authored files.
 
 ## Verification
 
