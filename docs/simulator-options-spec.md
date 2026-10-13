@@ -24,7 +24,7 @@ Canonical contract for **simulation** quick-options, workspace settings, and `ms
 | **msprof analysis repo** (open-source parsing) | Defines metric group names and exported field semantics — **not** a simulator allow-list |
 | **§8 manual CLI verification** | **UI gate** — a metric is shown only after a real `msprof op simulator` pass on that `(metric, cannSoc)` |
 
-Do **not** infer simulator support from msprof analysis chip maps alone (A3 analysis includes `ResourceConflictRatio`; msopprof rejects it on `ascend910_93` — GC-22).
+Do **not** infer simulator support from msprof analysis chip maps alone (Atlas A3 series analysis includes `ResourceConflictRatio`; msopprof rejects it on `ascend910_93` — GC-22).
 
 ---
 
@@ -34,13 +34,13 @@ Do **not** infer simulator support from msprof analysis chip maps alone (A3 anal
 | ----- | -- | ---------- |
 | **confirmed** | Show control (or implicit base text) | Slug in `SIMULATOR_OPTIONAL_METRIC_SOCS` |
 | **unverified** | Hidden | Slug not in set |
-| **rejected** | Never | Slug never added (e.g. A3 + `ResourceConflictRatio`) |
+| **rejected** | Never | Slug never added (e.g. Atlas A3 series + `ResourceConflictRatio`) |
 
 Promotion: `unverified` → `confirmed` only after §8 CLI pass and PR evidence.
 
 ---
 
-## 4. Environment identifiers (A5 example)
+## 4. Environment identifiers (Ascend950PR&950DT series example)
 
 | Identifier | Value | Used for |
 | ---------- | ----- | -------- |
@@ -48,7 +48,7 @@ Promotion: `unverified` → `confirmed` only after §8 CLI pass and PR evidence.
 | CANN SOC slug | `ascend950` | Allow-list key, `resolveAscendEnv({ isSimulator: true }).socVersion` |
 | Invalid for `--soc-version` | `ascend950` (slug) | msopprof rejects early |
 
-See [`ascend-env-spec.md`](./ascend-env-spec.md) §8.1 for A2/A3 defaults and resolution precedence.
+See [`ascend-env-spec.md`](./ascend-env-spec.md) §8.1 for Atlas A2 / Atlas A3 series defaults and resolution precedence.
 
 ---
 
@@ -72,7 +72,7 @@ Workspace mapping: [`workspace-settings.md`](./workspace-settings.md) — `simul
 3. **Append:** `PMSampling` may append when user-enabled **and** allow-listed (e.g. `ResourceConflictRatio,PMSampling`).
 4. **Stale workspace values** must not emit metrics when slug is not allow-listed (GC-22 safety).
 
-Example A5 command (defaults on):
+Example Ascend950PR&950DT series command (defaults on):
 
 ```bash
 msprof op simulator \
@@ -102,7 +102,7 @@ msprof op simulator --soc-version=Ascend950PR_9589 \
 msprof op simulator --soc-version=Ascend950PR_9589 \
   --output=/tmp/opprof_test --aic-metrics=PMSampling <target>
 
-# A3 negative control (must fail for ResourceConflictRatio)
+# Atlas A3 series negative control (must fail for ResourceConflictRatio)
 msprof op simulator --soc-version=Ascend910C \
   --output=/tmp/opprof_test --aic-metrics=ResourceConflictRatio <target>
 ```
@@ -113,7 +113,7 @@ After per-metric PASS, also verify **combined** `--aic-metrics` values the UI ca
 
 ---
 
-## 8. §8.1 Recorded results — A5 (`ascend950`)
+## 8. §8.1 Recorded results — Ascend950PR&950DT series (`ascend950`)
 
 Manual `msprof op simulator` verification (reported 2026-06-26):
 
@@ -138,9 +138,9 @@ Implementation: both metrics added to `SIMULATOR_OPTIONAL_METRIC_SOCS` for `asce
 
 | Environment | `cannSoc` | `--soc-version` | PipeUtilization | ResourceConflictRatio | PMSampling |
 | ----------- | --------- | --------------- | --------------- | --------------------- | ---------- |
-| **A5** | `ascend950` | `Ascend950PR_9589` | confirmed (base) | **confirmed** (§8.1) | **confirmed** (§8.1) |
-| **A3** | `ascend910_93` | `Ascend910C` | confirmed (base) | **rejected** (GC-22) | unverified |
-| **A2** | `ascend910b` | `Ascend910B3` | confirmed (base) | unverified | unverified |
+| **Ascend950PR&950DT series** | `ascend950` | `Ascend950PR_9589` | confirmed (base) | **confirmed** (§8.1) | **confirmed** (§8.1) |
+| **Atlas A3 series** | `ascend910_93` | `Ascend910C` | confirmed (base) | **rejected** (GC-22) | unverified |
+| **Atlas A2 series** | `ascend910b` | `Ascend910B3` | confirmed (base) | unverified | unverified |
 
 **Never allow-list:** `ascend910_93` for `ResourceConflictRatio`.
 
@@ -154,14 +154,14 @@ Both paths use `resolveAscendEnv({ isSimulator: true }).socVersion` and [`isSimu
 
 ---
 
-## 11. Expected A5 quick-options (after allow-list)
+## 11. Expected Ascend950PR&950DT series quick-options (after allow-list)
 
-| UI element | Shown on A5 |
+| UI element | Shown on Ascend950PR&950DT series |
 | ---------- | ----------- |
 | Instruction pipeline + description | Yes |
 | Memory throughput waveform checkbox | Yes (default off) |
 | Resource conflict ratio checkbox | Yes (default on) |
-| `optionalUnsupported` hint | No (removed; A2/A3 use section copy instead) |
+| `optionalUnsupported` hint | No (removed; Atlas A2 / Atlas A3 series use section copy instead) |
 | Default `--aic-metrics` | `ResourceConflictRatio` |
 
-A2/A3: optional checkboxes remain hidden until separate §8 passes add their slugs.
+Atlas A2 / Atlas A3 series: optional checkboxes remain hidden until separate §8 passes add their slugs.

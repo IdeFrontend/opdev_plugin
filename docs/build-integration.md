@@ -17,7 +17,7 @@ The plugin does **not** ship a compiler. It:
 
 Compilation is performed by the project script or toolchain named in the generated command.
 
-**Extension host vs shell CANN environment** — At activation the extension only **logs** a frozen global env snapshot; it does not source env scripts or mutate `process.env`. Strategies prepend **`. ${project.ascend_env_script} && …`** when set; `executeOperatorCommand` embeds `export SOC_VERSION=… && …` per command. Contract: [`ascend-env-spec.md`](./ascend-env-spec.md); A5: [`ascend-a5-support.md`](./ascend-a5-support.md).
+**Extension host vs shell CANN environment** — At activation the extension only **logs** a frozen global env snapshot; it does not source env scripts or mutate `process.env`. Strategies prepend **`. ${project.ascend_env_script} && …`** when set; `executeOperatorCommand` embeds `export SOC_VERSION=… && …` per command. Contract: [`ascend-env-spec.md`](./ascend-env-spec.md); Ascend950PR&950DT series: [`ascend-a5-support.md`](./ascend-a5-support.md).
 
 ---
 

@@ -2,7 +2,7 @@
 
 This document describes how **simulation** and **on-board** performance analysis (`msprof` CLI) are integrated in Ascend C Toolkits **as implemented today**: build/deploy pre-steps, profiler command generation, output under `opprof`, and a **native VS Code tree** for browsing results. The extension orchestrates tooling; **msprof** runs in the operator environment.
 
-For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`; simulator-class runs use simulator dir as spawn `SOC_VERSION`) and ACLNN cmake defaults at generation, see [`ascend-env-spec.md`](./ascend-env-spec.md). For A5 on-board metric matrices, see [`ascend-a5-support.md`](./ascend-a5-support.md). For `op-devtools.performanceTuning.*` keys and mapping, see [`workspace-settings.md`](./workspace-settings.md).
+For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`; simulator-class runs use simulator dir as spawn `SOC_VERSION`) and ACLNN cmake defaults at generation, see [`ascend-env-spec.md`](./ascend-env-spec.md). For Ascend950PR&950DT series on-board metric matrices, see [`ascend-a5-support.md`](./ascend-a5-support.md). For `op-devtools.performanceTuning.*` keys and mapping, see [`workspace-settings.md`](./workspace-settings.md).
 
 ---
 
@@ -163,11 +163,11 @@ Same structure as simulation, but:
 | `simulation.resourceConflictRatio` | `ResourceConflictRatio` | only if SOC allow-listed |
 | `simulation.memoryThroughputWaveform` | `PMSampling` | only if SOC allow-listed |
 
-**SOC gating (GC-22 / plugin_release #32):** the simulator (CANN msopprof) validates `--aic-metrics` against the platform selected by `--soc-version` and accepts only a narrow, platform-dependent set; unknown metrics fail with `[ERROR] Unexpected argument … maybe in wrong soc platform` (this broke A3 / `ascend910_93`). Optional metrics are emitted only when the resolved CANN SOC slug is in `SIMULATOR_OPTIONAL_METRIC_SOCS` ([`shared/msprof-simulator-metrics.ts`](../shared/msprof-simulator-metrics.ts)). **A5 (`ascend950`):** `ResourceConflictRatio` and `PMSampling` are allow-listed after §8 CLI verification — see **[`simulator-options-spec.md`](./simulator-options-spec.md)**. Other SOCs remain on `PipeUtilization` only until verified. msprof **mutual exclusion:** `ResourceConflictRatio` (when allow-listed and enabled) replaces `PipeUtilization`; `PMSampling` may append.
+**SOC gating (GC-22 / plugin_release #32):** the simulator (CANN msopprof) validates `--aic-metrics` against the platform selected by `--soc-version` and accepts only a narrow, platform-dependent set; unknown metrics fail with `[ERROR] Unexpected argument … maybe in wrong soc platform` (this broke on the Atlas A3 series / `ascend910_93`). Optional metrics are emitted only when the resolved CANN SOC slug is in `SIMULATOR_OPTIONAL_METRIC_SOCS` ([`shared/msprof-simulator-metrics.ts`](../shared/msprof-simulator-metrics.ts)). **Ascend950PR&950DT series (`ascend950`):** `ResourceConflictRatio` and `PMSampling` are allow-listed after §8 CLI verification — see **[`simulator-options-spec.md`](./simulator-options-spec.md)**. Other SOCs remain on `PipeUtilization` only until verified. msprof **mutual exclusion:** `ResourceConflictRatio` (when allow-listed and enabled) replaces `PipeUtilization`; `PMSampling` may append.
 
 **`--soc-version`:** must be the **simulator directory** (`resolveAscendEnv({ isSimulator: true }).simulatorType`), e.g. `Ascend910B3` / `Ascend910C` / `Ascend950PR_9589` — not the CANN slug. Full contract (defaults, precedence, verification, contrast with `{soc_version}` / spawn env): **[`ascend-env-spec.md` §8.1](./ascend-env-spec.md#81-msprof-op-simulator---soc-version-canonical)**.
 
-**On-board metrics** depend on SOC: `isAscendA5ProfilerCannSoc(cannSoc)` chooses A5 vs A3-style base sets; workspace checkboxes are folded into the on_board section DAO (`ConfigService.getOnBoardConfig(projectPath)`); workspace keys: [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning). A5 matrix: [`ascend-a5-support.md`](./ascend-a5-support.md).
+**On-board metrics** depend on SOC: `isAscendA5ProfilerCannSoc(cannSoc)` chooses Ascend950PR&950DT series vs Atlas A3 series style base sets; workspace checkboxes are folded into the on_board section DAO (`ConfigService.getOnBoardConfig(projectPath)`); workspace keys: [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning). Ascend950PR&950DT series matrix: [`ascend-a5-support.md`](./ascend-a5-support.md).
 
 **Profiler target binary:** `strategy.getProfilerTargetFile` — the **ascend** strategy reads **`exampleBuildConfig.targetFile`** (workspace setting; falls back to `OperatorPluginRegistry.getDefaultPaths`); the **cann** / **pyasc** / **triton** strategies read the `build_op` deploy key (`deployCommandOrRunCommand`, fallback `targetOpFile`) — see [`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings). Optional `operatorNames` rewrites the `test_aclnn_*` path segment for standard custom (first selected name).
 
@@ -309,7 +309,7 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 | profiling-report | `plugin/src/class/profiling-report-panel.ts`, `web/src/views/panels/profiling-report/` |
 | Registration | `plugin/src/extension.ts`, `package.json` |
 | Options webviews | `web/src/views/panels/options-simulator/`, `options-on-board/` |
-| A5 metric matrix | `shared/msprof-onboard-env.ts`, `ascend-util.ts` |
+| Ascend950PR&950DT series metric matrix | `shared/msprof-onboard-env.ts`, `ascend-util.ts` |
 
 ---
 
@@ -319,7 +319,7 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 |----------|---------|
 | [`build-integration.md`](./build-integration.md) | Shared build / executor / `executeOperatorCommand` |
 | [`ascend-env-spec.md`](./ascend-env-spec.md) | Spawn env for compile + msprof |
-| [`ascend-a5-support.md`](./ascend-a5-support.md) | A5 on-board metrics and defaults |
+| [`ascend-a5-support.md`](./ascend-a5-support.md) | Ascend950PR&950DT series on-board metrics and defaults |
 | [`workspace-settings.md`](./workspace-settings.md) | All `op-devtools.*` keys and runtime merge |
 | [`sanitizer.md`](./sanitizer.md) | Parallel native-tree pattern for sanitizer results |
 | [`dump-tensor.md`](./dump-tensor.md) | Dump tensor results tree — reuses `downloadReport` / `diffFiles` |
