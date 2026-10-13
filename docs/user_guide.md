@@ -35,7 +35,7 @@
 
 #### 步骤一：安装并启动CANN镜像
 
-详细教程请参考[安装CANN官方Docker镜像](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)
+详细教程请参考“[安装CANN官方Docker镜像](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)”
 
 #### 步骤二：配置环境变量
 
