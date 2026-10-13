@@ -1,12 +1,12 @@
-# Documentation index (`docs/`)
+# 文档索引（`docs/`）
 
 
-> **Developer / design docs have moved.** The plugin-maintainer design and implementation specs now live in [`../design-docs/readme.md`](./design-docs/readme.md).
+> **开发者 / 设计文档已迁移。** 插件维护者的设计与实现规范现位于 [`../design-docs/readme.md`](./design-docs/readme.md)。
 
 ---
 
-## User documentation
+## 用户文档
 
-| Document | Use when |
-|----------|----------|
-| [`user-guide.md`](./user-guide.md) | End-user usage guide: environment setup, operator development workflow, FAQ（中文） |
+| 文档 | 适用场景 |
+|------|----------|
+| [`user-guide.md`](./user-guide.md) | 最终用户使用指南：环境准备、算子开发流程、常见问题（中文） |
