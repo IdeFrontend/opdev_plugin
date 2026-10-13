@@ -21,7 +21,7 @@
 
 [CANNLab](https://gitcode.com/org/cann/cannlab/environment) 是CANN社区的一站式算子开发平台。
 
-1. 进入[CANNLab](https://gitcode.com/org/cann/cannlab/environment)平台，进入开发者空间并选择WebIDE。
+1. 进入[CANNLab](https://gitcode.com/org/cann/cannlab/environment)平台，创建并连接环境。
 
    ![CANNLab入口](assets/pic-cannlab-entry.png)
 
@@ -35,7 +35,7 @@
 
 #### 步骤一：安装并启动CANN镜像
 
-[安装教程](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)
+详细教程请参考“[安装CANN官方Docker镜像](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)”
 
 #### 步骤二：配置环境变量
 
