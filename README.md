@@ -25,11 +25,11 @@
 ```mermaid
 flowchart LR
   subgraph IDE["VS Code / WebIDE"]
-    UI["Ascend C Toolkits 插件<br/>（工程管理、编译运行、调试、异常检测、性能调优）"]
+    UI["Ascend C Toolkits 插件<br/>（工程管理、编译运行、<br/>调试、异常检测、性能调优）"]
     View["结果展示<br/>（树视图、报告页面）"]
   end
   subgraph Env["算子开发环境（已安装 CANN）"]
-    Tools["CANN 工具链<br/>（编译器、msdebug、msSanitizer、msprof、npu-compute、npu-emulate）"]
+    Tools["CANN 工具链<br/>（编译器、msdebug、<br/>msSanitizer、msprof、<br/>npu-compute、npu-emulate）"]
   end
   UI -->|生成并执行命令| Tools
   Tools -->|报告与日志| View
