@@ -188,6 +188,8 @@ Only (1) triggers **SOC-from-simulator** via §4.4 inverse.
 
 The resolver never consults the project record; the workspace setting, the env snapshot, and host detection are its only sources.
 
+> **How to look up the SoC version / CANN SOC slug for your hardware:** see the Ascend official guide — [AI Core operator compilation (`#note-reference`)](https://asc.gitcode.com/guide/programming_guide/compilation_and_execution/operator_compilation/ai_core_operator_compilation.html#note-reference).
+
 ### 7.3 `npuArch`
 
 Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `SUPPORT_*` silently (no user notification).
