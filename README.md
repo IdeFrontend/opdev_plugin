@@ -29,7 +29,7 @@ flowchart LR
     View["结果展示<br/>（树视图、报告页面）"]
   end
   subgraph Env["算子开发环境（已安装 CANN）"]
-    Tools["CANN 工具链<br/>（编译器、msdebug、<br/>msSanitizer、msprof、<br/>npu-compute、npu-emulate）"]
+    Tools["CANN 工具链<br/>（编译器、msdebug、<br/>msSanitizer、npu-compute、<br/>msprof、npu-emulate）"]
   end
   UI -->|生成并执行命令| Tools
   Tools -->|报告与日志| View
