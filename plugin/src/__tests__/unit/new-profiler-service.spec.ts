@@ -10,7 +10,7 @@
 /**
  * Unit tests for the A5 new-tool command builders (new-profiler-service):
  * buildNpuComputeCommand (on-board → npu-compute) and buildNpuEmulateCommand
- * (simulation → npu-emulate, renamed from npusim). The dialog's
+ * (simulation → npu-emulate). The dialog's
  * common.commandLine is authoritative for tool args; the builders only augment
  * it with the report output path and the compiled target, and never overwrite
  * an option the user already typed.

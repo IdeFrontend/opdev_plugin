@@ -11,7 +11,7 @@
  * Command generation for the A5 replacement prototype profiler tools driven by
  * the "数据采集配置" dialog:
  *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
- *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
+ *   - simulation → `npu-emulate`
  *
  * The builders only *augment* the tool invocation with the pieces the report
  * link relies on — a stable output file location under the per-run opprof
