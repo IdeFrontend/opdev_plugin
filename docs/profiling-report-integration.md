@@ -100,9 +100,9 @@ sequenceDiagram
 - The extension host does **not** read the whole archive into a JSON message; large reports stay on disk and transfer through the webview resource protocol.
 - `parseRep` slices the `cann-rep` container's embedded files by offset/length (no decompression); `parseNpuRep160` parses the product `.npu-rep` 160-byte layout; `adaptRep` maps them to `SwimlaneModel` + `ReportViewModel`.
 
-### CANNBot 分析 (cannbot request)
+### CANNWork 分析 (cannbot request)
 
-Clicking a CANNBot icon in the report-analysis aside (summary / compute / memory scope) assembles a read-only snapshot payload inside the library (`buildCannbotPayload`: view-model sections + `reportMeta` + fixed prompt) and relays it to the cannbot plugin:
+Clicking a CANNWork icon in the report-analysis aside (summary / compute / memory scope) assembles a read-only snapshot payload inside the library (`buildCannbotPayload`: view-model sections + `reportMeta` + fixed prompt) and relays it to the cannbot plugin:
 
 ```mermaid
 sequenceDiagram
