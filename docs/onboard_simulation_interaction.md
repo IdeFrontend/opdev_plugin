@@ -183,13 +183,13 @@ msopprof会按 `--soc-version` 校验 `--aic-metrics`，平台不支持的指标
 
 ## 五、Ascend950PR&950DT系列产品环境的性能分析工具（npu-compute与npu-emulate）
 
-> 以下内容基于 `ascend-c-toolkit` 分支。该分支已提供npu-compute（上板）和npu-emulate（仿真）的工具开关、「数据采集配置」弹窗、命令拼装和报告展示，在Ascend950PR&950DT系列产品（ascend950）环境中默认启用；也可以通过工具开关改用msprof。
+> 以下内容基于 `ascend-c-toolkit` 分支。该分支已提供npu-compute（上板）和npu-emulate（仿真）的工具开关、「数据采集配置」弹窗、命令拼装和报告展示，在Ascend950PR&950DT系列产品（Ascend950）环境中默认启用；也可以通过工具开关改用msprof。
 
 ### 工具选择逻辑
 
 ```mermaid
 flowchart TD
-  Click["点击 上板分析 / 仿真分析"] --> Is950{"解析 soc_series<br/>是否为 Ascend950PR&950DT系列产品（ascend950）？"}
+  Click["点击 上板分析 / 仿真分析"] --> Is950{"解析 soc_series<br/>是否为 Ascend950PR&950DT系列产品（Ascend950）？"}
   Is950 -->|否| Old["使用 msprof：msprof op [simulator]"]
   Is950 -->|是| ToolCfg{"工具开关设置<br/>onBoard.tool / simulation.tool"}
   ToolCfg -->|msprof| Old
@@ -220,8 +220,8 @@ flowchart TD
 
 **`ascend-c-toolkit` 分支上的实现情况**：
 
-- 上板分析：`package.json` 已提供 `performanceTuning.onBoard.tool` / `performanceTuning.simulation.tool` 两个开关；Ascend950PR&950DT系列产品（ascend950）环境默认使用 `npu-compute`，点击上板分析会弹出「数据采集配置」面板（`web/src/views/panels/data-collection-config/`），实现见 `ConfigService.shouldUseNewOnBoardTool()`、`buildNpuComputeCommand()`。
-- 仿真分析：Ascend950PR&950DT系列产品（ascend950）环境默认使用 `npu-emulate`，点击仿真分析弹出同一个「数据采集配置」面板（Metrics面板隐藏）；确认后先编译，再执行 `npu-emulate collect --output <opprofRunDir>/result.npu-rep <产物路径>`，报告自动打开；实现见 `ConfigService.shouldUseNewSimulationTool()`、`buildNpuEmulateCommand()`。设置 `simulation.tool=msprof` 可改用第二、三节描述的msprof流程。
+- 上板分析：`package.json` 已提供 `performanceTuning.onBoard.tool` / `performanceTuning.simulation.tool` 两个开关；Ascend950PR&950DT系列产品（Ascend950）环境默认使用 `npu-compute`，点击上板分析会弹出「数据采集配置」面板（`web/src/views/panels/data-collection-config/`），实现见 `ConfigService.shouldUseNewOnBoardTool()`、`buildNpuComputeCommand()`。
+- 仿真分析：Ascend950PR&950DT系列产品（Ascend950）环境默认使用 `npu-emulate`，点击仿真分析弹出同一个「数据采集配置」面板（Metrics面板隐藏）；确认后先编译，再执行 `npu-emulate collect --output <opprofRunDir>/result.npu-rep <产物路径>`，报告自动打开；实现见 `ConfigService.shouldUseNewSimulationTool()`、`buildNpuEmulateCommand()`。设置 `simulation.tool=msprof` 可改用第二、三节描述的msprof流程。
 
 ---
 
