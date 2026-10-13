@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.5.4-beta7",
+  "version": "1.5.4-beta8",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -513,6 +513,10 @@
               "npu-compute",
               "msprof"
             ],
+            "enumDescriptions": [
+              "%config.op-devtools.performanceTuning.onBoard.tool.enumDescription.npuCompute%",
+              "%config.op-devtools.performanceTuning.onBoard.tool.enumDescription.msprof%"
+            ],
             "order": 308,
             "description": "%config.op-devtools.performanceTuning.onBoard.tool.description%",
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.tool.markdownDescription%"
@@ -676,6 +680,10 @@
             "enum": [
               "npu-emulate",
               "msprof"
+            ],
+            "enumDescriptions": [
+              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.npuEmulate%",
+              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.msprof%"
             ],
             "order": 299,
             "description": "%config.op-devtools.performanceTuning.simulation.tool.description%",

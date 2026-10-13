@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import {
   ref, computed, onBeforeMount, onUnmounted,
 } from 'vue';
@@ -68,7 +77,12 @@ const setDocumentThemeKind = (kind: WebviewThemeKind): void => {
   );
 };
 
-const THEME_REFRESH_DELAYS = [0, 50, 150, 300];
+const THEME_REFRESH_DELAYS = [
+  0,
+  50,
+  150,
+  300,
+];
 const THEME_TRANSITION_SUPPRESSION_MS = 160;
 
 const readCssVar = (name: string, fallback: string): string => {
@@ -279,17 +293,26 @@ export function useTheme() {
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class', 'style', 'data-vscode-theme-kind'],
+      attributeFilter: [
+        'class',
+        'style',
+        'data-vscode-theme-kind',
+      ],
       attributeOldValue: true,
     });
 
     if (document.body) {
       themeObserver.observe(document.body, {
         attributes: true,
-        attributeFilter: ['class', 'style', 'data-vscode-theme-kind'],
+        attributeFilter: [
+          'class',
+          'style',
+          'data-vscode-theme-kind',
+        ],
         attributeOldValue: true,
       });
     }
+
     vscode.postMessage({ command: 'getTheme' });
   });
 

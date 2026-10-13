@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 export default {
   // core (api-server)
   'core.message.apiResponseSuccess': 'Request success.',
@@ -262,6 +271,8 @@ export default {
   'build.compileFailedThrow': 'Compile operator failed: {{output}}',
   'build.executeFailedThrow': 'Execution failed: {{output}}',
   'build.simulationFailedThrow': 'Simulation analysis failed: {{output}}',
+  'performanceTuning.simulation.tool.notA5ResetToMsprof': 'The current environment does not support the npu-emulate simulation tool; it has been automatically reset to msprof. npu-emulate is only available on A5 (ascend950) environments.',
+  'performanceTuning.onBoard.tool.notA5ResetToMsprof': 'The current environment does not support the npu-compute on-board tool; it has been automatically reset to msprof. npu-compute is only available on A5 (ascend950) environments.',
 
   // project (additional)
   'project.invalidProjectId': 'Invalid project path',
