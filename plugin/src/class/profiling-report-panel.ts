@@ -458,7 +458,7 @@ export class ProfilingReportPanel {
 报告章节：${toText(effective.scope)}
 算子名称：${toText(effective.op_name)}
 采集时间：${formatCollectedAt(effective.collected_at)}
-仿真分析：${isSim}
+isSim：${isSim}
 `;
 
       await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText, { autoSend: true });
