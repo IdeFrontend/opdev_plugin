@@ -35,11 +35,13 @@
 
 #### 步骤一：安装并启动CANN镜像
 
+> 如果当前环境已经能够正常编译运行算子，可跳过本步骤。
+
 详细教程请参考[安装CANN官方Docker镜像](https://gitcode.com/cann/asc-devkit/blob/master/docs/zh/quick_start.md#2-cann%E5%AE%98%E6%96%B9docker%E9%95%9C%E5%83%8F)。
 
 #### 步骤二：配置环境变量
 
-> 如果使用步骤一中下载的容器镜像，可跳过本步骤。
+> 如果按照步骤一安装CANN官方Docker镜像，可跳过本步骤。
 
 将CANN包的环境变量设置脚本，以及CMAKE_PREFIX_PATH和LD_LIBRARY_PATH变量写入 /etc/profile，参考如下：
 
