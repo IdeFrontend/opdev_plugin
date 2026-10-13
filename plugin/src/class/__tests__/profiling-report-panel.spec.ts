@@ -254,12 +254,52 @@ describe('ProfilingReportPanel', () => {
         + '报告名称：sample.rep\n'
         + '报告章节：compute\n'
         + '算子名称：Add\n'
-        + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`,
+        + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`
+        + '仿真分析：false\n',
         { autoSend: true },
       );
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
     expect(mockShowErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('marks isSim true when the report path contains an npu-emulate run directory', async () => {
+    const simDir = path.join(root, 'opprof', `npu-emulate_${Date.now()}`);
+    const simFilePath = path.join(simDir, 'result.npu-rep');
+
+    fs.mkdirSync(simDir, { recursive: true });
+    fs.writeFileSync(simFilePath, 'rep-bytes');
+
+    await ProfilingReportPanel.createOrShow(context, simFilePath);
+
+    const panel = panels[0]!;
+    const payload = {
+      version: '1.0',
+      scope: 'compute',
+      report_name: 'result.npu-rep',
+      report_id: 'result.npu-rep',
+      report_path: simFilePath,
+      op_name: 'Add',
+      collected_at: '2026-08-13T09:41:00Z',
+      data: { pipeOccupancy: [] },
+      prompt: 'prompt-text',
+    };
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload,
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(
+        'cannwork.setInputText',
+        expect.stringContaining('仿真分析：true\n'),
+        { autoSend: true },
+      );
   });
 
   it('replaces the built-in prompt line when the hidden cannbot prompt override setting is set', async () => {
@@ -297,7 +337,8 @@ describe('ProfilingReportPanel', () => {
         + '报告名称：sample.rep\n'
         + '报告章节：summary\n'
         + '算子名称：Add\n'
-        + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`,
+        + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`
+        + '仿真分析：false\n',
         { autoSend: true },
       );
     expect(mockShowInformationMessage)
@@ -328,7 +369,8 @@ describe('ProfilingReportPanel', () => {
         + '报告名称：\n'
         + '报告章节：summary\n'
         + '算子名称：\n'
-        + '采集时间：\n',
+        + '采集时间：\n'
+        + '仿真分析：false\n',
         { autoSend: true },
       );
   });
