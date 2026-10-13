@@ -310,7 +310,7 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
 问题现象：
 
-![CANNBot报错](assets/pic-cannbot1.png)
+![CANNWork分析](assets/pic-cannbot1.png)
 
 原因：“CANNWork分析”功能由CANNWork插件提供，使用前需要安装CANNWork插件并完成登录。
 
