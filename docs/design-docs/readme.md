@@ -1,7 +1,7 @@
 # Developer documentation index (`design-docs/`)
 
 Design and implementation specs for Ascend C Toolkits maintainers. User-facing
-documentation lives under [`docs/`](./docs/readme.md).
+documentation lives under [`docs/`](./docs/README.md).
 
 ---
 
