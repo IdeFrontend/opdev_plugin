@@ -893,10 +893,9 @@ export class ConfigService {
   }
 
   /**
-   * Simulation tool selector. The new simulation tool was renamed
-   * `npusim` → `npu-emulate`; on A5 (ascend950) it is the default. The
-   * workspace setting `performanceTuning.simulation.tool` may pin
-   * `npu-emulate` or the legacy `msprof`. Non-A5 SOCs always resolve to
+   * Simulation tool selector. On A5 (ascend950) `npu-emulate` is the
+   * default. The workspace setting `performanceTuning.simulation.tool` may
+   * pin `npu-emulate` or the legacy `msprof`. Non-A5 SOCs always resolve to
    * `msprof` (the new tool is A5-only).
    */
   static getSimulationTool(): SimulationTool {

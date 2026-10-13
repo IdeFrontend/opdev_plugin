@@ -15,7 +15,7 @@
  * On A5 (`ascend950`) the on-board / simulation analysis can be switched to the
  * replacement prototype tools:
  *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
- *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
+ *   - simulation → `npu-emulate`
  *
  * `npu-emulate` is enabled on A5 (default simulation tool); its `collect`
  * subcommand currently takes no metric/section options (see
@@ -25,7 +25,7 @@
 /** On-board profiling tool: the new `npu-compute` prototype or the legacy `msprof`. */
 export type OnBoardTool = 'npu-compute' | 'msprof';
 
-/** Simulation tool: the new `npu-emulate` prototype (renamed from `npusim`) or the legacy `msprof`. */
+/** Simulation tool: the new `npu-emulate` prototype or the legacy `msprof`. */
 export type SimulationTool = 'npu-emulate' | 'msprof';
 
 /** Which collection the dialog is configuring; also preselects the top switch. */
