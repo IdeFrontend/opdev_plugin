@@ -1,6 +1,6 @@
 # asc-vscode
 
-本仓库是 **Ascend C Toolkits（Ascend C Toolkits）** 插件的源码仓库。Ascend C Toolkits是一款面向Ascend C算子开发的一站式VS Code插件，覆盖算子工程创建、代码开发、编译部署、运行调试、异常检测和性能分析的全流程，支持CANNLab云上开发环境和本地开发环境两种使用方式。
+本仓库是 **Ascend C Toolkits** 插件的源码仓库。Ascend C Toolkits是一款面向Ascend C算子开发的一站式VS Code插件，覆盖算子工程创建、代码开发、编译部署、运行调试、异常检测和性能分析的全流程，支持CANNLab云上开发环境和本地开发环境两种使用方式。
 
 ## 概述
 

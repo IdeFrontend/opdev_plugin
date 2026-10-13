@@ -26,7 +26,7 @@
 - **远程环境感知的操作可用性** — 操作树及相关选项面板同时识别本地NPU与已配置的远程工具；CPU主机用户会获得配置 `remote_tool.sh` 的引导，避免对支持的流程过早拦截。
 - **标准自定义工程能力识别与安装包部署 ([#66](https://gitcode.com/opdevtools/plugin_release/issues/66))** — 标准自定义工程能力改为依据公开的 `build.sh --help` 接口识别；部署 `.run` 安装包前先检测安装器是否支持 `--force`，仅在支持时传入该参数。
 
-本文列出 **Ascend C Toolkits（Ascend C Toolkits）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
+本文列出 **Ascend C Toolkits** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
 ## 1.4.0 — 2026-07-24
 
