@@ -245,7 +245,6 @@ flowchart TD
 - **定位**：SoC级芯片仿真，与板上二进制兼容；同一kernel可在仿真器与真实芯片运行。支持**精度仿真**（bit级结果）与**性能仿真**（指令流水图/IPC/roofline）。
 - **限制**：仅支持Linux与CANN环境（Windows无法运行仿真）；处理器为Ascend 950；支持aarch64与x86_64架构。
 - **插件使用的命令**：`npu-emulate collect --output <报告文件路径> <编译产物路径>`——运行编译产物完成SoC仿真，并直接导出 `.npu-rep` 报告；当前不支持指标/section类附加参数。
-- **NPUSim说明**：名为NPUSim的版本提供Python CLI（`record` / `report` 子命令）；当前随CANN分发的 `npu-emulate` 以 `collect` 子命令为准。
 - **安装要点**：随CANN分发；使用仓库代码时须打wheel并 `pip install dist/*.whl --upgrade -t ${install_path}/python/site-packages/` **覆盖安装**，否则会被CANN自带版本优先加载。
 
 ---
