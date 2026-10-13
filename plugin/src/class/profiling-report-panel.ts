@@ -450,12 +450,15 @@ export class ProfilingReportPanel {
         // 配置读取失败不影响正常转发（视为未配置）
       }
 
+      const isSim = !!this.filePath && this.filePath.includes('npu-emulate');
+
       const inputText = `${buildInPrompt}
 报告路径：${toText(effective.report_path)}
 报告名称：${toText(effective.report_name)}
 报告章节：${toText(effective.scope)}
 算子名称：${toText(effective.op_name)}
 采集时间：${formatCollectedAt(effective.collected_at)}
+仿真分析：${isSim}
 `;
 
       await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText, { autoSend: true });
