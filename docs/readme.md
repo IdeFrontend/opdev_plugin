@@ -1,8 +1,7 @@
 # Documentation index (`docs/`)
 
-User-facing documentation for the Ascend C Toolkits VS Code extension. User-reported issues are tracked under [`user-issues/`](./user-issues/readme.md).
 
-> **Developer / design docs have moved.** The plugin-maintainer design and implementation specs now live in [`../design-docs/readme.md`](../design-docs/readme.md).
+> **Developer / design docs have moved.** The plugin-maintainer design and implementation specs now live in [`../design-docs/readme.md`](./design-docs/readme.md).
 
 ---
 
