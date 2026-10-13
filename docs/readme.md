@@ -1,13 +1,12 @@
-# Documentation index (`docs/`)
+# 文档索引（`docs/`）
 
-User-facing documentation for the Ascend C Toolkits VS Code extension. User-reported issues are tracked under [`user-issues/`](./user-issues/readme.md).
 
-> **Developer / design docs have moved.** The plugin-maintainer design and implementation specs now live in [`../design-docs/readme.md`](../design-docs/readme.md).
+> **开发者 / 设计文档已迁移。** 插件维护者的设计与实现规范现位于 [`../design-docs/README.md`](./design-docs/README.md)。
 
 ---
 
-## User documentation
+## 用户文档
 
-| Document | Use when |
-|----------|----------|
-| [`user-guide.md`](./user-guide.md) | End-user usage guide: environment setup, operator development workflow, FAQ（中文） |
+| 文档 | 适用场景 |
+|------|----------|
+| [`user_guide.md`](./user_guide.md) | 最终用户使用指南：环境准备、算子开发流程、常见问题（中文） |
