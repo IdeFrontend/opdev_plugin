@@ -9,10 +9,10 @@
 
 **相关文档：**
 
-- [simulator-options-spec.md](../design-docs/simulator-options-spec.md)：仿真快捷选项与各soc_series支持的指标范围说明（英文）
-- [run-integration.md](../design-docs/run-integration.md)：「运行算子」功能，与性能分析共用执行栈
-- [ascend-env-spec.md](../design-docs/ascend-env-spec.md)：soc_series解析与spawn环境
-- [workspace-settings.md](../design-docs/workspace-settings.md)：`op-devtools.performanceTuning.*` 全部配置项
+- [simulator-options-spec.md](./simulator-options-spec.md)：仿真快捷选项与各soc_series支持的指标范围说明（英文）
+- [run-integration.md](./run-integration.md)：「运行算子」功能，与性能分析共用执行栈
+- [ascend-env-spec.md](./ascend-env-spec.md)：soc_series解析与spawn环境
+- [workspace-settings.md](./workspace-settings.md)：`op-devtools.performanceTuning.*` 全部配置项
 - npu-compute与npu-emulate的完整工具手册未随本仓库分发，本文第五、六节收录了其关键命令与参数说明
 
 ---
@@ -150,22 +150,6 @@ flowchart TD
 | 指标准入 | 可选指标必须经真机CLI验证后加入 `SIMULATOR_OPTIONAL_METRIC_SOCS` 白名单才在UI放行；陈旧workspace值在非白名单soc_series上不会产生该指标 | 上板指标随soc_series矩阵切换 |
 | 配置DAO | `ConfigService.getSimulateConfig(projectPath)` | `ConfigService.getOnBoardConfig(projectPath)` |
 | 目标二进制 | ascend策略取 `exampleBuildConfig.targetFile`（回退默认 `build/test_aclnn_<op>`）；cann/pyasc/triton策略取deploy键 `deployCommandOrRunCommand`（回退 `build_out/*.run` 等） | 同左（统一调用 `strategy.getProfilerTargetFile`） |
-
-### soc_series白名单机制（GC-22）
-
-msopprof会按 `--soc-version` 校验 `--aic-metrics`，平台不支持的指标直接报错 `Unexpected argument … maybe in wrong soc platform`。因此：
-
-| 环境 | soc_version（CANN slug） | PipeUtilization | ResourceConflictRatio | PMSampling |
-|------|--------------------------|-----------------|-----------------------|------------|
-| Ascend950PR&950DT系列产品 | `ascend950` | 支持（基础） | **已验证支持** | **已验证支持** |
-| Atlas A3系列产品 | `ascend910_93` | 支持（基础） | **明确禁用** | 未验证 |
-| Atlas A2系列产品 | `ascend910b` | 支持（基础） | 未验证 | 未验证 |
-
-仿真命令的 `--soc-version` 不填写上表中的soc_version值，而需填写 `$ASCEND_HOME_PATH/tools/simulator/` 下与环境对应的仿真器目录名，具体名称以实际安装的CANN版本为准。
-
-指标从“未验证”升级为“支持”必须有真实 `msprof op simulator` 跑通记录（退出码0）并随PR留存CANN版本、目标算子等信息。
-
----
 
 ## 四、目标二进制与工程类型
 

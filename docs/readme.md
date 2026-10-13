@@ -11,4 +11,3 @@ User-facing documentation for the Ascend C Toolkits VS Code extension. User-repo
 | Document | Use when |
 |----------|----------|
 | [`user-guide.md`](./user-guide.md) | End-user usage guide: environment setup, operator development workflow, FAQ（中文） |
-| [`onboard_simulation_interaction.md`](./onboard_simulation_interaction.md) | 仿真分析 / 上板分析交互说明：npu-compute、npu-emulate、msprof 流程与配置 |
