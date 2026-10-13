@@ -1,7 +1,7 @@
 # 文档索引（`docs/`）
 
 
-> **开发者 / 设计文档已迁移。** 插件维护者的设计与实现规范现位于 [`../design-docs/readme.md`](./design-docs/readme.md)。
+> **开发者 / 设计文档已迁移。** 插件维护者的设计与实现规范现位于 [`../design-docs/README.md`](./design-docs/README.md)。
 
 ---
 
