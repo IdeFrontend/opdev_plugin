@@ -218,7 +218,7 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
    - Common区域可配置报告输出文件（Output File，后缀为 .npu-rep）和是否强制覆盖已有报告（Force Overwrite）；Target Processes、Replay Mode、Application Replay Buffer、Application Replay Mode在当前版本提供固定选项。
    - Metrics区域支持按set（单选预设组合）或section（多选单项指标）选择采集内容，并支持在过滤框中输入关键字快速检索。
 
-   ![选择采集指标](assets/pic-npu-compute1b.png)
+     ![选择采集指标](assets/pic-npu-compute1b.png)
 
    - Command Line文本框会根据上述选择自动生成工具参数（每个指标展开为一个 --section参数），也支持手动编辑，最终执行时以该文本框中的内容为准。
 
