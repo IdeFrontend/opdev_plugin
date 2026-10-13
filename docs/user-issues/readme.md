@@ -30,12 +30,12 @@ This folder groups open and closed reports by theme, documents their current sta
 
 - **#8, #9, #10** share the same reporter (`devin-cwd`) and ops-math / 一站式 platform context (v1.2.9 / v1.3.0). Treat as one reproduction environment where possible.
 - **#4 and #7** both describe slow loading; #7 may be marketplace download timeout (infra) vs #4 activation latency (code).
-- A5 env work is partially documented in [ascend-a5-support.md](../ascend-a5-support.md) and [ascend-env-spec.md](../ascend-env-spec.md).
+- Ascend950PR&950DT series env work is partially documented in [ascend-a5-support.md](../ascend-a5-support.md) and [ascend-env-spec.md](../ascend-env-spec.md).
 
 ## Related internal docs
 
 - [ascend-env-spec.md](../ascend-env-spec.md) — SOC / simulator / NPU arch resolution contract
-- [ascend-a5-support.md](../ascend-a5-support.md) — A5-specific behavior and gaps
+- [ascend-a5-support.md](../ascend-a5-support.md) — Ascend950PR&950DT-specific behavior and gaps
 - [generated-files-specification.md](../generated-files-specification.md) — generated files, `devtool_config.json`, `.vscode/cache.json`
 - [performance.md](../performance.md) — Simulation / on-board profiling and results tree
 - [operator-treeview.md](../operator-treeview.md) — Sidebar native trees (Home, Actions, Operators, sanitizer/performance results)

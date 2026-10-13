@@ -181,7 +181,7 @@ cd plugin && npm test -- --testPathPattern="command-utils|compile-options|standa
 | `operator-script-placeholders.spec.ts` | `--ops={operatorNames}` substitution |
 | `ascend-plugin-config-scripts.spec.ts` | Default ascend scripts include `--ops` placeholder |
 | `standard-custom-deploy-command.spec.ts` | #10 deploy command before profiling |
-| `operator-project-workspace-config-a5.spec.ts` | A5 SOC merge for onboard UI config |
+| `operator-project-workspace-config-a5.spec.ts` | Ascend950PR&950DT series SOC merge for onboard UI config |
 
 ### Manual QA prerequisites
 
@@ -216,7 +216,7 @@ cd plugin && npm test -- --testPathPattern="command-utils|compile-options|standa
 ```
 Branch: nikitin/issues-fixes
 CANN version: ___
-Hardware: A3 / A5
+Hardware: Atlas A3 series / Ascend950PR&950DT series
 
 #8: automated PASS / manual: ___
 #9: automated PASS / manual: ___

@@ -108,4 +108,4 @@ Reset clears `VS` (all `op-devtools.*`) and `CA` (all fields) and deletes `DC`; 
 
 ## Related issues
 
-- [#6 A5 env](./a5-environment.md) — stale A3 profiler settings on A5 hardware; reset clears them for a fresh start.
+- [#6 Ascend950PR&950DT series env](./a5-environment.md) — stale Atlas A3 series profiler settings on Ascend950PR&950DT series hardware; reset clears them for a fresh start.

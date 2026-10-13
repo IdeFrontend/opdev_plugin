@@ -164,11 +164,11 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
 #### 使用npu-check检测
 
-适用环境：Ascend 950。
+适用环境：Ascend950PR&950DT系列产品。
 
 工具文档：[npu-check用户手册](https://gitcode.com/cann/asc-tools/blob/experimental/npu_tools/npu_check/npu_check.md)。
 
-在Ascend 950环境中，可以使用npu-check工具检测算子的潜在问题（内存、同步）。
+在Ascend950PR&950DT系列产品环境中，可以使用npu-check工具检测算子的潜在问题（内存、同步）。
 
 1. 点击操作面板中的“异常检测”按钮，在“异常检测快速选项”页面选择工具“npu-check”。该工具目前提供“内存检测”和“同步检测”两个检测选项。
 
@@ -196,15 +196,15 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
 ![配置仿真分析工具](assets/pic-npu-emulate3.png)
 
-> 说明：npu-compute和npu-emulate目前仅随Ascend 950环境的CANN包发布，因此仅在该环境下生效。未配置时，Ascend 950环境默认使用npu-compute和npu-emulate，其他环境默认使用msprof。
+> 说明：npu-compute和npu-emulate目前仅随Ascend950PR&950DT系列产品环境的CANN包发布，因此仅在该环境下生效。未配置时，Ascend950PR&950DT系列产品环境默认使用npu-compute和npu-emulate，其他环境默认使用msprof。
 
 #### 使用npu-compute和npu-emulate采集性能数据
 
-适用环境：Ascend 950。
+适用环境：Ascend950PR&950DT系列产品。
 
 工具文档：[npu-compute使用文档](https://gitcode.com/cann/asc-tools/blob/experimental/docs/06_npu_compute.md)。
 
-在Ascend 950环境中，可以通过npu-compute工具采集算子在NPU上运行时的Kernel性能数据（基于Kernel重放和PMU硬件计数器），也可以通过npu-emulate工具在无实体NPU卡的情况下进行芯片级仿真，获取算子的精度结果与指令级性能数据（仿真运行的二进制与上板运行的二进制兼容）。
+在Ascend950PR&950DT系列产品环境中，可以通过npu-compute工具采集算子在NPU上运行时的Kernel性能数据（基于Kernel重放和PMU硬件计数器），也可以通过npu-emulate工具在无实体NPU卡的情况下进行芯片级仿真，获取算子的精度结果与指令级性能数据（仿真运行的二进制与上板运行的二进制兼容）。
 
 1. 创建或者打开一个算子工程（如下图，以addn工程为例）。
 
