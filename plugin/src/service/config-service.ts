@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -22,7 +31,9 @@ import {
   resolveSanitizerToolType,
   SanitizerToolType,
 } from '@shared/cann-env-constants';
-import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
+import {
+  resolveEffectiveCannSoc, stripSimulatorFlag,
+} from '@plugin/domain/utils/ascend-util';
 import {
   ON_BOARD_METRIC_LEGACY_TO_DOTTED,
   SIMULATE_METRIC_LEGACY_TO_DOTTED,
@@ -615,6 +626,13 @@ export class ConfigService {
       const scripts = plugin.getInitialConfigScripts(op, workspaceRoot);
       const paths = plugin.getDefaultPaths(op);
       const isA5Profiler = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc());
+
+      // A5 environments default to the npu-emulate simulation tool, which does
+      // not use the CANN `--simulator` build path. Strip the flag from the
+      // seeded simulation compile command for A5; non-A5 keeps it (msprof flow).
+      if (isA5Profiler) {
+        scripts.simulateScript = stripSimulatorFlag(scripts.simulateScript);
+      }
 
       // Targets are ROOT-level for every project shape: a standard-custom
       // collection builds through ONE root operator, so the workspace-level
