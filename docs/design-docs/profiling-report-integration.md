@@ -75,8 +75,8 @@ The shell gives the host element `height: 100vh` (the `ProfilingReport` componen
 
 - `createOrShow(context, filePath)` — singleton per file (re-uses an open panel and re-loads). Registers the file directory in `localResourceRoots` so the webview can `fetch` it. Only inserts into `openedFiles` after `initializeHtml()` succeeds (failed HTML transform disposes the panel).
 - `initializeHtml()` — `HtmlTransformer.transformDistHtml` + `registerWebviewThemeBridge`.
-- `loadFile(filePath)` — posts an `asWebviewUri` for the file (no base64 shuttle) plus `filePath` (absolute path) and `collectedAt` (file mtime, ISO) for the cannbot payload meta; failures also post `loadProfilingReportFailed` to the webview.
-- `cannbotRequest` handling — when the webview posts `{ command: 'cannbotRequest', payload }`, the panel fills the payload fields into a multi-line template (first line is the built-in prompt `buildInPrompt`, replaceable via the hidden `cannbotPromptOverride` setting) and forwards it to the cannbot plugin via `vscode.commands.executeCommand('cannwork.setInputText', inputText, {autoSend: true})`; success/failure is surfaced with an info/error message.
+- `loadFile(filePath)` — posts an `asWebviewUri` for the file (no base64 shuttle) plus `filePath` (absolute path) and `collectedAt` (file mtime, ISO) for the CANNWork payload meta; failures also post `loadProfilingReportFailed` to the webview.
+- `cannbotRequest` handling — when the webview posts `{ command: 'cannbotRequest', payload }`, the panel fills the payload fields into a multi-line template (first line is the built-in prompt `buildInPrompt`, replaceable via the hidden `cannbotPromptOverride` setting) and forwards it to the CANNWork plugin via `vscode.commands.executeCommand('cannwork.setInputText', inputText, {autoSend: true})`; success/failure is surfaced with an info/error message.
 - `dispose()` — tears down theme/message/dispose disposables and removes itself from `openedFiles`.
 
 ## Data flow
@@ -102,7 +102,7 @@ sequenceDiagram
 
 ### CANNWork分析 (CANNWork request)
 
-Clicking a CANNWork icon in the report-analysis aside (summary / compute / memory scope) assembles a read-only snapshot payload inside the library (`buildCannbotPayload`: view-model sections + `reportMeta` + fixed prompt) and relays it to the cannbot plugin:
+Clicking a CANNWork icon in the report-analysis aside (summary / compute / memory scope) assembles a read-only snapshot payload inside the library (`buildCannbotPayload`: view-model sections + `reportMeta` + fixed prompt) and relays it to the CANNWork plugin:
 
 ```mermaid
 sequenceDiagram
