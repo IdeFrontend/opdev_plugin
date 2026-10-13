@@ -264,7 +264,7 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
   ![计算负载分析详情](assets/compute-load-analysis-detail3.png)
 
-- 内存负载分析：支持全屏查看、放大缩小，支持与CANNBot联动分析报告；可在报告中勾选L2Cache、MemoryL1、MemoryL0、MemoryUB等检测项，查看对应的详细数据。
+- 内存负载分析：支持全屏查看、放大缩小，支持与CANNWork联动分析报告；可在报告中勾选L2Cache、MemoryL1、MemoryL0、MemoryUB等检测项，查看对应的详细数据。
 
   ![内存负载分析](assets/memory-load-analysis.png)
 
@@ -278,9 +278,9 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
 - Roofline瓶颈分析：开发中。
 
-- 与CANNBot联动分析：点击报告中的CANNBot图标，可以将报告信息发送至CANNBot进行智能分析。
+- 与CANNWork联动分析：点击报告中的CANNWork图标，可以将报告信息发送至CANNWork进行智能分析。
 
-  ![CANNBot联动演示](assets/gif-cannbot.gif)
+  ![CANNWork联动演示](assets/gif-cannbot.gif)
 
 #### 使用msprof采集性能数据
 
