@@ -2,9 +2,9 @@
 
 This document is the **Ascend950PR&950DT-focused guide** for the Mind Studio / operator VS Code extension. It lists canonical strings, what the plugin does today on Ascend950PR&950DT series hardware, how to verify behavior, and known gaps.
 
-**Canonical environment resolution** (precedence, spawn env, placeholders, lifecycle) lives in **`docs/ascend-env-spec.md`**. Read that first for “how SOC / simulator / NPU arch are chosen”; this file covers **Ascend950PR&950DT-specific values and behavior** on top of that contract.
+**Canonical environment resolution** (precedence, spawn env, placeholders, lifecycle) lives in **`design-docs/ascend-env-spec.md`**. Read that first for “how SOC / simulator / NPU arch are chosen”; this file covers **Ascend950PR&950DT-specific values and behavior** on top of that contract.
 
-**Atlas A3 series vs Ascend950PR&950DT series behavior split** (detailed matrix): **`docs/review-a3-a5-environment-support.md`**.
+**Atlas A3 series vs Ascend950PR&950DT series behavior split** (detailed matrix): **`design-docs/review-a3-a5-environment-support.md`**.
 
 There is **no separate product mode** for the Ascend950PR&950DT series. Its support means the plugin consistently uses the correct **CANN SOC slug**, **simulator directory**, **`NPU_ARCH`**, **host detection** substrings, and **on-board profiler** metric matrix for Ascend950PR&950DT series (`ascend950`) targets.
 
@@ -144,7 +144,7 @@ On-board command build passes `onboardCannSoc` from `resolveAscendEnv({ isSimula
 | New-op on-board defaults | `plugin/src/service/config-service.ts` |
 | Workspace SOC / simulator helpers | `plugin/src/helpers/operator-project-workspace-config.ts` |
 | On-board options (webview + settings DAO) | `plugin/src/extension.ts`, `plugin/src/service/config-service.ts` |
-| Env spec (all platforms) | `docs/ascend-env-spec.md` |
+| Env spec (all platforms) | `design-docs/ascend-env-spec.md` |
 
 ---
 

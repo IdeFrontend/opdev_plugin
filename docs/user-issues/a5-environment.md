@@ -15,9 +15,9 @@ Two distinct problems reported on Ascend950PR&950DT series hardware:
 
 Related internal documentation:
 
-- [ascend-env-spec.md](../ascend-env-spec.md) — resolution precedence and spawn env contract
-- [ascend-a5-support.md](../ascend-a5-support.md) — Ascend950PR&950DT series canonical strings and known gaps
-- [review-a3-a5-environment-support.md](../review-a3-a5-environment-support.md) — Atlas A3 series vs Ascend950PR&950DT series differences (current implementation)
+- [ascend-env-spec.md](../../design-docs/ascend-env-spec.md) — resolution precedence and spawn env contract
+- [ascend-a5-support.md](../../design-docs/ascend-a5-support.md) — Ascend950PR&950DT series canonical strings and known gaps
+- [review-a3-a5-environment-support.md](../../design-docs/review-a3-a5-environment-support.md) — Atlas A3 series vs Ascend950PR&950DT series differences (current implementation)
 
 ---
 
@@ -68,7 +68,7 @@ The reporter may be conflating `SOC_VERSION` with `SIMULATOR_TYPE`, **or** a tem
 2. Which file shows the wrong value — generated `CMakeLists.txt`, build log, or UI display?
 3. Exact wrong vs expected values on the Ascend950PR&950DT series host?
 4. CANN version and `npu-smi info` / `asys info -r=status` output?
-5. Is `environment.socVersion` set to `ascend950` in workspace settings? ([`workspace-settings.md`](../workspace-settings.md))
+5. Is `environment.socVersion` set to `ascend950` in workspace settings? ([`workspace-settings.md`](../../design-docs/workspace-settings.md))
 6. Does reporter expect `Ascend950PR_9589` in `SOC_VERSION` or in `SIMULATOR_TYPE`?
 
 ### Implementation plan
@@ -118,7 +118,7 @@ Possible failure modes:
 | `plugin/src/extension.ts` | Post-onboard refresh callback |
 | `plugin/src/class/operate-tree-provider.ts` | `refreshPerformanceReports`, `revealPerformanceReport` |
 | `plugin/src/core/performance/performance-run-data.ts` | Scans opprof output |
-| `docs/performance.md` | Performance results tree and msprof flow |
+| `design-docs/performance.md` | Performance results tree and msprof flow |
 
 ### Open questions
 

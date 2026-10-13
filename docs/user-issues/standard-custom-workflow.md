@@ -104,7 +104,7 @@ Copy-paste helper: [`plugin/templates/snippets/deploy_run_package.sh`](../../plu
 
 ### Option B — Override compile commands in VS Code settings
 
-If you cannot change `build.sh` immediately, set the **full** build script for the on-board (or simulation) pre-profiling step in workspace settings ([`workspace-settings.md`](../workspace-settings.md) — `onBoardCompileCommand` / `simulationCompileCommand`).
+If you cannot change `build.sh` immediately, set the **full** build script for the on-board (or simulation) pre-profiling step in workspace settings ([`workspace-settings.md`](../../design-docs/workspace-settings.md) — `onBoardCompileCommand` / `simulationCompileCommand`).
 
 **Settings → Extensions → Ascend C Toolkits → Compile & Deploy**, or edit `.vscode/settings.json`:
 
@@ -121,7 +121,7 @@ For **simulation**, use `simulationCompileCommand` instead. Replace `ascend910b`
 
 ### Related settings
 
-Key list: [`workspace-settings.md`](../workspace-settings.md). For standard-custom deploy, **`deployCommandOrRunCommand`** is a path/glob (e.g. `build_out/*.run`); on **Ascend Build** the plugin appends `"$RUN_FILE" --force` after resolve — not a full shell with flags. There is **no** separate “deploy only” setting for cann — override the whole compile command string, or fix `build.sh`.
+Key list: [`workspace-settings.md`](../../design-docs/workspace-settings.md). For standard-custom deploy, **`deployCommandOrRunCommand`** is a path/glob (e.g. `build_out/*.run`); on **Ascend Build** the plugin appends `"$RUN_FILE" --force` after resolve — not a full shell with flags. There is **no** separate “deploy only” setting for cann — override the whole compile command string, or fix `build.sh`.
 
 ---
 
