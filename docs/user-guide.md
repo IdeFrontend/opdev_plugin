@@ -254,7 +254,7 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
   ![报告统计信息](assets/statistical-report.png)
 
-- 计算负载分析：支持与CANNBot联动分析报告，并可查看检测项的详细数据。
+- 计算负载分析：支持与CANNWork联动分析报告，并可查看检测项的详细数据。
 
   ![计算负载分析](assets/compute-load-analysis.png)
 
@@ -324,4 +324,4 @@ msSanitizer用于检测算子的潜在问题（内存、竞争、未初始化、
 
 ## 意见反馈
 
-使用过程中如有问题或建议，欢迎提交issue反馈：[插件发布仓Issues](https://gitcode.com/opdevtools/plugin_release/issues)。
+使用过程中如有问题或建议，欢迎提交issue反馈：[asc-vscode](https://gitcode.com/cann/asc-vscode/issues)（推荐）或[插件发布仓Issues](https://gitcode.com/opdevtools/plugin_release/issues)。
