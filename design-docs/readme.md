@@ -27,6 +27,7 @@ tracking lives under [`docs/user-issues/`](../docs/user-issues/readme.md).
 | [`performance.md`](./performance.md) | Simulation / on-board msprof flow and results tree |
 | [`profiling-report-integration.md`](./profiling-report-integration.md) | `.rep` / `.ncrep` viewer panel (profiling-report library) |
 | [`simulator-options-spec.md`](./simulator-options-spec.md) | Simulation quick-options, metric allow-list, `msprof op simulator` command |
+| [`onboard_simulation_interaction.md`](./onboard_simulation_interaction.md) | 仿真分析 / 上板分析交互说明：npu-compute、npu-emulate、msprof 流程与配置 |
 | [`dump-tensor.md`](./dump-tensor.md) | DumpTensor integration: queue, `.bin` import, native tree |
 | [`msagent.md`](./msagent.md) | Optional msAgent bridge |
 
