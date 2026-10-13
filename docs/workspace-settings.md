@@ -214,8 +214,8 @@ Pre-build script: `compileAndDeploy.buildConfig.simulationCompileCommand`.
 | `onBoard.interCoreLoad` | `Occupancy` | |
 | `onBoard.roofline` | `Roofline` | |
 | `onBoard.operatorCodeHotspot` | `Source` | |
-| `onBoard.cacheHeatmap` | `MemoryDetail` | Non–A5 profiler SOC only |
-| `onBoard.pcSampling` | `PCSampling` | **A5** profiler SOC only (`isAscendA5ProfilerCannSoc`) |
+| `onBoard.cacheHeatmap` | `MemoryDetail` | Non–Ascend950PR&950DT series profiler SOC only |
+| `onBoard.pcSampling` | `PCSampling` | **Ascend950PR&950DT series** profiler SOC only (`isAscendA5ProfilerCannSoc`) |
 | `onBoard.operatorMetrics` | `operatorMetrics` (bulk toggle) | Toggling writes all metric child keys via `writeOpDevtoolsDottedSettings` |
 | `onBoard.cubeAndVectorInstructionTimeAndRatio` | `ArithmeticUtilization` | Child of bulk toggle |
 | `onBoard.l2CacheHitRate` | `L2Cache` | |
@@ -229,7 +229,7 @@ Pre-build script: `compileAndDeploy.buildConfig.simulationCompileCommand`.
 
 Pre-build script: `compileAndDeploy.buildConfig.onBoardCompileCommand`.
 
-A5 metric matrix details: [`ascend-a5-support.md`](./ascend-a5-support.md).
+Ascend950PR&950DT series metric matrix details: [`ascend-a5-support.md`](./ascend-a5-support.md).
 
 ### Environment (`op-devtools.environment`)
 

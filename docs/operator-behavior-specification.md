@@ -73,7 +73,7 @@ Runtime config objects for commands come from the per-section typed DAO factorie
 
 ## Ascend/CANN environment and SOC resolution
 
-**Canonical spec:** [`ascend-env-spec.md`](./ascend-env-spec.md) (precedence, spawn env, placeholders, logging). **A5:** [`ascend-a5-support.md`](./ascend-a5-support.md). **Workspace keys:** [`workspace-settings.md`](./workspace-settings.md#environment-op-devtoolsenvironment).
+**Canonical spec:** [`ascend-env-spec.md`](./ascend-env-spec.md) (precedence, spawn env, placeholders, logging). **Ascend950PR&950DT series:** [`ascend-a5-support.md`](./ascend-a5-support.md). **Workspace keys:** [`workspace-settings.md`](./workspace-settings.md#environment-op-devtoolsenvironment).
 
 Operator commands use `resolveAscendEnvForOperatorCommand` → `executeOperatorCommand` ([`build-integration.md`](./build-integration.md)). Strategies may prepend `. ${project.ascend_env_script} &&` when the workspace `environment.environmentScript` setting is set (the record's `ascend_env_script` is that setting, read via `getConfiguredEnvironmentScriptPath`).
 

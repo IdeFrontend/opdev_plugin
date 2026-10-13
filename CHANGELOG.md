@@ -86,11 +86,11 @@
 ## 1.3.5 — 2026-06-26
 
 
-- **仿真分析 `--aic-metrics` 按SOC平台门控** — `msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。可选指标仅在解析出的CANN SOC标识命中 `SIMULATOR_OPTIONAL_METRIC_SOCS` 允许列表（`shared/msprof-simulator-metrics.ts`）时传递；命令生成与仿真选项面板共用该统一来源。A2/A3仍仅传递必选的 `PipeUtilization`；`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则不变。**A5（`ascend950`）** 经 §8.1 CLI验证已加入允许列表，`ResourceConflictRatio` 与 `PMSampling` 在A5仿真快速选项中可见；默认仿真命令由 `--aic-metrics=PipeUtilization` 变为 `--aic-metrics=ResourceConflictRatio`。详见 `docs/simulator-options-spec.md`。
+- **仿真分析 `--aic-metrics` 按SOC平台门控** — `msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。Atlas A3系列产品（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。可选指标仅在解析出的CANN SOC标识命中 `SIMULATOR_OPTIONAL_METRIC_SOCS` 允许列表（`shared/msprof-simulator-metrics.ts`）时传递；命令生成与仿真选项面板共用该统一来源。Atlas A2/A3系列产品仍仅传递必选的 `PipeUtilization`；`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则不变。**Ascend950PR&950DT系列产品（`ascend950`）** 经 §8.1 CLI验证已加入允许列表，`ResourceConflictRatio` 与 `PMSampling` 在Ascend950PR&950DT系列产品仿真快速选项中可见；默认仿真命令由 `--aic-metrics=PipeUtilization` 变为 `--aic-metrics=ResourceConflictRatio`。详见 `docs/simulator-options-spec.md`。
 - **修复standard-custom「运行样例」缺少算子名/平台** — `build.sh --run_example` 从**位置参数** `<算子> <模式> <pkg_mode>` 读取样例名与模式，而非从 `--ops`。缺失时脚本打印空的 `name:` / `mode:` 并回退到usage。现 `CannCommandStrategy.buildExampleCommand` 与 `AscendCommandStrategy` 一致地追加 `<算子> <模式> cust`，并在 `compileOption` 未带 `--soc` 时补全 `--soc`（经 `{soc_version}` 占位符）。
 - **按算子自动选择run_example模式** — 通过扫描算子 `examples/` 目录（对齐build.sh布局，跳过 `experimental/`）检测样例模式（`eager` 与 `graph`）。全局 `executionMode` 设置仅在两种模式均存在时作为决胜项。文件名匹配默认 `^test_aclnn_.*\.cpp$` / `^test_geir_.*\.cpp$`，可通过 `eagerExamplePattern` / `graphExamplePattern` 覆盖。仅当运行脚本使用 `--run_example` 接口时才追加位置参数。
 - **NPU调试launch.json自动适配** — 调试启动前，`launch.json` 目标在**所选算子自身**的 `build/` 目录下解析（而非工作区根 `build/`），使用插件默认名称（`test_aclnn_<算子>`、`<算子>`、graph二进制及build_example目标）。多算子选择取第一个；替换遗留的根 `build/` 占位符；无法解析目标时向用户告警。
-- **异常检测A5 CMake模板修复** — CANN工程模板在生成时按SOC修补异常检测编译/链接标志：A5仅 `-g`；非A5保留 `--cce-enable-sanitizer` 与链接标志。仅SOC相关后缀使用占位符，共享选项（`-O2`、`--cce-fatobj-link`）保持字面量。
+- **异常检测Ascend950PR&950DT系列产品CMake模板修复** — CANN工程模板在生成时按SOC修补异常检测编译/链接标志：Ascend950PR&950DT系列产品仅 `-g`；其他系列产品保留 `--cce-enable-sanitizer` 与链接标志。仅SOC相关后缀使用占位符，共享选项（`-O2`、`--cce-fatobj-link`）保持字面量。
 - **MindStudio Debug VSIX 1.0.9** — 内置调试扩展由1.0.8升级至1.0.9。
 
 ## 1.3.3 — 2026-06-15
@@ -101,24 +101,24 @@
 - **欢迎页** — 重新设计欢迎面板布局与文案；欢迎页Webview标签图标从扩展品牌资源正确加载。
 - **从Actions视图打开欢迎页** — Actions树新增侧栏命令分组与菜单项，可随时重新打开欢迎页。
 - **命令面板** — 用户可见命令按产品名称分组（`%config.title%`）；仅用于侧栏/操作树的UI命令不再出现在命令面板中。
-- **`.run` 部署** — 在 **A2** 与 **A5** SOC（`ascend910b`、`ascend950` 等）重装 `.run` 包时追加 `--force`；A3（`ascend910_93`）行为不变。
+- **`.run` 部署** — 在 **Atlas A2系列产品** 与 **Ascend950PR&950DT系列产品** SOC（`ascend910b`、`ascend950` 等）重装 `.run` 包时追加 `--force`；Atlas A3系列产品（`ascend910_93`）行为不变。
 - 仿真分析向 `msprof op simulator --soc-version` 传递**仿真器目录名**（如 `Ascend910B3`、`Ascend910C`、`Ascend950PR_9589`），不再传递CANN SOC标识 — 恢复1.3.2之前行为，与msopprof / CANN `tools/simulator` 目录一致。
 - 仿真分析不再同时传递 `PipeUtilization` 与 `ResourceConflictRatio`；启用资源冲突比时仅传递 `ResourceConflictRatio`（及可选的 `PMSampling`），符合msprof互斥规则。
-- 在 `docs/ascend-env-spec.md` §8.1补充 `--soc-version` 与SOC标识、spawn环境的规范说明；同步修订性能分析与A3/A5环境文档。
+- 在 `docs/ascend-env-spec.md` §8.1补充 `--soc-version` 与SOC标识、spawn环境的规范说明；同步修订性能分析与Atlas A3系列产品/Ascend950PR&950DT系列产品环境文档。
 
 ## 1.3.2 — 2026-06-08
 
-本版本强化A5/A3芯片环境解析与命令行注入、标准自定义算子就地创建与genop脚手架、SOC设置与仿真/调试一致性，并改进设置迁移与稳定性。
+本版本强化Ascend950PR&950DT系列产品/Atlas A3系列产品芯片环境解析与命令行注入、标准自定义算子就地创建与genop脚手架、SOC设置与仿真/调试一致性，并改进设置迁移与稳定性。
 
 - 在标准自定义算子集合内新建子算子时，直接在指定路径完成创建，不再提示「在当前窗口打开」，避免误识别为独立工程。
 - 新建标准自定义算子时优先执行工程自带的 `build.sh --genop`；新增可配置项 **genOpCommand**（默认 `bash build.sh --genop={path}/{operatorname}`），失败或无输出时回退到插件模板。
 - 标准自定义构建、调试、调优等流程统一通过脚本模板中的 `--ops={operatorNames}` 占位符注入算子名（兼容未迁移的旧脚本）。
-- 集中Ascend系列检测：芯片名规范化、A3 `Ascend910_93xx` 识别、A2 Pro/Premium/901的 `dav-1001` 等。
-- Atlas A3统一为CANN SOC `ascend910_93`（检测、告警示例与文档）；`Ascend910A` 归入910B族。
+- 集中Ascend系列检测：芯片名规范化、Atlas A3系列产品 `Ascend910_93xx` 识别、Atlas A2系列产品 Pro/Premium/901的 `dav-1001` 等。
+- Atlas A3系列产品统一为CANN SOC `ascend910_93`（检测、告警示例与文档）；`Ascend910A` 归入910B族。
 - 「SOC未检测到」告警中的 **SOC设置** 与齿轮 **项目配置** 一致，打开**工作区**作用域设置（避免在用户作用域填写却被解析器忽略）。
-- 仿真分析向 `msprof op simulator --soc-version` 传递CANN SOC标识（如 `ascend910_93`），不再误用仿真器目录名（如 `Ascend910C`）。**已在1.3.3废止** — A2/A5现场工具链不接受SOC标识作为 `--soc-version`；见 `docs/ascend-env-spec.md` §8.1。
-- A5/A3环境变量改为在**命令字符串**中显式 `export`（可审计、顺序可控）；标准自定义工程在生成CMake时写入 `SOC_VERSION`/`NPU_ARCH` 占位符及 `SUPPORT_*` 默认值，减少错误的环境注入。
-- CANN与 `add_custom` 工程模板CMake占位符与A5构建说明更新。
+- 仿真分析向 `msprof op simulator --soc-version` 传递CANN SOC标识（如 `ascend910_93`），不再误用仿真器目录名（如 `Ascend910C`）。**已在1.3.3废止** — Atlas A2系列产品/Ascend950PR&950DT系列产品现场工具链不接受SOC标识作为 `--soc-version`；见 `docs/ascend-env-spec.md` §8.1。
+- Ascend950PR&950DT系列产品/Atlas A3系列产品环境变量改为在**命令字符串**中显式 `export`（可审计、顺序可控）；标准自定义工程在生成CMake时写入 `SOC_VERSION`/`NPU_ARCH` 占位符及 `SUPPORT_*` 默认值，减少错误的环境注入。
+- CANN与 `add_custom` 工程模板CMake占位符与Ascend950PR&950DT系列产品构建说明更新。
 - NPU调试启动前自动将 `launch.json` 中的调试目标适配为 `build/<算子名>`（占位或缺失路径时更新；用户已配置的有效目标保留）。
 - 一次性旧版设置迁移；运行时以VS Code工作区设置为准；监视主配置变更。
 - 修复性能分析服务在VS Code中因默认日志路径权限导致的 **Error:OTHER**（显式 `--logPath`）。
@@ -127,11 +127,11 @@
 
 ## 1.3.1 — 2026-05-28
 
-本版本面向A5环境适配、标准自定义算子工作流修复、启动与安装包体积优化、输出面板体验改进及缺陷修复。
+本版本面向Ascend950PR&950DT系列产品环境适配、标准自定义算子工作流修复、启动与安装包体积优化、输出面板体验改进及缺陷修复。
 
-- 标准自定义工程构建时，扩展根据解析后的SoC注入芯片相关环境变量，生成的CMake不再固定为A3默认值。
-- CANN工程模板支持A5构建与仿真；**SoC版本**、**NPU架构** 可通过CMake参数（`-DSOC_VERSION=`、`-DNPU_ARCH=`）传入，未在命令行指定时也可通过环境变量作为后备。从扩展侧栏发起构建时会自动注入芯片环境变量。
-- 当SoC配置或检测为Atlas A5（`ascend950`）时，上板**性能调优**快捷选项显示 **PC采样**，替代 **Cache热力图**。
+- 标准自定义工程构建时，扩展根据解析后的SoC注入芯片相关环境变量，生成的CMake不再固定为Atlas A3系列产品默认值。
+- CANN工程模板支持Ascend950PR&950DT系列产品构建与仿真；**SoC版本**、**NPU架构** 可通过CMake参数（`-DSOC_VERSION=`、`-DNPU_ARCH=`）传入，未在命令行指定时也可通过环境变量作为后备。从扩展侧栏发起构建时会自动注入芯片环境变量。
+- 当SoC配置或检测为Ascend950PR&950DT系列产品（`ascend950`）时，上板**性能调优**快捷选项显示 **PC采样**，替代 **Cache热力图**。
 - **SoC版本**、**仿真器类型** 设置默认为空；运行时按工作区设置、全局环境变量（如 `SOC_VERSION`）或主机Ascend工具链检测依次解析。未设置仿真器类型时，仿真构建选用与解析SoC匹配的默认值。相关设置项说明已更新。
 - SoC版本无法自动检测时（如 `asys` / `npu-smi` 不可用）显示警告通知。
 - 编译后安装生成的 `.run` 包时自动追加 **`--force`**（Ascend Build部署及标准自定义上板/仿真调优前置步骤）。
@@ -158,8 +158,8 @@
 
 ## 2026-04-20
 
-- 标准自定义算子仿真分析适配芯片配置（适配A5环境）。
-- 支持工程配置中芯片类型自动根据环境生成（适配A5环境）。
+- 标准自定义算子仿真分析适配芯片配置（适配Ascend950PR&950DT系列产品环境）。
+- 支持工程配置中芯片类型自动根据环境生成（适配Ascend950PR&950DT系列产品环境）。
 
 ## 2026-03-27
 

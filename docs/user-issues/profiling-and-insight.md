@@ -67,7 +67,7 @@ RegisterProfileCallback, callback type is 5
 
 ### Open questions
 
-1. Plugin version, CANN version, hardware (A3 vs A5)?
+1. Plugin version, CANN version, hardware (Atlas A3 series vs Ascend950PR&950DT series)?
 2. Which actions fail — on-board only, or also build/run/sim?
 3. Does unsetting those variables in `/etc/profile` and restarting VS Code fully fix it?
 4. Does the command exit with failure or complete with errors?

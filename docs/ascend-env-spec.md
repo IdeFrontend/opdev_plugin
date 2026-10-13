@@ -4,7 +4,7 @@ Status: implemented in `shared/ascend-series-registry.ts`,
 `plugin/src/domain/utils/ascend-util.ts`, `plugin/src/domain/utils/global-env-snapshot.ts`,
 `plugin/src/domain/utils/ascend-detection-env.ts`.
 
-Workspace keys: [`workspace-settings.md`](./workspace-settings.md). A5 operations: [`ascend-a5-support.md`](./ascend-a5-support.md).
+Workspace keys: [`workspace-settings.md`](./workspace-settings.md). Ascend950PR&950DT series operations: [`ascend-a5-support.md`](./ascend-a5-support.md).
 
 > If implementation disagrees with this document, fix the implementation.
 
@@ -14,22 +14,22 @@ Workspace keys: [`workspace-settings.md`](./workspace-settings.md). A5 operation
 
 Matching uses **normalized** chip id (§3). **Order:** exact (§4.1), then prefix (§4.2).
 
-| Rule | Pattern / names (normalized) | Series | Default `socVersion` |
+| Rule | Pattern / names (normalized) | Product series | Default `socVersion` |
 |------|------------------------------|--------|----------------------|
-| Prefix | `Ascend950*` | A5 | `ascend950` |
-| Prefix | `Ascend910_*` | A3 | `ascend910_93` |
-| Prefix | `Ascend910A*`, `Ascend910B*` | A2 | `ascend910b` |
-| Exact | `Ascend901A/B`, `Ascend910PremiumA`, `Ascend910ProA/B` | A2 | `ascend910b` |
+| Prefix | `Ascend950*` | Ascend950PR&950DT series | `ascend950` |
+| Prefix | `Ascend910_*` | Atlas A3 series | `ascend910_93` |
+| Prefix | `Ascend910A*`, `Ascend910B*` | Atlas A2 series | `ascend910b` |
+| Exact | `Ascend901A/B`, `Ascend910PremiumA`, `Ascend910ProA/B` | Atlas A2 series | `ascend910b` |
 
 Prefix order: `Ascend950` → `Ascend910_` → `Ascend910A` → `Ascend910B`.
 
-| Series | `socVersion` | `simulatorType` | Default `npuArch` |
+| Product series | `socVersion` | `simulatorType` | Default `npuArch` |
 |--------|--------------|-----------------|-------------------|
-| A2 | `ascend910b` | `Ascend910B3` | `dav-2201` |
-| A3 | `ascend910_93` | `Ascend910_9362` | `dav-2201` |
-| A5 | `ascend950` | `Ascend950PR_9589` | `dav-3510` |
+| Atlas A2 series | `ascend910b` | `Ascend910B3` | `dav-2201` |
+| Atlas A3 series | `ascend910_93` | `Ascend910_9362` | `dav-2201` |
+| Ascend950PR&950DT series | `ascend950` | `Ascend950PR_9589` | `dav-3510` |
 
-**A2 Pro / Premium / 901:** still series **A2** (`ascend910b`, `Ascend910B3`); only `NPU_ARCH` is **`dav-1001`** (not `dav-2201`). Workspace `socVersion=ascend910b` alone does not set `dav-1001` — needs a detected/cached §4.1 chip (§5).
+**Atlas A2 series Pro / Premium / 901 chips:** still the Atlas A2 series (`ascend910b`, `Ascend910B3`); only `NPU_ARCH` is **`dav-1001`** (not `dav-2201`). Workspace `socVersion=ascend910b` alone does not set `dav-1001` — needs a detected/cached §4.1 chip (§5).
 
 Constants: [`shared/cann-env-constants.ts`](../shared/cann-env-constants.ts).
 
@@ -83,7 +83,7 @@ For Remote-SSH or container use, `ASCEND_HOME_PATH` and its target directories m
 normalize(chip) = chip.trim().replace(/\s+/g, '')
 ```
 
-Examples: `Ascend 910_9362 V1` → `Ascend910_9362V1` (A3); `Ascend 910 ProA` → `Ascend910ProA` (A2 + `dav-1001`). Matching uses normalized id; logs and chip cache store **raw** probe text.
+Examples: `Ascend 910_9362 V1` → `Ascend910_9362V1` (Atlas A3 series); `Ascend 910 ProA` → `Ascend910ProA` (Atlas A2 series + `dav-1001`). Matching uses normalized id; logs and chip cache store **raw** probe text.
 
 ---
 
@@ -100,36 +100,36 @@ Dedupe, preserve order; use **first** chip matching §4.2–4.3.
 
 ### 4.2 Exact match (first)
 
-| Normalized chip | Series | `npuArch` |
+| Normalized chip | Product series | `npuArch` |
 |-----------------|--------|-----------|
-| `Ascend901A`, `Ascend901B`, `Ascend910PremiumA`, `Ascend910ProA`, `Ascend910ProB` | A2 | `dav-1001` |
+| `Ascend901A`, `Ascend901B`, `Ascend910PremiumA`, `Ascend910ProA`, `Ascend910ProB` | Atlas A2 series | `dav-1001` |
 
 ### 4.3 Prefix match
 
-| Prefix | Series |
+| Prefix | Product series |
 |--------|--------|
-| `Ascend950` | A5 |
-| `Ascend910_` | A3 |
-| `Ascend910A`, `Ascend910B` | A2 |
+| `Ascend950` | Ascend950PR&950DT series |
+| `Ascend910_` | Atlas A3 series |
+| `Ascend910A`, `Ascend910B` | Atlas A2 series |
 
-No match → detection yields no slug. Non-`Ascend*` labels (e.g. `Atlas A5` without chip name) → user sets `environment.socVersion`.
+No match → detection yields no slug. Non-`Ascend*` labels (e.g. an Atlas-labeled host without a chip name) → user sets `environment.socVersion`.
 
 ### 4.4 Slug → series (overrides / simulator inverse)
 
-| Slug | Series |
+| Slug | Product series |
 |------|--------|
-| `ascend910b`, `ascend910`, `ascend310p` | A2 |
-| `ascend910_93` | A3 |
-| `ascend950` | A5 |
+| `ascend910b`, `ascend910`, `ascend310p` | Atlas A2 series |
+| `ascend910_93` | Atlas A3 series |
+| `ascend950` | Ascend950PR&950DT series |
 
 Simulator → slug: invert §1 default simulator names only (`simulatorTypeToCannSoc`). Unknown → warning, fall back to §7.
 
 ### 4.5 ACLNN & profiler (by series of resolved slug)
 
-| Series | `SUPPORT_COMPUTE_UNIT` | `SUPPORT_TILING_DIR` | On-board profiler |
+| Product series | `SUPPORT_COMPUTE_UNIT` | `SUPPORT_TILING_DIR` | On-board profiler |
 |--------|------------------------|----------------------|-------------------|
-| A2, A3 | `ascend910_95` | `arch22` | `MemoryDetail`, … |
-| A5 | `ascend950` | `arch35` | `PCSampling`, … (`isAscendA5ProfilerCannSoc` ↔ `ascend950`) |
+| Atlas A2 / Atlas A3 series | `ascend910_95` | `arch22` | `MemoryDetail`, … |
+| Ascend950PR&950DT series | `ascend950` | `arch35` | `PCSampling`, … (`isAscendA5ProfilerCannSoc` ↔ `ascend950`) |
 
 ---
 
@@ -143,7 +143,7 @@ On successful host detection, cache **raw** Chip Name until extension restart. U
 
 1. Workspace `environment.npuArch` — an explicit value wins as-is (`null` counts as unset).
 2. Global snapshot `NPU_ARCH` — used unless the SOC was derived from the simulator type.
-3. Cached chip matches §4.2 and the resolved slug is series A2 → `dav-1001` (slug still `ascend910b`).
+3. Cached chip matches §4.2 and the resolved slug is the Atlas A2 series → `dav-1001` (slug still `ascend910b`).
 4. Series default from §1 for the resolved slug.
 5. Empty slug → `''` (no silent 910-class default).
 
@@ -224,11 +224,11 @@ Passing a slug can also surface misleading metric errors (`Unexpected argument �
 
 #### Default directory names (plugin)
 
-| Series | `simulatorType` (for `--soc-version`) | CANN slug (`socVersion`; **not** for `--soc-version`) |
+| Product series | `simulatorType` (for `--soc-version`) | CANN slug (`socVersion`; **not** for `--soc-version`) |
 |--------|---------------------------------------|--------------------------------------------------------|
-| A2 | `Ascend910B3` | `ascend910b` |
-| A3 | `Ascend910_9362` | `ascend910_93` |
-| A5 | `Ascend950PR_9589` | `ascend950` |
+| Atlas A2 series | `Ascend910B3` | `ascend910b` |
+| Atlas A3 series | `Ascend910_9362` | `ascend910_93` |
+| Ascend950PR&950DT series | `Ascend950PR_9589` | `ascend950` |
 
 Constants: [`shared/cann-env-constants.ts`](../shared/cann-env-constants.ts). CANN upgrades may rename directories — list installed simulators on the host and override via workspace setting when needed.
 
@@ -242,7 +242,7 @@ resolveAscendEnv({ isSimulator: true }).simulatorType
 
 Precedence for `simulatorType` on simulate runs: §7.1 (workspace `performanceTuning.simulation.simulatorType` → global `SIMULATOR_TYPE` snapshot → §1 default for resolved series).
 
-Example generated fragment (A2, default simulate metrics). The optional
+Example generated fragment (Atlas A2 series, default simulate metrics). The optional
 `--aic-metrics` values are SOC-gated (GC-22 / plugin_release #32): with the
 shipped empty allow-list only the mandatory `PipeUtilization` base is emitted —
 see [`performance.md`](./performance.md) "Simulation metrics":
@@ -256,7 +256,7 @@ msprof op simulator --soc-version=Ascend910B3 \
 
 #### Where each identifier is used (do not conflate)
 
-| Context | Identifier | Example (A3) |
+| Context | Identifier | Example (Atlas A3 series) |
 |---------|------------|--------------|
 | `msprof op simulator --soc-version` | **Simulator directory** | `Ascend910_9362` |
 | Spawn `export SOC_VERSION=…` on **simulator-class** builds | **Simulator directory** | `Ascend910_9362` |
@@ -279,7 +279,7 @@ The name passed to `--soc-version` must match an entry in that listing (case-sen
 
 #### Huawei documentation note
 
-Some CANN/msopprof guides mention obtaining `--soc-version` via `python3 -c "import acl; print(acl.get_soc_name())"`, which returns a **slug**, while examples use directory-style names (`Ascend910B3`, `Ascend910_9362`). The plugin follows the **directory-name** contract validated on A2/A3/A5 field toolkits: slug in `--soc-version` is rejected or mis-identifies the platform for metric validation. See [`performance.md`](./performance.md) for simulation metrics and mutual-exclusion rules.
+Some CANN/msopprof guides mention obtaining `--soc-version` via `python3 -c "import acl; print(acl.get_soc_name())"`, which returns a **slug**, while examples use directory-style names (`Ascend910B3`, `Ascend910_9362`). The plugin follows the **directory-name** contract validated on Atlas A2 / Atlas A3 / Ascend950PR&950DT series field toolkits: slug in `--soc-version` is rejected or mis-identifies the platform for metric validation. See [`performance.md`](./performance.md) for simulation metrics and mutual-exclusion rules.
 
 ---
 
