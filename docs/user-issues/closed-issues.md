@@ -27,7 +27,7 @@ Closed without detailed resolution comment on GitCode. Likely addressed in a rec
 | File | Role |
 |------|------|
 | `plugin/src/class/operate-tree-provider.ts` | Performance report tree nodes |
-| `docs/performance.md` | Performance profiling and results tree |
+| `design-docs/performance.md` | Performance profiling and results tree |
 
 ### Follow-up questions (only if reopened)
 

@@ -131,7 +131,7 @@ export function normalizeCannSoc(cannSoc?: string | null): string {
     .toLowerCase();
 }
 
-/** Chip Name or probe text → default CANN SOC slug (see docs/ascend-env-spec.md §4). */
+/** Chip Name or probe text → default CANN SOC slug (see design-docs/ascend-env-spec.md §4). */
 export function socFromCoreName(coreName?: string): string | undefined {
   if (!coreName) {
     return undefined;
@@ -692,7 +692,7 @@ function resolveSocVersion(
  * spawn env, profiler, build-service, model defaults, …) call this so they
  * cannot disagree.
  *
- * Precedence (canonical contract — also captured in `docs/ascend-env-spec.md`):
+ * Precedence (canonical contract — also captured in `design-docs/ascend-env-spec.md`):
  *
  * - **`simulatorType`** (only when `isSimulator`):
  *   1. Workspace `op-devtools.performanceTuning.simulation.simulatorType` (explicit).

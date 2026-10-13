@@ -263,7 +263,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 | `bin`, `json` | `viewService.openInsight` → Insight data viewer panel (`INSIGHT_HOME_PATH` / `.arts/.env`) |
 | `rep`, `ncrep`, `npu-rep` | `viewService.openProfilingReport` → profiling-report panel (see [`profiling-report-integration.md`](./profiling-report-integration.md)) |
 
-See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight.md) for known Insight viewer issues (not plugin msprof orchestration).
+See [`user-issues/profiling-and-insight.md`](../docs/user-issues/profiling-and-insight.md) for known Insight viewer issues (not plugin msprof orchestration).
 
 ### Refresh
 

@@ -101,7 +101,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     const simEnv = resolveAscendEnv({ isSimulator: true });
 
     // msprof op simulator --soc-version: simulator directory under
-    // $ASCEND_HOME_PATH/tools/simulator — see docs/ascend-env-spec.md §8.1.
+    // $ASCEND_HOME_PATH/tools/simulator — see design-docs/ascend-env-spec.md §8.1.
     const msprofSimulatorArg = simEnv.simulatorType ?? '';
 
     // Gate aic-metrics by the resolved CANN SOC slug (NOT the simulator directory):

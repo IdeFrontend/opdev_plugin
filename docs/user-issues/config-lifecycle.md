@@ -57,7 +57,7 @@ Result: the workspace is treated as a fresh project on next launch — default s
 | `plugin/src/service/config-service.ts` | Section DAO factories, settings writes |
 | `plugin/src/controller/welcome-controller.ts` | Project open, config seeding (`ensureOpDevtoolsSettingsSeeded`) |
 | `plugin/src/extension.ts` | Command registration |
-| `docs/generated-files-specification.md` | Spec for generated files |
+| `design-docs/generated-files-specification.md` | Spec for generated files |
 
 ### Config layers (what reset touches)
 
