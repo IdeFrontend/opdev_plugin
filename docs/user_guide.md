@@ -43,12 +43,11 @@
 
 > 如果按照步骤一安装CANN官方Docker镜像，可跳过本步骤。
 
-将CANN包的环境变量设置脚本，以及CMAKE_PREFIX_PATH和LD_LIBRARY_PATH变量写入 /etc/profile，参考如下：
+将CANN包的环境变量设置脚本写入 /etc/profile，参考如下：
 
 ```shell
-source /home/developer/Ascend/cann/set_env.sh
-export CMAKE_PREFIX_PATH=${ASCEND_TOOLKIT_HOME}/compiler/tikcpp/ascend_kernel_cmake:$CMAKE_PREFIX_PATH
-export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:/home/developer/Ascend/cann-9.0.0/tools/msdebug/lib:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/driver/lib64:$LD_LIBRARY_PATH
+# 路径按实际安装位置调整
+echo 'source $HOME/Ascend/cann/set_env.sh' | sudo tee -a /etc/profile
 ```
 
 #### 步骤三：安装Remote - SSH插件并连接远端环境
