@@ -155,6 +155,7 @@
   "command.sidebar.openWelcome.title": "Open Welcome Page",
   "command.sidebar.sanitizer.report.select.title": "Select report",
   "command.sidebar.sanitizer.report.copyPath.title": "Copy path",
+  "command.sidebar.sanitizer.report.openFile.title": "Open file",
   "command.sidebar.sanitizer.report.toggleMark.title": "Mark / Unmark",
   "command.sidebar.sanitizer.report.mark.title": "Mark",
   "command.sidebar.sanitizer.report.unmark.title": "Unmark",

@@ -190,6 +190,8 @@ export const COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT = `${COMMAND_PREFIX}.sideba
 
 export const COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH = `${COMMAND_PREFIX}.sidebar.sanitizer.report.copyPath`;
 
+export const COMMAND_SIDEBAR_SANITIZER_REPORT_OPEN_FILE = `${COMMAND_PREFIX}.sidebar.sanitizer.report.openFile`;
+
 export const COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK = `${COMMAND_PREFIX}.sidebar.sanitizer.report.toggleMark`;
 
 export const COMMAND_SIDEBAR_SANITIZER_REPORT_MARK = `${COMMAND_PREFIX}.sidebar.sanitizer.report.mark`;

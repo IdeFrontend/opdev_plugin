@@ -473,6 +473,7 @@ export default {
   'web.sanitizerPanel.other': 'Other',
   'web.sanitizerPanel.problem': 'Problem',
   'web.sanitizerPanel.selectReportHint': 'Select a report on the left to view detection result',
+  'web.sanitizerPanel.openFileFailed': 'Failed to open file: {{path}}',
   'web.sanitizerPanel.handler.illegalRead': 'Illegal read/write issues occur when operator code reads or writes memory that was not allocated. This usually occurs in GM or on-chip memory, caused by mismatched GM allocation/access range or by exceeding on-chip hardware capacity.',
   'web.sanitizerPanel.handler.illegalWrite': 'Illegal read/write issues occur when operator code reads or writes memory that was not allocated. This usually occurs in GM or on-chip memory, caused by mismatched GM allocation/access range or by exceeding on-chip hardware capacity.',
   'web.sanitizerPanel.handler.outOfBounds': 'AI Core is the compute core of Ascend AI processors. Without explicit inter-core synchronization, if cores access overlapping GM regions and at least one core writes, multi-core stomp may occur. Ownership-based checking reports out-of-bounds when another core accesses memory owned by a different core.',

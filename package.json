@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.5.4-beta7",
+  "version": "1.5.4-beta8",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -95,6 +95,13 @@
           "fontCharacter": "\\ea07"
         }
       },
+      "opdevtools-open-file": {
+        "description": "Open file icon",
+        "default": {
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea14"
+        }
+      },
       "opdevtools-flag-outlined": {
         "description": "Outlined flag icon",
         "default": {
@@ -183,28 +190,28 @@
         "description": "Power icon",
         "default": {
           "fontPath": "./out/web/fonts/opdevtools-icons.woff",
-          "fontCharacter": "\\ea14"
+          "fontCharacter": "\\ea15"
         }
       },
       "opdevtools-run": {
         "description": "Run icon",
         "default": {
           "fontPath": "./out/web/fonts/opdevtools-icons.woff",
-          "fontCharacter": "\\ea15"
+          "fontCharacter": "\\ea16"
         }
       },
       "opdevtools-simulation": {
         "description": "Simulation icon",
         "default": {
           "fontPath": "./out/web/fonts/opdevtools-icons.woff",
-          "fontCharacter": "\\ea18"
+          "fontCharacter": "\\ea19"
         }
       },
       "opdevtools-tensor": {
         "description": "Tensor icon",
         "default": {
           "fontPath": "./out/web/fonts/opdevtools-icons.woff",
-          "fontCharacter": "\\ea19"
+          "fontCharacter": "\\ea1a"
         }
       }
     },
@@ -1215,6 +1222,11 @@
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.openFile",
+        "title": "%command.sidebar.sanitizer.report.openFile.title%",
+        "icon": "$(opdevtools-open-file)"
+      },
+      {
         "command": "huawei-op-devtools.sidebar.sanitizer.report.mark",
         "title": "%command.sidebar.sanitizer.report.mark.title%",
         "icon": "$(opdevtools-flag-outlined)"
@@ -1583,6 +1595,10 @@
         },
         {
           "command": "huawei-op-devtools.sidebar.sanitizer.report.toggleMark",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.openFile",
           "when": "false"
         },
         {
@@ -1982,6 +1998,11 @@
           "command": "huawei-op-devtools.sidebar.sanitizer.report.mark",
           "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem\\.unmarked/",
           "group": "inline@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.openFile",
+          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem/",
+          "group": "inline@5"
         },
         {
           "command": "huawei-op-devtools.sidebar.sanitizer.results.openGroupFile",

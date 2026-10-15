@@ -151,6 +151,7 @@ import {
   COMMAND_SIDEBAR_ACTIONS_QUICK_PICK,
   COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT,
   COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_OPEN_FILE,
   COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK,
   COMMAND_SIDEBAR_SANITIZER_REPORT_MARK,
   COMMAND_SIDEBAR_SANITIZER_REPORT_UNMARK,
@@ -1332,6 +1333,26 @@ export async function activate(context: vscode.ExtensionContext) {
       await operateTreeProvider.copySanitizerReportPath(reportPath);
     },
   );
+  const sidebarSanitizerReportOpenFileCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_OPEN_FILE,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const raw = typeof arg === 'string'
+        ? arg
+        : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+      const reportPath = raw.startsWith('sanitizer-report:')
+        ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
+        : raw;
+
+      if (!reportPath) {
+        return;
+      }
+
+      await operateTreeProvider.openSanitizerReportFile(reportPath);
+    },
+  );
   const sidebarSanitizerReportToggleMarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK,
     async (arg: string | {
@@ -2312,6 +2333,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarOpenHelpCommand);
   context.subscriptions.push(sidebarSanitizerReportSelectCommand);
   context.subscriptions.push(sidebarSanitizerReportCopyPathCommand);
+  context.subscriptions.push(sidebarSanitizerReportOpenFileCommand);
   context.subscriptions.push(sidebarSanitizerReportToggleMarkCommand);
   context.subscriptions.push(sidebarSanitizerReportMarkCommand);
   context.subscriptions.push(sidebarSanitizerReportUnmarkCommand);

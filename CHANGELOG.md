@@ -85,9 +85,7 @@
 
 ## 1.3.5 — 2026-06-26
 
-本版本包含 Triton 仿真分析与异常检测支持、仿真分析修复、NPU 调试与异常检测改进。
 
-- **Triton 仿真分析与异常检测** — Triton 工程可在插件内运行**仿真分析**（`msprof`）与**异常检测**（`mssanitizer`）。异常检测快速选项新增检测范围、Block ID 与日志配置；活动 `.py` 目标从编辑器同步至运行时配置；`--log-file` 路径经 shell 引号转义。
 - **仿真分析 `--aic-metrics` 按 SOC 平台门控** — `msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。可选指标仅在解析出的 CANN SOC 标识命中 `SIMULATOR_OPTIONAL_METRIC_SOCS` 允许列表（`shared/msprof-simulator-metrics.ts`）时传递；命令生成与仿真选项面板共用该统一来源。A2/A3 仍仅传递必选的 `PipeUtilization`；`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则不变。**A5（`ascend950`）** 经 §8.1 CLI 验证已加入允许列表，`ResourceConflictRatio` 与 `PMSampling` 在 A5 仿真快速选项中可见；默认仿真命令由 `--aic-metrics=PipeUtilization` 变为 `--aic-metrics=ResourceConflictRatio`。详见 `docs/simulator-options-spec.md`。
 - **修复 standard-custom「运行样例」缺少算子名/平台** — `build.sh --run_example` 从**位置参数** `<算子> <模式> <pkg_mode>` 读取样例名与模式，而非从 `--ops`。缺失时脚本打印空的 `name:` / `mode:` 并回退到 usage。现 `CannCommandStrategy.buildExampleCommand` 与 `AscendCommandStrategy` 一致地追加 `<算子> <模式> cust`，并在 `compileOption` 未带 `--soc` 时补全 `--soc`（经 `{soc_version}` 占位符）。
 - **按算子自动选择 run_example 模式** — 通过扫描算子 `examples/` 目录（对齐 build.sh 布局，跳过 `experimental/`）检测样例模式（`eager` 与 `graph`）。全局 `executionMode` 设置仅在两种模式均存在时作为决胜项。文件名匹配默认 `^test_aclnn_.*\.cpp$` / `^test_geir_.*\.cpp$`，可通过 `eagerExamplePattern` / `graphExamplePattern` 覆盖。仅当运行脚本使用 `--run_example` 接口时才追加位置参数。

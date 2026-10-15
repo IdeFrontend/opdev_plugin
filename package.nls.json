@@ -156,6 +156,7 @@
   "command.sidebar.openWelcome.title": "打开欢迎页",
   "command.sidebar.sanitizer.report.select.title": "选择报告",
   "command.sidebar.sanitizer.report.copyPath.title": "复制路径",
+  "command.sidebar.sanitizer.report.openFile.title": "打开文件",
   "command.sidebar.sanitizer.report.toggleMark.title": "标记/取消标记",
   "command.sidebar.sanitizer.report.mark.title": "标记",
   "command.sidebar.sanitizer.report.unmark.title": "取消标记",
