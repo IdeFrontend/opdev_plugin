@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import {
   _resetDetectedChipCacheForTest,
   detectSocSlugFromProbe,
@@ -6,7 +15,9 @@ import {
   matchChipNameToSeries,
   normalizeChipNameForMatching,
 } from '@shared/ascend-series-registry';
-import { NPU_ARCH_DAV_1001, NPU_ARCH_DAV_2201, NPU_ARCH_DAV_3510 } from '@shared/cann-env-constants';
+import {
+  NPU_ARCH_DAV_1001, NPU_ARCH_DAV_2201, NPU_ARCH_DAV_3510,
+} from '@shared/cann-env-constants';
 
 describe('ascend-series-registry', () => {
   beforeEach(() => {
@@ -22,11 +33,26 @@ describe('ascend-series-registry', () => {
 
   describe('matchChipNameToSeries', () => {
     it.each([
-      ['Ascend910B3', 'a2'],
-      ['Ascend 910B3', 'a2'],
-      ['Ascend910_9362', 'a3'],
-      ['Ascend 910_9362 V1', 'a3'],
-      ['Ascend950PR_9589', 'a5'],
+      [
+        'Ascend910B3',
+        'a2',
+      ],
+      [
+        'Ascend 910B3',
+        'a2',
+      ],
+      [
+        'Ascend910_9362',
+        'a3',
+      ],
+      [
+        'Ascend 910_9362 V1',
+        'a3',
+      ],
+      [
+        'Ascend950PR_9589',
+        'a5',
+      ],
     ])('maps %s to series %s', (chip, series) => {
       expect(matchChipNameToSeries(chip))
         .toBe(series);

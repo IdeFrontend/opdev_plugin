@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import * as vscode from 'vscode';
 import fs from 'fs-extra';
 import path from 'path';
@@ -950,6 +959,38 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
   const script = params.script || '';
 
   return /\B--simulator\b/.test(script);
+}
+
+/**
+ * Remove the `--simulator` flag (and its optional following value/placeholder,
+ * e.g. `{simulator_type}`) from a script string. Used when the simulation tool
+ * is `npu-emulate` (A5), which does not use the CANN simulator build path.
+ */
+export function stripSimulatorFlag(script: string): string {
+  return script
+    .replace(/\s*--simulator(?:\s+\S+)?/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * Append the `--simulator` flag to a script if it is not already present.
+ *
+ * For ascend/standard-custom scripts (which carry `--vendor_name=custom`), the
+ * `{simulator_type}` placeholder is appended so the simulator device directory
+ * is resolved at runtime. For cann scripts, a bare `--simulator` is appended
+ * (the simulator dir is supplied via the `SOC_VERSION` spawn env).
+ */
+export function ensureSimulatorFlag(script: string): string {
+  if (/\B--simulator\b/.test(script)) {
+    return script;
+  }
+
+  const suffix = /--vendor_name=custom/.test(script)
+    ? ' --simulator {simulator_type}'
+    : ' --simulator';
+
+  return script + suffix;
 }
 
 /**

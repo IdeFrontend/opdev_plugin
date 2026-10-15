@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -42,7 +51,10 @@ import {
   normalizeProjectPath,
 } from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
-import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
+import {
+  resolveAscendEnv, resolveEffectiveCannSoc,
+} from '@plugin/domain/utils/ascend-util';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import {
   buildNpuComputeCommand,
@@ -109,6 +121,43 @@ export async function isRootStandardCustom(): Promise<boolean> {
 
     return false;
   }
+}
+
+/**
+ * Locate the `.npu-rep` report produced by `npu-emulate collect`.
+ *
+ * npu-emulate creates a nested layout under the output directory:
+ * `<opprofRunDir>/npusim_<ts>_<pid>/report/*.npu-rep`.
+ * The report file sits directly inside the `report/` folder, so we scan
+ * the first `npusim_*` run dir's `report/` directory for `.npu-rep` files.
+ * Returns the absolute path of the first `.npu-rep` file found, or `undefined`.
+ */
+function findNpuEmulateReport(opprofRunDir: string): string | undefined {
+  try {
+    const runDirs = fs.readdirSync(opprofRunDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith('npusim'))
+      .map((entry) => path.join(opprofRunDir, entry.name));
+
+    for (const runDir of runDirs) {
+      const reportDir = path.join(runDir, 'report');
+
+      if (!fs.existsSync(reportDir)) {
+        continue;
+      }
+
+      const repFile = fs.readdirSync(reportDir)
+        .find((name) => name.endsWith('.npu-rep'));
+
+      if (repFile) {
+        return path.join(reportDir, repFile);
+      }
+    }
+  }
+  catch (error) {
+    console.warn('[findNpuEmulateReport] Failed to locate .npu-rep:', error);
+  }
+
+  return undefined;
 }
 
 /**
@@ -250,11 +299,20 @@ export class BuildService {
    * emits `SOC_VERSION` (simulator device dir for cann sim) / `NPU_ARCH` in the spawn env via
    * `executeOperatorCommand`; this option string adds the `--soc=` CLI flag
    * required by the example build after `--simulator`.
+   *
+   * On A5 (ascend950) when the new `npu-emulate` simulation tool is selected,
+   * the `--simulator` flag is omitted — npu-emulate does not use the CANN
+   * simulator build path. For the legacy `msprof` flow (or non-A5 SOCs) the
+   * `--simulator` flag is kept as before.
    */
   private buildSimulateExampleCompileOption(): string {
     const resolved = resolveAscendEnv({ isSimulator: true });
+    const isA5WithNpuEmulate = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
+      && ConfigService.getSimulationTool() === 'npu-emulate';
 
-    return `--simulator --soc=${resolved.socVersion}`;
+    return isA5WithNpuEmulate
+      ? `--soc=${resolved.socVersion}`
+      : `--simulator --soc=${resolved.socVersion}`;
   }
 
   /**
@@ -1063,9 +1121,13 @@ export class BuildService {
       vscode.window.showInformationMessage(t(isSimulate ? 'build.simulationSuccess' : 'build.onBoardSuccess'));
 
       // New-tool reports open through the profiling-report viewer (.npu-rep).
-      const reportPath = path.join(opprofRunDir, NEW_TOOL_REPORT_FILENAME);
+      // npu-compute writes a deterministic file at <opprofRunDir>/result.npu-rep;
+      // npu-emulate lays out <opprofRunDir>/npusim_<ts>_<pid>/report/*.npu-rep.
+      const reportPath = isSimulate
+        ? findNpuEmulateReport(opprofRunDir)
+        : path.join(opprofRunDir, NEW_TOOL_REPORT_FILENAME);
 
-      if (fs.existsSync(reportPath)) {
+      if (reportPath && fs.existsSync(reportPath)) {
         await vscode.commands.executeCommand(COMMAND_OPEN_PROFILING_REPORT, reportPath);
       }
 
