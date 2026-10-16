@@ -481,15 +481,44 @@ describe('npu-hardware-probe', () => {
       await expect(startRemoteNpuHardwareProbe()).resolves.toBe(true);
       expect(isRemoteNpuHardwareProbeAvailable())
         .toBe(true);
+      expect(getRemoteToolSeries)
+        .toHaveBeenCalledTimes(1);
+    });
+
+    it('resolves true when the second attempt finds a series', async () => {
+      (getRemoteToolSeries as jest.Mock)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce('a3');
+
+      await expect(startRemoteNpuHardwareProbe()).resolves.toBe(true);
+      expect(isRemoteNpuHardwareProbeAvailable())
+        .toBe(true);
+      expect(getRemoteToolSeries)
+        .toHaveBeenCalledTimes(2);
+    });
+
+    it('resolves true when the third attempt finds a series', async () => {
+      (getRemoteToolSeries as jest.Mock)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce('a5');
+
+      await expect(startRemoteNpuHardwareProbe()).resolves.toBe(true);
+      expect(isRemoteNpuHardwareProbeAvailable())
+        .toBe(true);
+      expect(getRemoteToolSeries)
+        .toHaveBeenCalledTimes(3);
     });
 
     it('resolves false when no remote tool series is configured', async () => {
       (getRemoteToolSeries as jest.Mock)
-        .mockResolvedValueOnce(undefined);
+        .mockResolvedValue(undefined);
 
       await expect(startRemoteNpuHardwareProbe()).resolves.toBe(false);
       expect(isRemoteNpuHardwareProbeAvailable())
         .toBe(false);
+      expect(getRemoteToolSeries)
+        .toHaveBeenCalledTimes(3);
     });
 
     it('serves repeated calls from the cached result', async () => {
