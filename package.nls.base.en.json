@@ -20,6 +20,8 @@
   "config.category.execution.title": "Execution",
   "config.category.operatorSupport.title": "Operator Support",
   "config.op-devtools.operatorSupport.triton.description": "Enable Triton project support",
+  "config.category.companion.title": "Companion Extensions",
+  "config.op-devtools.companion.cannworkAutoInstall.description": "Silently install/upgrade the CANNWork companion extension (cann-pub.cannbot-toolkit, required by the profiling report CANNWork analysis) to the latest stable marketplace release, with no prompts. Turn off to stop auto install/upgrade; the installed version is left untouched.",
   "config.op-devtools.debugMode.description": "Enable debug (experimental)",
   "config.op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile.description": "Operator name to compile for the build.",
   "config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description": "Path or glob to the .run package (e.g. build_out/*.run) for Ascend deploy after Build. Do not put --force here; the plugin adds it on .run install. Cann run uses this as the test binary path.",
