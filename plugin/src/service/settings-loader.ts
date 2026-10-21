@@ -134,6 +134,14 @@ export class SettingsLoader {
   }
 
   /**
+   * 配套扩展 CANNWork（cann-pub.cannbot-toolkit）静默自动安装开关，默认开启。
+   * 关闭后不再自动安装或升级，已安装的版本不受影响。
+   */
+  static isCannworkAutoInstallEnabled(): boolean {
+    return SettingsLoader.readOptional<boolean>('companion.cannworkAutoInstall') ?? true;
+  }
+
+  /**
    * 调测专用隐藏配置（刻意不在 package.json 注册，不出现在设置页面）：
    * 工作区 settings.json 中写入 `op-devtools.profilingReport.cannbotPromptOverride`
    * 后，转发给 cannbot 插件的多行模板首行内置提示词（buildInPrompt）会被该值替换，

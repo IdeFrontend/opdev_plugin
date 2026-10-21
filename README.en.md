@@ -18,6 +18,7 @@
 - Visual Studio Code 1.80 or newer.
 - CANN / Ascend toolchain and runtime. Use the version and image required by your team or official environment guide.
 - Remote SSH is recommended for remote development, and Microsoft C/C++ is recommended for C/C++ language support. The current VSIX does not install these recommended extensions automatically; install them manually as needed.
+- The CANNWork companion extension (`cann-pub.cannbot-toolkit`) does not need manual installation: after activation, the extension silently installs the latest stable release in the background, without prompts or notifications. Disable this with the workspace setting `op-devtools.companion.cannworkAutoInstall` (on by default; turning it off stops future installs and upgrades but leaves an already-installed version untouched).
 
 ## Quick Start
 
@@ -48,6 +49,7 @@ Older intermediate screens and screenshots from the previous discussion guide ar
 - Build, run, debug, and profiling flows are documented in the source repository under `docs/build-integration.md`, `docs/run-integration.md`, `docs/debug-integration.md`, and `docs/performance.md`.
 - Sanitizer behavior is documented in the source repository under `docs/sanitizer.md`.
 - `op-devtools.environment.npuArch` overrides the SOC-derived `NPU_ARCH`, and `op-devtools.execution.commandTimeoutSeconds` controls the operator command timeout (default 1800 seconds; `0` disables it).
+- `op-devtools.companion.cannworkAutoInstall` controls the silent background install of the CANNWork companion extension (default `true`).
 - After a profiling or sanitizer run finishes, the report that run produced opens automatically.
 
 ## Language

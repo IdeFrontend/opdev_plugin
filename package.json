@@ -810,6 +810,19 @@
             "description": "%config.op-devtools.operatorSupport.triton.description%"
           }
         }
+      },
+      {
+        "id": "op-devtools.companion",
+        "title": "%config.category.companion.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.companion.cannworkAutoInstall": {
+            "type": "boolean",
+            "default": true,
+            "order": 600,
+            "description": "%config.op-devtools.companion.cannworkAutoInstall.description%"
+          }
+        }
       }
     ],
     "colors": [

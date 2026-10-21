@@ -18,6 +18,11 @@ jest.mock('@plugin/helpers/cpp-extension-support', () => ({
     .mockResolvedValue(undefined),
 }));
 
+jest.mock('@plugin/helpers/cannwork-extension-support', () => ({
+  ensureCannworkExtension: jest.fn()
+    .mockResolvedValue(undefined),
+}));
+
 jest.mock('@plugin/domain/utils/cann-cpp-include-paths', () => ({
   maybeApplyCannCppIncludePaths: jest.fn()
     .mockResolvedValue(undefined),
@@ -74,6 +79,7 @@ import {
 } from '@plugin/domain/utils/npu-hardware-probe';
 import { maybeApplyCannCppIncludePaths } from '@plugin/domain/utils/cann-cpp-include-paths';
 import { maybePromptInstallCppExtension } from '@plugin/helpers/cpp-extension-support';
+import { ensureCannworkExtension } from '@plugin/helpers/cannwork-extension-support';
 import {
   CONTEXT_PREFIX, TREE_VIEW_OPERATE,
 } from '@shared/flavor';
@@ -172,6 +178,30 @@ describe('post-activate-bootstrap', () => {
       .toHaveBeenCalledWith(context, logDebug);
     expect(maybeApplyCannCppIncludePaths)
       .toHaveBeenCalledWith(logDebug);
+    expect(ensureCannworkExtension)
+      .toHaveBeenCalledWith(logDebug);
+  });
+
+  it('finishes bootstrap when the CANNWork ensure rejects instead of taking the rest down', async () => {
+    const logDebug = jest.fn();
+
+    (ensureCannworkExtension as jest.Mock).mockRejectedValueOnce(new Error('marketplace unreachable'));
+
+    startPostActivateBootstrap({
+      context: {} as never,
+      operateTreeProvider,
+      logDebug,
+    });
+
+    await expect(whenPostActivateBootstrapReady())
+      .resolves
+      .toBeUndefined();
+    await flushPromises();
+
+    expect(logDebug)
+      .toHaveBeenCalledWith('postActivate:cannworkEnsure:error', expect.any(Error));
+    expect(requestSidebarContextsRefresh)
+      .toHaveBeenCalledTimes(1);
   });
 
   it('finishes bootstrap when the C/C++ work rejects instead of taking the rest down', async () => {

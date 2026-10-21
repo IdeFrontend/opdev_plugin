@@ -17,6 +17,7 @@ import {
 import { CONTEXT_PREFIX } from '@shared/flavor';
 import { maybeApplyCannCppIncludePaths } from '@plugin/domain/utils/cann-cpp-include-paths';
 import { maybePromptInstallCppExtension } from '@plugin/helpers/cpp-extension-support';
+import { ensureCannworkExtension } from '@plugin/helpers/cannwork-extension-support';
 import { computeAscendEnvResolution } from '@plugin/domain/utils/ascend-util';
 import { applyNpuArchToTerminalEnv } from './terminal-npu-arch-env';
 import { AsyncSingleFlight } from './async-single-flight';
@@ -68,6 +69,11 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   void maybePromptInstallCppExtension(context, logDebug)
     .catch((error) => {
       logDebug('postActivate:cppSupportPrompt:error', error);
+    });
+
+  void ensureCannworkExtension(logDebug)
+    .catch((error) => {
+      logDebug('postActivate:cannworkEnsure:error', error);
     });
 
   void maybeApplyCannCppIncludePaths(logDebug)
