@@ -11,7 +11,7 @@
  * Command generation for the A5 replacement prototype profiler tools driven by
  * the "数据采集配置" dialog:
  *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
- *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
+ *   - simulation → `npu-emulate`
  *
  * The builders only *augment* the tool invocation with the pieces the report
  * link relies on — a stable output file location under the per-run opprof
@@ -89,11 +89,11 @@ export function buildNpuComputeCommand(params: NewProfilerCommandParams): string
 /**
  * Build the `npu-emulate collect` command.
  *
- * Shape: `npu-emulate collect --output <dir> <target>`. `collect` runs the
- * compiled target on the SoC simulator and emits the report under the given
- * output directory. npu-emulate creates its own sub-directory structure
- * (`<dir>/npusim_<ts>_<pid>/{record,report}/*.npu-rep`), so `--output`
- * must point at the per-run opprof directory only — not a full file path.
+ * Shape: `npu-emulate collect --output <report> <target>`. `collect` runs the
+ * compiled target on the SoC simulator and emits the report in one step; it
+ * currently takes no metric/section options, so the deterministic report path
+ * `<opprofRunDir>/result.npu-rep` is always passed via `--output` (the report
+ * link scans that exact file).
  */
 export function buildNpuEmulateCommand(params: NewProfilerCommandParams): string {
   const {
@@ -103,7 +103,7 @@ export function buildNpuEmulateCommand(params: NewProfilerCommandParams): string
   const parts = [
     'npu-emulate',
     'collect',
-    `--output ${opprofRunDir}`,
+    `--output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME}`,
   ];
 
   // The compiled target is the final positional (the app to simulate).

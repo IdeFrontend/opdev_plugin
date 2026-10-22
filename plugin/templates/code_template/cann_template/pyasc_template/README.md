@@ -7,9 +7,9 @@
 ## 支持的AI处理器
 - Ascend 910C
 - Ascend 910B
-- Ascend 950 / Atlas A5（在 VS Code 扩展中设置 `op-devtools.environment.socVersion` 为 `ascend950`，或通过环境脚本 / 主机检测）
+- Ascend 950 / Atlas A5（在VS Code扩展中设置 `op-devtools.environment.socVersion` 为 `ascend950`，或通过环境脚本 / 主机检测）
 
-PyAsc 工程为 **Python + asc JIT** 样例，**不包含** CANN 模板中的 `build.sh` / `CMakeLists.txt` / `NPU_ARCH` 编译链。扩展创建工程后，运行与仿真/上板调优脚本为 `python3 ./<算子名>.py`；SOC / 仿真器由扩展的 `resolveAscendEnv()` 注入到 msprof 等命令中（见 `docs/ascend-env-spec.md`）。
+PyAsc工程为 **Python + asc JIT** 样例，**不包含** CANN模板中的 `build.sh` / `CMakeLists.txt` / `NPU_ARCH` 编译链。扩展创建工程后，运行与仿真/上板调优脚本为 `python3 ./<算子名>.py`；SOC / 仿真器由扩展的 `resolveAscendEnv()` 注入到msprof等命令中（见 `docs/ascend-env-spec.md`）。
 
 ## 样例实现
 
@@ -54,7 +54,7 @@ python3 add.py -r [RUN_MODE] -v [SOC_VERSION]
 - SOC_VERSION：昇腾AI处理器型号，如果无法确定具体的[SOC_VERSION]，则在安装昇腾AI处理器的服务器执行npu-smi info命令进行查询，在查询到的“Name”前增加Ascend信息，例如“Name”对应取值为xxxyy，实际配置的[SOC_VERSION]值为Ascendxxxyy。支持以下产品型号：
   - Ascend 910C
   - Ascend 910B
-  - Ascend 950 / Atlas A5（扩展侧 CANN slug 为 `ascend950`）
+  - Ascend 950 / Atlas A5（扩展侧CANN slug为 `ascend950`）
 
 示例如下，Ascendxxxyy请替换为实际的AI处理器型号。
 ```
@@ -66,9 +66,9 @@ python3 add.py -r Model -v Ascendxxxyy
 
 ### 性能调优配置
 
-在 **Mind Studio / op-devtools 扩展** 中，可直接从侧边栏启动 **仿真** / **上板** 调优；扩展会根据工作区 SOC 与仿真器设置解析 `ascend950` / `Ascend950PR_9589` 等参数（A5 上板默认启用 PC 采样相关指标）。
+在 **Mind Studio / op-devtools扩展** 中，可直接从侧边栏启动 **仿真** / **上板** 调优；扩展会根据工作区SOC与仿真器设置解析 `ascend950` / `Ascend950PR_9589` 等参数（A5上板默认启用PC采样相关指标）。
 
-若需 **手动** 修改样例 Python 中的运行后端，可参考：
+若需 **手动** 修改样例Python中的运行后端，可参考：
 #### 上板性能数据采集
 ```Python
 ......

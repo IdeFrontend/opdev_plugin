@@ -1073,7 +1073,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
 
-      // A5 + npu-emulate (formerly npusim): open the unified data-collection
+      // A5 + npu-emulate: open the unified data-collection
       // dialog instead of the legacy quick-options panel / direct msprof flow.
       if (ConfigService.shouldUseNewSimulationTool()) {
         setPendingDataCollectionType('simulate');

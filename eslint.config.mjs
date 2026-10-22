@@ -22,6 +22,7 @@ export default defineConfig([
       'plugin/templates/code_template/**',
       // Reference material / submodule with their own tooling; not part of the app source lint.
       'npu-simulator-analysis/**',
+      // Reference submodule with its own tooling; not part of the app source lint.
       'profiling-report/**',
       'out/',
       'dist/',

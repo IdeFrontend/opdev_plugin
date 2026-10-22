@@ -166,7 +166,7 @@ export default {
   'build.workspacePathNotFound': '未找到工作区路径',
   'build.runFailed': '运行失败 {{output}}',
   'build.runFailedQemuSegfault': '运行失败（可能是架构不匹配：可执行文件为其他 CPU 架构如 aarch64 编译，却在 x86_64 下通过 QEMU 运行）。请在匹配的主机上运行或在本环境中重新编译。 {{output}}',
-  'build.runFailedPyascRuntime': 'PyAsc 运行失败：未找到 Ascend 运行时库（如 runtime_camodel）。请将项目的「Ascend 环境脚本」设置为 CANN 环境脚本（如 source /usr/local/Ascend/ascend-toolkit/set_env.sh），并确保当前环境已安装 CANN 运行时。详见 docs/run-integration.md。 {{output}}',
+  'build.runFailedPyascRuntime': 'PyAsc 运行失败：未找到 Ascend 运行时库（如 runtime_camodel）。请将项目的「Ascend 环境脚本」设置为 CANN 环境脚本（如 source /usr/local/Ascend/ascend-toolkit/set_env.sh），并确保当前环境已安装 CANN 运行时。详见 design-docs/run-integration.md。 {{output}}',
   'build.runSuccess': '运行成功',
   'build.getRunCommandFailed': '获取运行命令失败 {{error}}',
   'build.executeFailed': '执行失败 {{output}}',
@@ -271,8 +271,6 @@ export default {
   'build.compileFailedThrow': '编译算子失败: {{output}}',
   'build.executeFailedThrow': '执行失败: {{output}}',
   'build.simulationFailedThrow': '执行仿真分析失败: {{output}}',
-  'performanceTuning.simulation.tool.notA5ResetToMsprof': '当前环境不支持 npu-emulate 仿真工具，已自动切换为 msprof。npu-emulate 仅在 A5（ascend950）环境下可用。',
-  'performanceTuning.onBoard.tool.notA5ResetToMsprof': '当前环境不支持 npu-compute 上板工具，已自动切换为 msprof。npu-compute 仅在 A5（ascend950）环境下可用。',
 
   // project (additional)
   'project.invalidProjectId': '无效的工程路径',
@@ -722,8 +720,8 @@ export default {
   'profilingReport.loading': '正在加载性能分析报告...',
   'profilingReport.noData': '未加载性能分析数据。',
   'profilingReport.fetchFailed': '获取性能分析数据失败',
-  'profilingReport.cannbotSent': '已将报告数据发送至 CANNWork',
-  'profilingReport.cannbotFailed': '调用 CANNWork 失败：{{error}}',
+  'profilingReport.cannbotSent': '已将报告数据发送至 CANNBot',
+  'profilingReport.cannbotFailed': '调用 CANNBot 失败：{{error}}',
   'profilingReport.cannbotNotInstalled': '调用"CANNWork 分析"功能失败，请确认 CANNWork 插件是否安装以及 CANNWork 版本是否正确：\n1、如 CANNWork 扩展插件未安装，请先在"扩展"中搜索并安装 "CANNWork"\n2、如 CANNWork 版本小于 2.0.0，请升级插件到最新版本',
   'profilingReport.hintsPublishedInProblems': '性能提示已发布到 Problems',
   'profilingReport.openHintsInProblems': '在 Problems 中打开性能提示',

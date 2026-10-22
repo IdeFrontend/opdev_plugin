@@ -31,9 +31,7 @@ import {
   resolveSanitizerToolType,
   SanitizerToolType,
 } from '@shared/cann-env-constants';
-import {
-  resolveEffectiveCannSoc, stripSimulatorFlag,
-} from '@plugin/domain/utils/ascend-util';
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import {
   ON_BOARD_METRIC_LEGACY_TO_DOTTED,
   SIMULATE_METRIC_LEGACY_TO_DOTTED,
@@ -627,13 +625,6 @@ export class ConfigService {
       const paths = plugin.getDefaultPaths(op);
       const isA5Profiler = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc());
 
-      // A5 environments default to the npu-emulate simulation tool, which does
-      // not use the CANN `--simulator` build path. Strip the flag from the
-      // seeded simulation compile command for A5; non-A5 keeps it (msprof flow).
-      if (isA5Profiler) {
-        scripts.simulateScript = stripSimulatorFlag(scripts.simulateScript);
-      }
-
       // Targets are ROOT-level for every project shape: a standard-custom
       // collection builds through ONE root operator, so the workspace-level
       // target keys are seeded from the root record's default paths.
@@ -893,10 +884,9 @@ export class ConfigService {
   }
 
   /**
-   * Simulation tool selector. The new simulation tool was renamed
-   * `npusim` → `npu-emulate`; on A5 (ascend950) it is the default. The
-   * workspace setting `performanceTuning.simulation.tool` may pin
-   * `npu-emulate` or the legacy `msprof`. Non-A5 SOCs always resolve to
+   * Simulation tool selector. On A5 (ascend950) `npu-emulate` is the
+   * default. The workspace setting `performanceTuning.simulation.tool` may
+   * pin `npu-emulate` or the legacy `msprof`. Non-A5 SOCs always resolve to
    * `msprof` (the new tool is A5-only).
    */
   static getSimulationTool(): SimulationTool {

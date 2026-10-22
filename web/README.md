@@ -1,4 +1,4 @@
-# Web 模块开发指南
+# Web模块开发指南
 
 > **导航**: [← 返回项目主页](../README.md)
 
@@ -13,7 +13,7 @@
 
 # 视图结构说明
 
-本项目采用 MPA (Multi-Page Application) 架构。
+本项目采用MPA (Multi-Page Application) 架构。
 
 ## 目录结构
 
@@ -35,4 +35,4 @@ web/src/views/
 1. 在 `web/src/views/` 下创建新的视图目录（例如 `my-view`）。
 2. 添加 `my-view.html`, `main.ts`, `app.vue`。
 3. 在 `web/vite.config.ts` 中的 `TEMP_MULTI_ENTRIES` 数组中添加视图名称（例如 `'my-view'`）。
-4. 在 Plugin 端注册视图时，使用该名称作为路由路径。
+4. 在Plugin端注册视图时，使用该名称作为路由路径。

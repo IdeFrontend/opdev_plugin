@@ -167,7 +167,7 @@ export default {
   'build.workspacePathNotFound': 'Workspace path not found',
   'build.runFailed': 'Run failed {{output}}',
   'build.runFailedQemuSegfault': 'Run failed (likely architecture mismatch: binary was built for a different CPU, e.g. aarch64, but is running under QEMU on x86_64). Run on a matching host or rebuild in this environment. {{output}}',
-  'build.runFailedPyascRuntime': 'PyAsc run failed: Ascend runtime library not found (e.g. runtime_camodel). Set the project Ascend env script to the CANN env script (e.g. source /usr/local/Ascend/ascend-toolkit/set_env.sh) and ensure CANN runtime is installed. See docs/run-integration.md. {{output}}',
+  'build.runFailedPyascRuntime': 'PyAsc run failed: Ascend runtime library not found (e.g. runtime_camodel). Set the project Ascend env script to the CANN env script (e.g. source /usr/local/Ascend/ascend-toolkit/set_env.sh) and ensure CANN runtime is installed. See design-docs/run-integration.md. {{output}}',
   'build.runSuccess': 'Run succeeded',
   'build.getRunCommandFailed': 'Failed to get run command: {{error}}',
   'build.executeFailed': 'Execution failed {{output}}',
@@ -271,8 +271,6 @@ export default {
   'build.compileFailedThrow': 'Compile operator failed: {{output}}',
   'build.executeFailedThrow': 'Execution failed: {{output}}',
   'build.simulationFailedThrow': 'Simulation analysis failed: {{output}}',
-  'performanceTuning.simulation.tool.notA5ResetToMsprof': 'The current environment does not support the npu-emulate simulation tool; it has been automatically reset to msprof. npu-emulate is only available on A5 (ascend950) environments.',
-  'performanceTuning.onBoard.tool.notA5ResetToMsprof': 'The current environment does not support the npu-compute on-board tool; it has been automatically reset to msprof. npu-compute is only available on A5 (ascend950) environments.',
 
   // project (additional)
   'project.invalidProjectId': 'Invalid project path',
@@ -723,9 +721,9 @@ export default {
   'profilingReport.loading': 'Loading profiling report...',
   'profilingReport.noData': 'No profiling data loaded.',
   'profilingReport.fetchFailed': 'Failed to fetch profiling data',
-  'profilingReport.cannbotSent': 'Sent report data to CANNWork',
-  'profilingReport.cannbotFailed': 'Failed to call CANNWork: {{error}}',
-  'profilingReport.cannbotNotInstalled': 'Failed to call "CANNWork Analysis". Please verify whether the CANNWork plugin is installed and its version is correct:\n1. If the CANNWork extension is not installed, search for and install "CANNWork" in "Extensions" first\n2. If the CANNWork version is earlier than 2.0.0, upgrade the plugin to the latest version',
+  'profilingReport.cannbotSent': 'Sent report data to CANNBot',
+  'profilingReport.cannbotFailed': 'Failed to call CANNBot: {{error}}',
+  'profilingReport.cannbotNotInstalled': 'Failed to call "CANNBot Analysis". Please verify whether the CANNWork plugin is installed and its version is correct:\n1. If the CANNWork extension is not installed, search for and install "CANNWork" in "Extensions" first\n2. If the CANNWork version is earlier than 2.0.0, upgrade the plugin to the latest version',
   'profilingReport.hintsPublishedInProblems': 'Performance hints published in Problems',
   'profilingReport.openHintsInProblems': 'Open performance hints in Problems',
 

@@ -131,7 +131,7 @@ export function normalizeCannSoc(cannSoc?: string | null): string {
     .toLowerCase();
 }
 
-/** Chip Name or probe text → default CANN SOC slug (see docs/ascend-env-spec.md §4). */
+/** Chip Name or probe text → default CANN SOC slug (see design-docs/ascend-env-spec.md §4). */
 export function socFromCoreName(coreName?: string): string | undefined {
   if (!coreName) {
     return undefined;
@@ -692,7 +692,7 @@ function resolveSocVersion(
  * spawn env, profiler, build-service, model defaults, …) call this so they
  * cannot disagree.
  *
- * Precedence (canonical contract — also captured in `docs/ascend-env-spec.md`):
+ * Precedence (canonical contract — also captured in `design-docs/ascend-env-spec.md`):
  *
  * - **`simulatorType`** (only when `isSimulator`):
  *   1. Workspace `op-devtools.performanceTuning.simulation.simulatorType` (explicit).
@@ -959,38 +959,6 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
   const script = params.script || '';
 
   return /\B--simulator\b/.test(script);
-}
-
-/**
- * Remove the `--simulator` flag (and its optional following value/placeholder,
- * e.g. `{simulator_type}`) from a script string. Used when the simulation tool
- * is `npu-emulate` (A5), which does not use the CANN simulator build path.
- */
-export function stripSimulatorFlag(script: string): string {
-  return script
-    .replace(/\s*--simulator(?:\s+\S+)?/g, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
-}
-
-/**
- * Append the `--simulator` flag to a script if it is not already present.
- *
- * For ascend/standard-custom scripts (which carry `--vendor_name=custom`), the
- * `{simulator_type}` placeholder is appended so the simulator device directory
- * is resolved at runtime. For cann scripts, a bare `--simulator` is appended
- * (the simulator dir is supplied via the `SOC_VERSION` spawn env).
- */
-export function ensureSimulatorFlag(script: string): string {
-  if (/\B--simulator\b/.test(script)) {
-    return script;
-  }
-
-  const suffix = /--vendor_name=custom/.test(script)
-    ? ' --simulator {simulator_type}'
-    : ' --simulator';
-
-  return script + suffix;
 }
 
 /**
