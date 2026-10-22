@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import {
   BRANDING,
   COMMAND_JSON_BUTTON_ACTION_ID,
@@ -6,8 +15,6 @@ import {
   COMMAND_VSCODE_JUMP_TO_FILE_ID,
   CONTEXT_PREFIX,
   CSV_VIEWER_VIEW_TYPE,
-  DUMP_TENSOR_PANEL_CONTAINER_ID,
-  DUMP_TENSOR_PANEL_VIEW_ID,
   DUMP_TENSOR_SIDEBAR_VIEW_ID,
   EXTENSION_ID,
   FLAVOR_DEFAULTS,
@@ -37,8 +44,6 @@ export {
   COMMAND_VSCODE_JUMP_TO_FILE_ID,
   CONTEXT_PREFIX,
   CSV_VIEWER_VIEW_TYPE,
-  DUMP_TENSOR_PANEL_CONTAINER_ID,
-  DUMP_TENSOR_PANEL_VIEW_ID,
   DUMP_TENSOR_SIDEBAR_VIEW_ID,
   EXTENSION_ID,
   FLAVOR_DEFAULTS,
@@ -96,4 +101,8 @@ export function sanitizerDiagnosticCollectionId(): string {
 
 export function jumpToFileDiagnosticCollectionId(): string {
   return `${VIEW_PREFIX}-jump-to-file`;
+}
+
+export function performanceHintsDiagnosticCollectionId(): string {
+  return `${VIEW_PREFIX}.performanceHints`;
 }

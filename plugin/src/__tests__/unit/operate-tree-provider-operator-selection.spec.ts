@@ -1,9 +1,34 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import {
   CONTEXT_PREFIX,
   treeItemContextKey,
 } from '@shared/flavor';
 
 const mockSetSelectedOperators = jest.fn();
+/** Handlers of the per-row commands the provider registers, keyed by command id. */
+const mockRegisteredCommands = new Map<string, (...args: unknown[])=> unknown>();
+const mockDisposedCommands: string[] = [];
+const mockRegisterCommand = jest.fn((
+  id: string,
+  handler: (...args: unknown[])=> unknown,
+) => {
+  mockRegisteredCommands.set(id, handler);
+
+  return {
+    dispose: jest.fn(() => {
+      mockDisposedCommands.push(id);
+      mockRegisteredCommands.delete(id);
+    }),
+  };
+});
 
 jest.mock('i18next', () => ({ t: (key: string) => key }));
 
@@ -65,6 +90,7 @@ jest.mock('vscode', () => {
     commands: {
       executeCommand: jest.fn()
         .mockResolvedValue(undefined),
+      registerCommand: (id: string, handler: (...args: unknown[])=> unknown) => mockRegisterCommand(id, handler),
     },
     env: {
       language: 'en',
@@ -110,10 +136,13 @@ import { COMMAND_SIDEBAR_TOGGLE_OPERATOR } from '../../constants';
 import {
   OperateNode, OperateTreeProvider,
 } from '@plugin/class/operate-tree-provider';
+import { normalizeProjectPath } from '@plugin/domain/models/project-model';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 
 type OperatorRecord = {
   id: number;
   name: string;
+  path: string;
   hasEx: boolean;
   isCompiled: boolean;
 };
@@ -152,10 +181,17 @@ type StateHarness = {
 const operator = (id: number, name: string, options: Partial<OperatorRecord> = {}): OperatorRecord => ({
   id,
   name,
+  path: `/ws/${name}`,
   hasEx: false,
   isCompiled: true,
   ...options,
 });
+
+/** Toggle-command id a row for `operatorPath` must carry. */
+const toggleCommandId = (operatorPath: string): string => stableCommandId(
+  COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+  normalizeProjectPath(operatorPath),
+);
 
 const createState = (): StateHarness['state'] => ({
   hasDevtoolConfig: true,
@@ -228,10 +264,11 @@ describe('OperateTreeProvider operator project tree root', () => {
       .toBe('operatorItem');
     expect(nodes[0].command)
       .toEqual({
-        command: COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        command: toggleCommandId('/ws/alpha'),
         title: 'alpha',
-        arguments: [2],
       });
+    expect(nodes[0].command?.arguments)
+      .toBeUndefined();
     expect(nodes[0].id)
       .toBe('operator-2');
     expect(nodes[0].collapsibleState)
@@ -258,9 +295,8 @@ describe('OperateTreeProvider operator project tree root', () => {
       .toBe('check');
     expect(nodes[2].command)
       .toEqual({
-        command: COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        command: toggleCommandId('/ws/ex-op'),
         title: 'ex-op',
-        arguments: [1],
       });
     expect(nodes[2].tooltip)
       .toBeUndefined();
@@ -344,9 +380,8 @@ describe('OperateTreeProvider operator project tree root', () => {
       .toBe('check');
     expect(nodes[0].command)
       .toEqual({
-        command: COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        command: toggleCommandId('/ws/second'),
         title: 'second',
-        arguments: [2],
       });
   });
 
@@ -394,14 +429,68 @@ describe('OperateTreeProvider operator toggling', () => {
     harness = provider as unknown as StateHarness;
     mockSetSelectedOperators.mockReset();
     mockSetSelectedOperators.mockResolvedValue(undefined);
+    mockRegisteredCommands.clear();
+    mockDisposedCommands.length = 0;
+    mockRegisterCommand.mockClear();
   });
 
-  it('ignores toggling an unknown operator id', async () => {
-    await provider.toggleOperator(99);
+  it('matches the path regardless of separators and casing', async () => {
+    harness.state.operators = [operator(1, 'first', { path: '/ws/First' })];
+    harness.state.selectedOperatorIds = [];
+
+    await provider.toggleOperatorForPath('/ws/first/');
+
+    expect(harness.state.selectedOperatorIds)
+      .toEqual([1]);
+  });
+
+  it('ignores a path that belongs to no operator', async () => {
+    harness.state.operators = [operator(1, 'first')];
+
+    await provider.toggleOperatorForPath('/ws/gone');
 
     expect(mockSetSelectedOperators)
       .not
       .toHaveBeenCalled();
+  });
+
+  it('ignores an empty path', async () => {
+    harness.state.operators = [operator(1, 'first')];
+
+    await provider.toggleOperatorForPath('');
+
+    expect(mockSetSelectedOperators)
+      .not
+      .toHaveBeenCalled();
+    expect(mockRegisterCommand)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('runs the row command handler: toggle by id, then the after-toggle hook', async () => {
+    harness.state.operators = [
+      operator(1, 'first'),
+      operator(2, 'second'),
+    ];
+    harness.state.selectedOperatorIds = [1];
+    const afterToggle = jest.fn(async () => undefined);
+
+    provider.registerOperatorToggleCommands(afterToggle);
+
+    const handler = mockRegisteredCommands.get(toggleCommandId('/ws/second'));
+
+    expect(handler)
+      .toBeDefined();
+
+    await handler?.();
+
+    expect(harness.state.selectedOperatorIds)
+      .toEqual([
+        1,
+        2,
+      ]);
+    expect(afterToggle)
+      .toHaveBeenCalledTimes(1);
   });
 
   it('selects an unselected operator and persists the new list', async () => {
@@ -416,7 +505,7 @@ describe('OperateTreeProvider operator toggling', () => {
     )
       .mockClear();
 
-    await provider.toggleOperator(2);
+    await provider.toggleOperatorForPath('/ws/second');
 
     expect(mockSetSelectedOperators)
       .toHaveBeenCalledWith({
@@ -444,7 +533,7 @@ describe('OperateTreeProvider operator toggling', () => {
       2,
     ];
 
-    await provider.toggleOperator(1);
+    await provider.toggleOperatorForPath('/ws/first');
 
     expect(mockSetSelectedOperators)
       .toHaveBeenCalledWith({ operatorIds: [2] });
@@ -459,13 +548,39 @@ describe('OperateTreeProvider operator toggling', () => {
     ];
     harness.state.selectedOperatorIds = [2];
 
-    await provider.toggleOperator(1);
+    await provider.toggleOperatorForPath('/ws/ex-op');
 
     expect(mockSetSelectedOperators)
       .not
       .toHaveBeenCalled();
     expect(harness.state.selectedOperatorIds)
       .toEqual([2]);
+  });
+
+  it('applies the in-memory selection before the persist resolves', async () => {
+    harness.state.operators = [
+      operator(1, 'first'),
+      operator(2, 'second'),
+    ];
+    harness.state.selectedOperatorIds = [];
+    let resolvePersist!: ()=> void;
+
+    mockSetSelectedOperators.mockImplementation(() => new Promise<void>((resolve) => {
+      resolvePersist = resolve;
+    }));
+
+    const togglePromise = provider.toggleOperatorForPath('/ws/second');
+
+    // The state update and the repaint happen synchronously, before the
+    // async cache round-trip completes: the row state must never depend on
+    // the persist latency.
+    expect(harness.state.selectedOperatorIds)
+      .toEqual([2]);
+    expect(mockSetSelectedOperators)
+      .toHaveBeenCalledTimes(1);
+
+    resolvePersist();
+    await togglePromise;
   });
 
   it('reports a mixed-type selection as disabled', async () => {

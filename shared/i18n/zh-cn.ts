@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 export default {
   // core (api-server)
   'core.message.apiResponseSuccess': '请求成功。',
@@ -157,7 +166,7 @@ export default {
   'build.workspacePathNotFound': '未找到工作区路径',
   'build.runFailed': '运行失败 {{output}}',
   'build.runFailedQemuSegfault': '运行失败（可能是架构不匹配：可执行文件为其他 CPU 架构如 aarch64 编译，却在 x86_64 下通过 QEMU 运行）。请在匹配的主机上运行或在本环境中重新编译。 {{output}}',
-  'build.runFailedPyascRuntime': 'PyAsc 运行失败：未找到 Ascend 运行时库（如 runtime_camodel）。请将项目的「Ascend 环境脚本」设置为 CANN 环境脚本（如 source /usr/local/Ascend/ascend-toolkit/set_env.sh），并确保当前环境已安装 CANN 运行时。详见 docs/run-integration.md。 {{output}}',
+  'build.runFailedPyascRuntime': 'PyAsc 运行失败：未找到 Ascend 运行时库（如 runtime_camodel）。请将项目的「Ascend 环境脚本」设置为 CANN 环境脚本（如 source /usr/local/Ascend/ascend-toolkit/set_env.sh），并确保当前环境已安装 CANN 运行时。详见 design-docs/run-integration.md。 {{output}}',
   'build.runSuccess': '运行成功',
   'build.getRunCommandFailed': '获取运行命令失败 {{error}}',
   'build.executeFailed': '执行失败 {{output}}',
@@ -355,9 +364,6 @@ export default {
   'csv.errorPageTitle': 'CSV 表格视图 — 错误',
   'csv.errorLoadFailed': '无法加载 CSV 文件',
   'csv.errorDetailsLabel': '错误：',
-
-  // routes
-  'routes.dumpTensorViewTitle': 'DumpTensor数据-视图',
 
   // web home sidebar
   'web.home.clickOpen': '点击打开',
@@ -577,17 +583,12 @@ export default {
   'web.link.validation.scriptNotExist': '脚本文件不存在，请确认',
   'web.link.validation.failed': '验证失败',
 
-  // web dump-tensor-data
+  // dump tensor native sidebar tree
   'web.dump.selectTwoFiles': '请选择至少两个文件进行比较',
   'web.dump.maxSelectCount': '最多只能选择 {{count}} 个文件进行比较',
-  'web.dump.compareStarting': '正在启动VSCode文件对比...',
-  'web.dump.compareFailed': '启动VSCode文件对比失败',
-  'web.dump.startCompare': '开始对比',
-  'web.dump.cancel': '取消',
-  'web.dump.import': '导入',
-  'web.dump.compare': '对比',
-  'web.dump.importSuccess': '导入成功',
-  'web.dump.importFailed': '导入失败',
+  'web.dump.noData': '暂无数据',
+  'web.dump.markFailed': '标记操作失败',
+  'web.dump.txtCompanionMissing': '未找到配套的文本文件：{{path}}',
 
   // web options (shared)
   'web.options.simulationFailed': '仿真分析失败，已停止',
@@ -638,7 +639,7 @@ export default {
   'web.options.onboard.resourceConflict': '资源冲突占比',
   'web.options.onboard.startNow': '立即开始',
 
-  // web data-collection-config (A5 新工具 npu-compute / npusim 弹窗)
+  // web data-collection-config (A5 新工具 npu-compute / npu-emulate 弹窗)
   'web.dataCollection.title': '数据采集配置',
   'web.dataCollection.collectionType': 'Collection type',
   'web.dataCollection.simulate': '仿真',
@@ -721,5 +722,16 @@ export default {
   'profilingReport.fetchFailed': '获取性能分析数据失败',
   'profilingReport.cannbotSent': '已将报告数据发送至 CANNBot',
   'profilingReport.cannbotFailed': '调用 CANNBot 失败：{{error}}',
+  'profilingReport.cannbotNotInstalled': '调用"CANNWork 分析"功能失败，请确认 CANNWork 插件是否安装以及 CANNWork 版本是否正确：\n1、如 CANNWork 扩展插件未安装，请先在"扩展"中搜索并安装 "CANNWork"\n2、如 CANNWork 版本小于 2.0.0，请升级插件到最新版本',
+  'profilingReport.hintsPublishedInProblems': '性能提示已发布到 Problems',
+  'profilingReport.openHintsInProblems': '在 Problems 中打开性能提示',
+
+  // performance-hints (native diagnostics from .npu-rep)
+  'performanceHints.source': '性能提示',
+  'performanceHints.origin.instruction': '指令',
+  'performanceHints.origin.sourceLine': '源码行',
+  'performanceHints.origin.kernel': 'Kernel',
+  'performanceHints.publishFailed': '发布 {{file}} 的性能提示失败：{{error}}',
+  'performanceHints.empty': '未在 {{file}} 中找到性能提示',
 
 };

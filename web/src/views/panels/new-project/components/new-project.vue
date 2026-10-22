@@ -1,3 +1,12 @@
+<!--
+  Copyright (c) 2025 Huawei Technologies Co., Ltd.
+  This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+  CANN Open Software License Agreement Version 2.0 (the "License").
+  Please refer to the License for details. You may not use this file except in compliance with the License.
+  THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+  See LICENSE in the root of the software repository for the full text of the License.
+-->
 <script setup lang="ts">
 import {
   ref, onMounted, computed,
@@ -48,14 +57,24 @@ const {
 } = useNewProject(selectedTemplate);
 
 const tryAppendExperimentalToPath = () => {
-  if (
-    selectedId_type.value === OperatorProjectViewId.STANDARD_CUSTOM
-    && projectFormData.projectPath
-  ) {
+  if (!projectFormData.projectPath) {
+    return;
+  }
+
+  // 仅标准自定义算子工程的子算子路径需要 experimental 后缀；
+  // 切换到其它类型时去除尾部 experimental 后缀，避免污染新工程路径。
+  if (selectedId_type.value === OperatorProjectViewId.STANDARD_CUSTOM) {
     const updated = ensureExperimentalInPath(projectFormData.projectPath);
 
     if (updated !== projectFormData.projectPath) {
       projectFormData.projectPath = updated;
+    }
+  }
+  else {
+    const stripped = projectFormData.projectPath.replace(/[/\\]experimental$/i, '');
+
+    if (stripped !== projectFormData.projectPath) {
+      projectFormData.projectPath = stripped;
     }
   }
 };
@@ -130,6 +149,7 @@ const tritonProject: ProjectTypeItem = {
 };
 const items_type = ref<ProjectTypeItem[]>([
   cannProject,
+  ascendProject,
   pyascProject,
   tritonProject,
 ]);
@@ -171,7 +191,8 @@ onMounted(async () => {
     console.log('[Operate] 当前项目类型:', currentProjectType.value);
 
     if (isStandardCustomProjectType(currentProjectType.value)) {
-      items_type.value = [ascendProject];
+      // 不裁剪可选项：在标准自定义算子工程中也允许创建其它类型算子（issue #83）。
+      // 仅默认选中 STANDARD_CUSTOM，以便走子算子流程（不打开新工程）。
       selectedId_type.value = OperatorProjectViewId.STANDARD_CUSTOM;
       tryAppendExperimentalToPath();
     }

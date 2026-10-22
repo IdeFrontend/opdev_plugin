@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -875,18 +884,19 @@ export class ConfigService {
   }
 
   /**
-   * Simulation tool selector. On A5 the new `npusim` tool is the default; the
-   * workspace setting `performanceTuning.simulation.tool` may pin `npusim` or the
-   * legacy `msprof`. Non-A5 SOCs always resolve to `msprof`.
+   * Simulation tool selector. On A5 (ascend950) `npu-emulate` is the
+   * default. The workspace setting `performanceTuning.simulation.tool` may
+   * pin `npu-emulate` or the legacy `msprof`. Non-A5 SOCs always resolve to
+   * `msprof` (the new tool is A5-only).
    */
   static getSimulationTool(): SimulationTool {
     const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
 
-    if (configured === 'npusim' || configured === 'msprof') {
+    if (configured === 'npu-emulate' || configured === 'msprof') {
       return configured;
     }
 
-    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npusim' : 'msprof';
+    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npu-emulate' : 'msprof';
   }
 
   /** True when the on-board analysis should open the new-tool data-collection dialog (A5 + npu-compute). */
@@ -895,10 +905,13 @@ export class ConfigService {
       && ConfigService.getOnBoardTool() === 'npu-compute';
   }
 
-  /** True when the simulation analysis should open the new-tool data-collection dialog (A5 + npusim). */
+  /**
+   * True when the simulation analysis should open the new-tool data-collection
+   * dialog (A5 + npu-emulate).
+   */
   static shouldUseNewSimulationTool(): boolean {
     return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
-      && ConfigService.getSimulationTool() === 'npusim';
+      && ConfigService.getSimulationTool() === 'npu-emulate';
   }
 
   /**

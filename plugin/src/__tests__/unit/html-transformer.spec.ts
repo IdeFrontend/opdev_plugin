@@ -1,4 +1,13 @@
 /**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+/**
  * Unit tests for HtmlTransformer: dist/HTML loading, dev-server fetching,
  * template value substitution, and resource path rewriting for webviews.
  * The http module is mocked so no network traffic is ever attempted.
@@ -155,7 +164,7 @@ describe('HtmlTransformer.fetchHtml', () => {
 
 describe('HtmlTransformer.processDevResourcePaths', () => {
   it('rewrites absolute src and href attributes and injects base after head', () => {
-    const html = '<html><head><script src="/assets/main.js"></script><link href="/css/style.css"></head></html>';
+    const html = '<html><head><script src="/docs/assets/main.js"></script><link href="/css/style.css"></head></html>';
     const result = HtmlTransformer.processDevResourcePaths(
       html,
       'http://localhost:5173',
@@ -351,7 +360,7 @@ describe('HtmlTransformer.transformDistHtml', () => {
       { lang: 'en' },
     );
 
-    response.emit('data', '<html><head><script src="/assets/main.js"></script></head></html>');
+    response.emit('data', '<html><head><script src="/docs/assets/main.js"></script></head></html>');
     response.emit('end');
 
     const result = await promise;

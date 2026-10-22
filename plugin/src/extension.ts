@@ -1,8 +1,11 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
 import i18next, { t } from 'i18next';
 import * as vscode from 'vscode';
@@ -14,18 +17,18 @@ import i18nResource from '@shared/i18n';
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
+import { NpuRepEditorProvider } from './class/npu-rep-editor-provider';
 import { HomeTreeProvider } from './class/home-tree-provider';
 import { StTestResultsPanel } from './class/st-test-results-panel';
 import { StTestRunHistoryTreeProvider } from './class/st-test-run-history-tree-provider';
+import type { StTestWorkspaceRunHistoryRecord } from '@plugin/domain/services/st-test-run-history';
 import {
   OperateTreeProvider, type OperateNode,
 } from './class/operate-tree-provider';
 import {
   ApiServer, type ApiGroup,
 } from './core/api-server';
-import { ViewServer } from './core/view/view-server';
 import { ViewOpener } from './core/view/view-opener';
-import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
 import { taskMethods } from './controller/task-controller';
@@ -38,16 +41,23 @@ import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ProjectManager } from './core/project/project-manager';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
+import {
+  performanceHintsDiagnosticsService, resolvePerformanceHintsFilePath,
+} from './service/performance-hints-diagnostics.service';
 import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
 import { sanitizerService } from './service/sanitizer-service';
 import { buildService } from './service/build-service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
-import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import {
   appendLog,
   getOperatorToolOutputChannel,
 } from './helpers/output-channel';
 import { promptReloadWindow } from './helpers/reload-window-prompt';
+import {
+  resolveDumpTensorFileCommandArgs,
+  resolveDumpTensorReportCommandKey,
+  resolvePerformanceReportCommandKey,
+} from './helpers/report-command-key';
 import { insightService } from './service/insight-service';
 
 import { createMainConfigWatcher } from './helpers/main-config-watch';
@@ -71,7 +81,6 @@ import {
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
   COMMAND_FLASH_DUMP_TENSOR_DATA,
   COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE,
-  COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
   VIEW_NEW_PROJECT,
   VIEW_WELCOME,
   COMMAND_SIMULATOR_OPTIONS,
@@ -114,6 +123,18 @@ import {
   COMMAND_SIDEBAR_ST_TEST,
   COMMAND_SIDEBAR_UT_TEST,
   COMMAND_SIDEBAR_DUMP_TENSOR,
+  COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN,
+  COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SORT_TIME,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_FILTER_MARKED,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SHOW_ALL,
+  COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE,
+  COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_START,
+  COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_CANCEL,
   COMMAND_SIDEBAR_DEBUG_SETTINGS,
   COMMAND_SIDEBAR_SANITIZER_SETTINGS,
   COMMAND_SIDEBAR_ON_BOARD_SETTINGS,
@@ -122,7 +143,6 @@ import {
   COMMAND_SIDEBAR_CLEAR_SELECTED_OPERATORS,
   COMMAND_SIDEBAR_SEARCH_OPERATORS,
   COMMAND_SIDEBAR_CLEAR_OPERATOR_PROJECTS_SEARCH,
-  COMMAND_SIDEBAR_TOGGLE_OPERATOR,
   COMMAND_SIDEBAR_SELECT_ALL_OPERATORS,
   COMMAND_SIDEBAR_SELECT_ALL_COMPILED_OPERATORS,
   COMMAND_SIDEBAR_SELECT_ALL_PREPARED_OPERATORS,
@@ -166,7 +186,7 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
   COMMAND_OPEN_CSV,
   COMMAND_OPEN_PROFILING_REPORT,
-  COMMAND_ST_TEST_HISTORY_OPEN,
+  COMMAND_SHOW_PERFORMANCE_HINTS,
 } from './constants';
 import {
   focusOpsOperateViewContainer,
@@ -182,6 +202,7 @@ import {
   TREE_VIEW_OPERATOR_PROJECTS,
   TREE_VIEW_SANITIZER_RESULTS,
   TREE_VIEW_PERFORMANCE_RESULTS,
+  DUMP_TENSOR_SIDEBAR_VIEW_ID,
   TREE_VIEW_ST_TEST_HISTORY,
   settingsKey,
   contextKey,
@@ -251,21 +272,6 @@ function getFolderUri(uri: vscode.Uri): vscode.Uri {
     // If the file information cannot be obtained, assuming it is a file, return to the parent directory
     return vscode.Uri.file(path.dirname(uri.fsPath));
   }
-}
-
-function resolvePerformanceReportCommandKey(arg: string | {
-  id?: string;
-  command?: { arguments?: unknown[] }
-} | undefined): string {
-  const raw = typeof arg === 'string'
-    ? arg
-    : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
-
-  if (raw.startsWith('performance-report:')) {
-    return decodeURIComponent(raw.replace(/^performance-report:/, ''));
-  }
-
-  return raw;
 }
 
 function resolvePerformanceReportKeyFromTreeItem(node: OperateNode): string | undefined {
@@ -363,6 +369,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Must be called before any code that uses OperatorPluginRegistry.
   registerOperatorPlugins();
   sanitizerDiagnosticsService.activate(context);
+  performanceHintsDiagnosticsService.activate(context);
   registerMsdebugTargetAutoAdapt(
     context,
     () => homeMethods.resolveDebugOperatorEntry(),
@@ -397,7 +404,32 @@ export async function activate(context: vscode.ExtensionContext) {
     root: string;
     name: string;
   }> = [];
-  const stTestRunHistoryTreeProvider = new StTestRunHistoryTreeProvider({ getWorkspaces: () => stTestHistoryWorkspaces });
+  // The history tree resolves the record from its own key and delegates the open
+  // to this handler, so a row click runs a directly registered command.
+  const openStTestHistoryRecord = async (entry: StTestWorkspaceRunHistoryRecord): Promise<void> => {
+    const outputChannel = getOperatorToolOutputChannel('st test');
+    const writeHistoryLog = (message: string): void => {
+      const timestamp = new Date()
+        .toISOString();
+
+      outputChannel.appendLine(`${timestamp} ${message}`);
+    };
+
+    writeHistoryLog(`[ST history] Record resolved: workspaceRoot=${entry.workspaceRoot}, runId=${entry.record.runId}, runDirectory=${entry.record.runDirectory}`);
+
+    try {
+      await StTestResultsPanel.createOrShowHistorical(context, entry, writeHistoryLog);
+    }
+    catch (error) {
+      writeHistoryLog(`[ST history] Open failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
+      console.error('[ST test] Could not open a historical result report:', error);
+      await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
+    }
+  };
+  const stTestRunHistoryTreeProvider = new StTestRunHistoryTreeProvider({
+    getWorkspaces: () => stTestHistoryWorkspaces,
+    openRecord: openStTestHistoryRecord,
+  });
 
   StTestResultsPanel.setHistoryTreeProvider(stTestRunHistoryTreeProvider);
 
@@ -651,9 +683,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(watchMainConfig);
 
-  // view
-  const viewServer = initViews(context, apiServer);
-
   PermanentStorage.setInstance(context);
 
   // Initialize the Webview of the new operator project
@@ -789,47 +818,6 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   stTestRunHistoryTreeProvider.setTreeView(stTestHistoryTreeView);
-  const openStTestHistoryCommand = vscode.commands.registerCommand(
-    COMMAND_ST_TEST_HISTORY_OPEN,
-    async (recordKey: unknown) => {
-      const outputChannel = getOperatorToolOutputChannel('st test');
-      const writeHistoryLog = (message: string): void => {
-        const timestamp = new Date()
-          .toISOString();
-
-        outputChannel.appendLine(`${timestamp} ${message}`);
-      };
-
-      writeHistoryLog(`[ST history] Open requested: recordKeyType=${typeof recordKey}, recordKey=${String(recordKey)}`);
-
-      if (typeof recordKey !== 'string') {
-        writeHistoryLog('[ST history] Record lookup skipped: command argument is not a string.');
-        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
-
-        return;
-      }
-
-      const entry = stTestRunHistoryTreeProvider.getRecord(recordKey);
-
-      if (!entry) {
-        writeHistoryLog('[ST history] Record lookup failed: the key is absent from the current history tree provider.');
-        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
-
-        return;
-      }
-
-      writeHistoryLog(`[ST history] Record resolved: workspaceRoot=${entry.workspaceRoot}, runId=${entry.record.runId}, runDirectory=${entry.record.runDirectory}`);
-
-      try {
-        await StTestResultsPanel.createOrShowHistorical(context, entry, writeHistoryLog);
-      }
-      catch (error) {
-        writeHistoryLog(`[ST history] Open failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
-        console.error('[ST test] Could not open a historical result report:', error);
-        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
-      }
-    },
-  );
 
   operateTreeProvider.setPerformanceResultsTreeView(performanceResultsTreeView);
   context.subscriptions.push(performanceResultsTreeView.onDidChangeSelection(async (event) => {
@@ -847,19 +835,44 @@ export async function activate(context: vscode.ExtensionContext) {
 
     await applyPerformanceReportSelection(operateTreeProvider, reportKey);
   }));
+  const dumpTensorResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
+    onDidChangeTreeData: operateTreeProvider.onDidChangeDumpTensorTreeData,
+    getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    getParent: (element) => operateTreeProvider.getDumpTensorTreeParent(element),
+    getChildren: (element) => {
+      if (!element) {
+        return operateTreeProvider.getDumpTensorResultsPanelNodes();
+      }
+
+      if (element.nodeId === 'dumpTensorReportItem' || element.nodeId === 'dumpTensorFolder') {
+        return operateTreeProvider.getChildren(element);
+      }
+
+      return [];
+    },
+  };
+  const dumpTensorResultsTreeView = vscode.window.createTreeView(DUMP_TENSOR_SIDEBAR_VIEW_ID, {
+    treeDataProvider: dumpTensorResultsPanelProvider,
+    showCollapseAll: false,
+  });
+
+  operateTreeProvider.setDumpTensorResultsTreeView(dumpTensorResultsTreeView);
   const operatorProjectsTreeView = vscode.window.createTreeView(TREE_VIEW_OPERATOR_PROJECTS, {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
   });
+
+  // One toggle command per operator project, registered by the provider.
+  operatorProjectsTreeProvider.registerOperatorToggleCommands(refreshSidebarContexts);
 
   context.subscriptions.push(
     homeTreeView,
     operateTreeView,
     sanitizerResultsTreeView,
     performanceResultsTreeView,
+    dumpTensorResultsTreeView,
     stTestHistoryTreeView,
     stTestRunHistoryTreeProvider,
-    openStTestHistoryCommand,
     { dispose: () => StTestResultsPanel.setHistoryTreeProvider(undefined) },
     operatorProjectsTreeView,
     toggleOpsOperateCommand,
@@ -869,6 +882,8 @@ export async function activate(context: vscode.ExtensionContext) {
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceMarkedOnly`, operateTreeProvider.isPerformanceMarkedOnlyEnabled());
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceReportSelected`, false);
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceSelectedReportMarked`, false);
+  await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, operateTreeProvider.isDumpTensorMarkedOnlyEnabled());
+  await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, operateTreeProvider.isDumpTensorCompareModeEnabled());
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.sanitizerResultsGroupBy`, operateTreeProvider.getSanitizerResultsGroupBy());
   await vscode.commands.executeCommand(
     'setContext',
@@ -1058,8 +1073,8 @@ export async function activate(context: vscode.ExtensionContext) {
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
 
-      // A5 + npusim: open the unified data-collection dialog instead of the
-      // legacy quick-options panel / direct msprof flow.
+      // A5 + npu-emulate: open the unified data-collection
+      // dialog instead of the legacy quick-options panel / direct msprof flow.
       if (ConfigService.shouldUseNewSimulationTool()) {
         setPendingDataCollectionType('simulate');
         await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
@@ -1816,6 +1831,156 @@ export async function activate(context: vscode.ExtensionContext) {
       await operateTreeProvider.openPerformanceFile(filePath, fileType);
     },
   );
+  const sidebarDumpTensorReportCopyPathCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      await operateTreeProvider.copyDumpTensorReportPath(reportKey);
+    },
+  );
+  const sidebarDumpTensorReportDownloadCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      await operateTreeProvider.downloadDumpTensorReport(reportKey);
+    },
+  );
+  const sidebarDumpTensorReportMarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      const report = operateTreeProvider.getDumpTensorReportByKey(reportKey);
+
+      if (report?.marked) {
+        return;
+      }
+
+      await operateTreeProvider.toggleDumpTensorReportMark(reportKey);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, operateTreeProvider.isDumpTensorMarkedOnlyEnabled());
+    },
+  );
+  const sidebarDumpTensorReportUnmarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      const report = operateTreeProvider.getDumpTensorReportByKey(reportKey);
+
+      if (!report?.marked) {
+        return;
+      }
+
+      await operateTreeProvider.toggleDumpTensorReportMark(reportKey);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, operateTreeProvider.isDumpTensorMarkedOnlyEnabled());
+    },
+  );
+  const sidebarDumpTensorReportSortTimeCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SORT_TIME,
+    async () => {
+      operateTreeProvider.toggleDumpTensorSortOrder();
+    },
+  );
+  const sidebarDumpTensorReportFilterMarkedCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_FILTER_MARKED,
+    async () => {
+      operateTreeProvider.setDumpTensorMarkedOnly(true);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, true);
+    },
+  );
+  const sidebarDumpTensorReportShowAllCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SHOW_ALL,
+    async () => {
+      operateTreeProvider.setDumpTensorMarkedOnly(false);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, false);
+    },
+  );
+  const sidebarDumpTensorFileOpenCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] };
+    }) => {
+      const resolved = resolveDumpTensorFileCommandArgs(arg);
+
+      if (!resolved || !resolved.filePath) {
+        return;
+      }
+
+      await operateTreeProvider.openDumpTensorFile(resolved.filePath, resolved.fileType);
+    },
+  );
+  const sidebarDumpTensorFileCompareWithCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] };
+    }) => {
+      const resolved = resolveDumpTensorFileCommandArgs(arg);
+
+      if (!resolved || resolved.fileType !== 'bin' || !resolved.filePath) {
+        return;
+      }
+
+      operateTreeProvider.beginDumpTensorCompareWithFile(resolved.filePath);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, true);
+    },
+  );
+  const sidebarDumpTensorCompareCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE,
+    async () => {
+      operateTreeProvider.setDumpTensorCompareMode(true);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, true);
+    },
+  );
+  const sidebarDumpTensorCompareStartCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_START,
+    async () => {
+      await operateTreeProvider.startDumpTensorCompare();
+      await vscode.commands.executeCommand(
+        'setContext',
+        `${CONTEXT_PREFIX}.dumpTensorComparing`,
+        operateTreeProvider.isDumpTensorCompareModeEnabled(),
+      );
+    },
+  );
+  const sidebarDumpTensorCompareCancelCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_CANCEL,
+    async () => {
+      operateTreeProvider.setDumpTensorCompareMode(false);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, false);
+    },
+  );
   const sidebarSelectOperatorsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SELECT_OPERATORS,
     async () => {
@@ -1888,14 +2053,6 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_CLEAR_OPERATOR_PROJECTS_SEARCH,
     async () => {
       operatorProjectsTreeProvider.setSearchKeyword('');
-      await refreshSidebarContexts();
-    },
-  );
-
-  const sidebarToggleOperatorCommand = vscode.commands.registerCommand(
-    COMMAND_SIDEBAR_TOGGLE_OPERATOR,
-    async (operatorId: number) => {
-      await operatorProjectsTreeProvider.toggleOperator(operatorId);
       await refreshSidebarContexts();
     },
   );
@@ -2047,15 +2204,6 @@ export async function activate(context: vscode.ExtensionContext) {
     await context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
   }
 
-  // DumpTensor data view (middle panel)
-  const {
-    dumpTensorPanelView,
-    openDumpTensorDisposable,
-    getWebview: getDumpTensorPanelWebview,
-  } = getDumpTensorPanelViewProvider(context, apiServer);
-
-  context.subscriptions.push(dumpTensorPanelView, openDumpTensorDisposable);
-
   // Simulation / on-board quick options panels (collection picker)
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
   const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
@@ -2102,7 +2250,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // A5 new-tool (npu-compute / npusim) unified "数据采集配置" dialog. The entry
+  // A5 new-tool (npu-compute / npu-emulate) unified "数据采集配置" dialog. The entry
   // command stashes the collection type (on-board / simulation) via
   // setPendingDataCollectionType before invoking this, so the panel preselects it.
   // Constructed after the sanitizer provider so the pre-existing WebviewProvider
@@ -2123,7 +2271,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Subscription to destruction event
   context.subscriptions.push(apiServer);
-  context.subscriptions.push(viewServer);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(openProjectCommand);
@@ -2159,7 +2306,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarClearSelectedOperatorsCommand);
   context.subscriptions.push(sidebarSearchOperatorsCommand);
   context.subscriptions.push(sidebarClearOperatorProjectsSearchCommand);
-  context.subscriptions.push(sidebarToggleOperatorCommand);
   context.subscriptions.push(sidebarSelectAllOperatorsCommand);
   context.subscriptions.push(sidebarSelectAllCompiledOperatorsCommand);
   context.subscriptions.push(sidebarSelectAllPreparedOperatorsCommand);
@@ -2200,6 +2346,18 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarPerformanceReportFilterMarkedCommand);
   context.subscriptions.push(sidebarPerformanceReportShowAllCommand);
   context.subscriptions.push(sidebarPerformanceFileOpenCommand);
+  context.subscriptions.push(sidebarDumpTensorReportCopyPathCommand);
+  context.subscriptions.push(sidebarDumpTensorReportDownloadCommand);
+  context.subscriptions.push(sidebarDumpTensorReportMarkCommand);
+  context.subscriptions.push(sidebarDumpTensorReportUnmarkCommand);
+  context.subscriptions.push(sidebarDumpTensorReportSortTimeCommand);
+  context.subscriptions.push(sidebarDumpTensorReportFilterMarkedCommand);
+  context.subscriptions.push(sidebarDumpTensorReportShowAllCommand);
+  context.subscriptions.push(sidebarDumpTensorFileOpenCommand);
+  context.subscriptions.push(sidebarDumpTensorFileCompareWithCommand);
+  context.subscriptions.push(sidebarDumpTensorCompareCommand);
+  context.subscriptions.push(sidebarDumpTensorCompareStartCommand);
+  context.subscriptions.push(sidebarDumpTensorCompareCancelCommand);
 
   // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
@@ -2216,7 +2374,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(refreshDecorationsCommand);
 
   // Note: Do not automatically detect and mark the operator project collection when the plug-in is activated.
-  // Automatic detection only occurs when the user explicitly opens the project (link-controller.ts)
+  // Automatic detection only occurs when the user explicitly opens the project.
 
   // Register folder right-click menu command
   const markAsOperatorProjectCommand = vscode.commands.registerCommand(
@@ -2543,6 +2701,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(csvEditorRegistration);
 
+  // Binary .npu-rep / .npu.rep: Problems/Explorer open this URI as the editor;
+  // hand off to the profiling-report panel instead of a text document.
+  const npuRepEditorRegistration = vscode.window.registerCustomEditorProvider(
+    NpuRepEditorProvider.viewType,
+    new NpuRepEditorProvider(),
+    {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: true },
+    },
+  );
+
+  context.subscriptions.push(npuRepEditorRegistration);
+
   // Register a command to open a CSV file
   const openCsvCommand = vscode.commands.registerCommand(
     COMMAND_OPEN_CSV,
@@ -2609,6 +2780,22 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(openProfilingReportCommand);
 
+  // Re-publish the performance hints of a .npu-rep file and focus the Problems view.
+  const showPerformanceHintsCommand = vscode.commands.registerCommand(
+    COMMAND_SHOW_PERFORMANCE_HINTS,
+    async (argument?: unknown) => {
+      const filePath = resolvePerformanceHintsFilePath(argument);
+
+      if (!filePath) {
+        return;
+      }
+
+      await performanceHintsDiagnosticsService.showPerformanceHintsForFile(filePath);
+    },
+  );
+
+  context.subscriptions.push(showPerformanceHintsCommand);
+
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
     async (options?: { openLatest?: boolean }) => {
@@ -2630,15 +2817,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const flashDumpTensorData = vscode.commands.registerCommand(
     COMMAND_FLASH_DUMP_TENSOR_DATA,
-    async () => {
-      const webview = getDumpTensorPanelWebview();
-
-      if (webview) {
-        webview.postMessage({ command: 'dumpTensorRefreshData' });
-      }
-      else {
-        console.log('[flashDumpTensorData] Webview not available, skipping refresh');
-      }
+    async (options?: { focusIfNew?: boolean }) => {
+      await operateTreeProvider.refreshDumpTensorReports(options);
     },
   );
 
@@ -2646,10 +2826,33 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const importDumpTensorBinFileCommand = vscode.commands.registerCommand(
     COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE,
-    async (uri) => {
+    async (uri?: vscode.Uri) => {
       try {
-        if (uri && uri.fsPath) {
-          await taskMethods.importDumpTensorBinFile({ binFilePath: uri.fsPath });
+        let binFilePath: string | undefined;
+
+        if (uri?.fsPath) {
+          binFilePath = uri.fsPath;
+        }
+        else {
+          const picks = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: { 'Binary Files': ['bin'] },
+            title: t('extension.selectDumpTensorBinFile'),
+          });
+
+          if (!picks || picks.length === 0) {
+            return;
+          }
+
+          binFilePath = picks[0].fsPath;
+        }
+
+        if (binFilePath) {
+          // buildService.importDumpTensorBinFile already refreshes the results
+          // tree with focusIfNew internally - no second flash here.
+          await taskMethods.importDumpTensorBinFile({ binFilePath });
         }
       }
       catch (error) {
@@ -2746,27 +2949,6 @@ async function initI18n() {
  */
 function initApiServer() {
   return new ApiServer(apis as ApiGroup);
-}
-
-/**
- * view
- * @param context extended context
- * @param apiServer api service
- */
-function initViews(
-  context: vscode.ExtensionContext,
-  apiServer: ApiServer,
-): ViewServer {
-  const viewServer = new ViewServer(routes, context);
-
-  viewServer.onViewActivated((path, webview) => {
-    apiServer.addWebview(path, webview);
-  });
-  viewServer.onViewDisposed((path) => {
-    apiServer.removeWebview(path);
-  });
-
-  return viewServer;
 }
 
 export function deactivate() {

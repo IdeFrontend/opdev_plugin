@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 jest.mock('i18next', () => ({
   t: jest.fn((key: string, params?: { error?: string }) =>
     params?.error ? `${key}: ${params.error}` : key),
@@ -212,14 +221,34 @@ describe('MindStudioPluginInstaller', () => {
   // =====================================================================
 
   describe('installIfNeeded', () => {
-    it('returns immediately when the target extension is already active', async () => {
-      (vscode.extensions.getExtension as jest.Mock).mockReturnValue({ id: PLUGIN_ID });
+    it('returns immediately when the installed version matches the bundled version', async () => {
+      (vscode.extensions.getExtension as jest.Mock).mockReturnValue({
+        id: PLUGIN_ID,
+        packageJSON: { version: PLUGIN_VERSION },
+      });
 
       await makeInstaller(root)
         .installIfNeeded();
 
       expect(vscode.commands.executeCommand)
         .not.toHaveBeenCalled();
+    });
+
+    it('reinstalls when the installed version differs from the bundled version', async () => {
+      createVsix();
+      (vscode.extensions.getExtension as jest.Mock).mockReturnValue({
+        id: PLUGIN_ID,
+        packageJSON: { version: '0.0.1' },
+      });
+
+      await makeInstaller(root)
+        .installIfNeeded();
+
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(
+          'workbench.extensions.installExtension',
+          expect.objectContaining({ fsPath: path.join(root, VSIX_RELATIVE) }),
+        );
     });
 
     it('installs via the desktop command when the environment is plain VS Code', async () => {
@@ -713,7 +742,7 @@ describe('MindStudioPluginInstaller', () => {
         .toHaveLength(2);
     });
 
-    it('registers a new entry when only a different version is present', async () => {
+    it('replaces an outdated version entry instead of leaving duplicates', async () => {
       const extensionsDir = codeServerExtensionsDir();
 
       fs.mkdirSync(extensionsDir, { recursive: true });
@@ -727,14 +756,14 @@ describe('MindStudioPluginInstaller', () => {
       await update(extensionsDir);
 
       const manifest = JSON.parse(fs.readFileSync(path.join(extensionsDir, 'extensions.json'), 'utf8')) as Array<{
+        identifier: { id: string };
         version: string;
       }>;
 
-      expect(manifest.map((entry) => entry.version))
-        .toEqual([
-          '0.1.0',
-          PLUGIN_VERSION,
-        ]);
+      expect(manifest)
+        .toHaveLength(1);
+      expect(manifest[0].version)
+        .toBe(PLUGIN_VERSION);
     });
 
     it('starts fresh when the existing extensions.json is corrupt', async () => {
@@ -772,6 +801,55 @@ describe('MindStudioPluginInstaller', () => {
           .replace(/\\/g, '/'));
       expect(manifest[0].location.fsPath)
         .toBe(path.join(extensionsDir, `${PLUGIN_ID}-${PLUGIN_VERSION}`));
+    });
+  });
+
+  // =====================================================================
+  // removeOldPluginVersions
+  // =====================================================================
+
+  describe('removeOldPluginVersions', () => {
+    function remove(extensionsDir: string, currentVersion: string): void {
+      return (makeInstaller(root) as unknown as {
+        removeOldPluginVersions(dir: string, pluginId: string, currentVersion: string): void;
+      }).removeOldPluginVersions(extensionsDir, PLUGIN_ID, currentVersion);
+    }
+
+    it('removes directories of other plugin versions but keeps the current one', () => {
+      const extensionsDir = codeServerExtensionsDir();
+
+      fs.mkdirSync(extensionsDir, { recursive: true });
+      const oldDir = path.join(extensionsDir, `${PLUGIN_ID}-0.1.0`);
+      const anotherOldDir = path.join(extensionsDir, `${PLUGIN_ID}-0.9.9`);
+      const currentDir = path.join(extensionsDir, `${PLUGIN_ID}-${PLUGIN_VERSION}`);
+      const unrelatedDir = path.join(extensionsDir, 'unrelated.ext-1.0.0');
+
+      fs.mkdirSync(oldDir, { recursive: true });
+      fs.mkdirSync(anotherOldDir, { recursive: true });
+      fs.mkdirSync(currentDir, { recursive: true });
+      fs.mkdirSync(unrelatedDir, { recursive: true });
+      fs.writeFileSync(path.join(oldDir, 'marker'), 'x');
+      fs.writeFileSync(path.join(anotherOldDir, 'marker'), 'x');
+
+      remove(extensionsDir, PLUGIN_VERSION);
+
+      expect(fs.existsSync(oldDir))
+        .toBe(false);
+      expect(fs.existsSync(anotherOldDir))
+        .toBe(false);
+      expect(fs.existsSync(currentDir))
+        .toBe(true);
+      expect(fs.existsSync(unrelatedDir))
+        .toBe(true);
+    });
+
+    it('is a no-op when the extensions directory does not exist', () => {
+      const extensionsDir = codeServerExtensionsDir();
+
+      expect(() => remove(extensionsDir, PLUGIN_VERSION))
+        .not.toThrow();
+      expect(fs.existsSync(extensionsDir))
+        .toBe(false);
     });
   });
 });

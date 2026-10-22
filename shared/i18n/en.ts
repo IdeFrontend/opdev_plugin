@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 export default {
   // core (api-server)
   'core.message.apiResponseSuccess': 'Request success.',
@@ -158,7 +167,7 @@ export default {
   'build.workspacePathNotFound': 'Workspace path not found',
   'build.runFailed': 'Run failed {{output}}',
   'build.runFailedQemuSegfault': 'Run failed (likely architecture mismatch: binary was built for a different CPU, e.g. aarch64, but is running under QEMU on x86_64). Run on a matching host or rebuild in this environment. {{output}}',
-  'build.runFailedPyascRuntime': 'PyAsc run failed: Ascend runtime library not found (e.g. runtime_camodel). Set the project Ascend env script to the CANN env script (e.g. source /usr/local/Ascend/ascend-toolkit/set_env.sh) and ensure CANN runtime is installed. See docs/run-integration.md. {{output}}',
+  'build.runFailedPyascRuntime': 'PyAsc run failed: Ascend runtime library not found (e.g. runtime_camodel). Set the project Ascend env script to the CANN env script (e.g. source /usr/local/Ascend/ascend-toolkit/set_env.sh) and ensure CANN runtime is installed. See design-docs/run-integration.md. {{output}}',
   'build.runSuccess': 'Run succeeded',
   'build.getRunCommandFailed': 'Failed to get run command: {{error}}',
   'build.executeFailed': 'Execution failed {{output}}',
@@ -356,9 +365,6 @@ export default {
   'csv.errorPageTitle': 'CSV table view — error',
   'csv.errorLoadFailed': 'Unable to load CSV file',
   'csv.errorDetailsLabel': 'Error:',
-
-  // routes
-  'routes.dumpTensorViewTitle': 'DumpTensor data view',
 
   // web home sidebar
   'web.home.clickOpen': 'Click to open',
@@ -578,17 +584,12 @@ export default {
   'web.link.validation.scriptNotExist': 'Script file does not exist. Please confirm.',
   'web.link.validation.failed': 'Validation failed',
 
-  // web dump-tensor-data
+  // dump tensor native sidebar tree
   'web.dump.selectTwoFiles': 'Select at least two files to compare',
   'web.dump.maxSelectCount': 'At most {{count}} files can be selected for comparison',
-  'web.dump.compareStarting': 'Starting VSCode file compare...',
-  'web.dump.compareFailed': 'VSCode file compare failed',
-  'web.dump.startCompare': 'Compare',
-  'web.dump.cancel': 'Cancel',
-  'web.dump.import': 'Import',
-  'web.dump.compare': 'Compare',
-  'web.dump.importSuccess': 'Import succeeded',
-  'web.dump.importFailed': 'Import failed',
+  'web.dump.noData': 'No data',
+  'web.dump.markFailed': 'Mark operation failed',
+  'web.dump.txtCompanionMissing': 'Companion text file not found: {{path}}',
 
   // web options-simulator / options-on-board / options-sanitizer (shared)
   'web.options.simulationFailed': 'Simulation failed and stopped',
@@ -639,7 +640,7 @@ export default {
   'web.options.onboard.resourceConflict': 'Resource conflict ratio',
   'web.options.onboard.startNow': 'Start now',
 
-  // web data-collection-config (A5 new-tool npu-compute / npusim dialog)
+  // web data-collection-config (A5 new-tool npu-compute / npu-emulate dialog)
   'web.dataCollection.title': 'Data Collection Config',
   'web.dataCollection.collectionType': 'Collection type',
   'web.dataCollection.simulate': 'Simulate',
@@ -722,5 +723,16 @@ export default {
   'profilingReport.fetchFailed': 'Failed to fetch profiling data',
   'profilingReport.cannbotSent': 'Sent report data to CANNBot',
   'profilingReport.cannbotFailed': 'Failed to call CANNBot: {{error}}',
+  'profilingReport.cannbotNotInstalled': 'Failed to call "CANNBot Analysis". Please verify whether the CANNWork plugin is installed and its version is correct:\n1. If the CANNWork extension is not installed, search for and install "CANNWork" in "Extensions" first\n2. If the CANNWork version is earlier than 2.0.0, upgrade the plugin to the latest version',
+  'profilingReport.hintsPublishedInProblems': 'Performance hints published in Problems',
+  'profilingReport.openHintsInProblems': 'Open performance hints in Problems',
+
+  // performance-hints (native diagnostics from .npu-rep)
+  'performanceHints.source': 'Performance Hints',
+  'performanceHints.origin.instruction': 'Instruction',
+  'performanceHints.origin.sourceLine': 'Source line',
+  'performanceHints.origin.kernel': 'Kernel',
+  'performanceHints.publishFailed': 'Failed to publish performance hints from {{file}}: {{error}}',
+  'performanceHints.empty': 'No performance hints found in {{file}}',
 
 };

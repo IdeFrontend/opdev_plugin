@@ -1,15 +1,24 @@
 /**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+/**
  * Unit tests for the A5 new-tool command builders (new-profiler-service):
- * buildNpuComputeCommand (on-board → npu-compute) and buildNpusimCommand
- * (simulation → npusim). The dialog's common.commandLine is authoritative for
- * tool args; the builders only augment it with the report output path and the
- * compiled target, and never overwrite an option the user already typed.
+ * buildNpuComputeCommand (on-board → npu-compute) and buildNpuEmulateCommand
+ * (simulation → npu-emulate). The dialog's
+ * common.commandLine is authoritative for tool args; the builders only augment
+ * it with the report output path and the compiled target, and never overwrite
+ * an option the user already typed.
  */
 
 import {
   buildNpuComputeCommand,
-  buildNpusimCommand,
-  NPUSIM_SOC_VERSION,
+  buildNpuEmulateCommand,
 } from '@plugin/domain/services/new-profiler-service';
 import {
   NEW_TOOL_REPORT_FILENAME,
@@ -20,6 +29,9 @@ import {
 const opprofRunDir = '/ws/.mstt/opprof/run-1';
 const targetFile = '/ws/build_out/op_test';
 
+const configWithSections = (collectionType: 'onboard' | 'simulate'): DataCollectionConfig =>
+  buildDefaultDataCollectionConfig(collectionType);
+
 const configWithCommandLine = (collectionType: 'onboard' | 'simulate', commandLine: string): DataCollectionConfig => {
   const config = buildDefaultDataCollectionConfig(collectionType);
 
@@ -29,44 +41,49 @@ const configWithCommandLine = (collectionType: 'onboard' | 'simulate', commandLi
 };
 
 describe('buildNpuComputeCommand', () => {
-  it('appends the default --export (result.npu-rep) and the target after user args', () => {
+  it('builds --section flags from the booleans (sections param), then --export + target', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', '--section Pipeline'),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
+      sections: ['Pipeline'],
     });
 
     expect(cmd)
       .toBe(`npu-compute --section Pipeline --export ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('respects a user --export and does not add the default output', () => {
+  it('orders multiple sections per DATA_COLLECTION_SECTIONS and dedupes', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', '--export /tmp/custom.npu-rep'),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
+      sections: [
+        'Memory',
+        'Pipeline',
+        'Memory',
+      ],
     });
 
     expect(cmd)
-      .toBe(`npu-compute --export /tmp/custom.npu-rep ${targetFile}`);
-    expect(cmd)
-      .not.toContain(opprofRunDir);
+      .toBe(`npu-compute --section Pipeline --section Memory --export ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('respects a user -o (short form) as an explicit output', () => {
+  it('omits section flags but still emits --export when no section is selected', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', '-o /tmp/out.npu-rep'),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
+      sections: [],
     });
 
     expect(cmd)
-      .not.toContain('--export');
+      .toBe(`npu-compute --export ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('still emits a runnable command when no user args are provided', () => {
+  it('defaults sections to empty when the param is omitted', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', ''),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
     });
@@ -76,57 +93,37 @@ describe('buildNpuComputeCommand', () => {
   });
 });
 
-describe('buildNpusimCommand', () => {
-  it('builds "npusim record <target> <args> -s <soc> -o <dir> -g" with defaults', () => {
-    const cmd = buildNpusimCommand({
-      config: configWithCommandLine('simulate', '--section Memory'),
+describe('buildNpuEmulateCommand', () => {
+  it('builds "npu-emulate collect --output <report> <target>" with defaults', () => {
+    const cmd = buildNpuEmulateCommand({
+      config: configWithSections('simulate'),
       targetFile,
       opprofRunDir,
     });
 
     expect(cmd)
-      .toBe(`npusim record ${targetFile} --section Memory -s ${NPUSIM_SOC_VERSION} -o ${opprofRunDir} -g`);
+      .toBe(`npu-emulate collect --output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('does not duplicate -s / -o / -g when the user already supplied them', () => {
-    const cmd = buildNpusimCommand({
-      config: configWithCommandLine('simulate', '-s Ascend950 -o /tmp/sim -g'),
-      targetFile,
-      opprofRunDir,
-    });
-
-    // Exactly one -g / -s / -o each (the user's), and our default -o dir is not appended.
-    expect(cmd.match(/\s-g(\s|$)/g))
-      .toHaveLength(1);
-    expect(cmd.match(/\s-s\s/g))
-      .toHaveLength(1);
-    expect(cmd)
-      .not.toContain(`-o ${opprofRunDir}`);
-  });
-
-  it('recognizes long-form --soc-version / --output / --gen-report', () => {
-    const cmd = buildNpusimCommand({
-      config: configWithCommandLine('simulate', '--soc-version Ascend950 --output /tmp/sim --gen-report'),
+  it('ignores commandLine text — collect currently takes no extra args', () => {
+    const cmd = buildNpuEmulateCommand({
+      config: configWithCommandLine('simulate', '--section Memory -s Ascend950 -g'),
       targetFile,
       opprofRunDir,
     });
 
     expect(cmd)
-      .not.toContain(`-s ${NPUSIM_SOC_VERSION}`);
-    expect(cmd)
-      .not.toContain(`-o ${opprofRunDir}`);
-    expect(cmd)
-      .not.toMatch(/\s-g(\s|$)/);
+      .toBe(`npu-emulate collect --output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('places the compiled target as the first positional after record', () => {
-    const cmd = buildNpusimCommand({
+  it('omits the trailing target when it is empty', () => {
+    const cmd = buildNpuEmulateCommand({
       config: configWithCommandLine('simulate', ''),
-      targetFile,
+      targetFile: '',
       opprofRunDir,
     });
 
-    expect(cmd.startsWith(`npusim record ${targetFile}`))
-      .toBe(true);
+    expect(cmd)
+      .toBe(`npu-emulate collect --output ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME}`);
   });
 });

@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import {
   COMMAND_PREFIX as FLAVOR_COMMAND_PREFIX,
   VIEW_PREFIX as FLAVOR_VIEW_PREFIX,
@@ -8,8 +17,6 @@ export const COMMAND_PREFIX = FLAVOR_COMMAND_PREFIX;
 export const COMMAND_OPEN = `${COMMAND_PREFIX}.open`;
 
 export const COMMAND_WELCOME = `${COMMAND_PREFIX}.welcome`;
-
-export const COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW = `${COMMAND_PREFIX}.open-dump-tensor-panel-view`;
 
 export const COMMAND_CREATE_OPERATOR_IN_WORKSPACE = `${COMMAND_PREFIX}.createOperatorInWorkspace`;
 
@@ -37,7 +44,7 @@ export const COMMAND_ON_BOARD_OPTIONS = `${COMMAND_PREFIX}.onBoardOptions`;
 
 export const COMMAND_SANITIZER_OPTIONS = `${COMMAND_PREFIX}.sanitizerOptions`;
 
-// A5 new-tool (npu-compute / npusim) data-collection config dialog.
+// A5 new-tool (npu-compute / npu-emulate) data-collection config dialog.
 export const COMMAND_DATA_COLLECTION_CONFIG = `${COMMAND_PREFIX}.dataCollectionConfig`;
 
 export const COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE = `${COMMAND_PREFIX}.importDumpTensorBinFile`;
@@ -47,6 +54,8 @@ export const COMMAND_OPEN_PROJECT = `${COMMAND_PREFIX}.openProject`;
 export const COMMAND_OPEN_CSV = `${COMMAND_PREFIX}.openCsv`;
 
 export const COMMAND_OPEN_PROFILING_REPORT = `${COMMAND_PREFIX}.openProfilingReport`;
+
+export const COMMAND_SHOW_PERFORMANCE_HINTS = `${COMMAND_PREFIX}.showPerformanceHints`;
 
 export const COMMAND_JSON_BUTTON_ACTION = `${COMMAND_PREFIX}.jsonButtonAction`;
 
@@ -59,15 +68,13 @@ export const VIEW_NEW_PROJECT = 'new-project';
 
 export const VIEW_WELCOME = 'welcome';
 
-export const VIEW_DUMP_TENSOR_DATA = 'dump-tensor-data';
-
 export const VIEW_OPTIONS_SIMULATOR = 'options-simulator';
 
 export const VIEW_OPTIONS_ON_BOARD = 'options-on-board';
 
 export const VIEW_OPTIONS_SANITIZER = 'options-sanitizer';
 
-// A5 new-tool (npu-compute / npusim) data-collection config dialog panel.
+// A5 new-tool (npu-compute / npu-emulate) data-collection config dialog panel.
 export const VIEW_DATA_COLLECTION_CONFIG = 'data-collection-config';
 
 export const VIEW_OPTIONS_ST_TEST = 'options-st-test';
@@ -79,6 +86,9 @@ export const ST_TEST_RESULTS_PANEL_TYPE = `${FLAVOR_VIEW_PREFIX}StTestResults`;
 export const VIEW_PROFILING_REPORT = 'profiling-report';
 
 export const PROFILING_REPORT_PANEL_TYPE = `${FLAVOR_VIEW_PREFIX}ProfilingReport`;
+
+/** Custom readonly editor for binary `.npu-rep` / `.npu.rep` (must match package.json). */
+export const NPU_REP_EDITOR_VIEW_TYPE = 'opdevtoolsNpuRepViewer';
 
 // cannbot (CANNAssist) plugin command: fills its chat input box with the given text.
 export const CANN_ASSIST_SET_INPUT_TEXT = 'cannwork.setInputText';
@@ -250,6 +260,30 @@ export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED = `${COMMAND_PREFI
 export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL = `${COMMAND_PREFIX}.sidebar.performance.report.showAll`;
 
 export const COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN = `${COMMAND_PREFIX}.sidebar.performance.file.open`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.copyPath`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.download`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.mark`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.unmark`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SORT_TIME = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.sortTime`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_FILTER_MARKED = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.filterMarked`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SHOW_ALL = `${COMMAND_PREFIX}.sidebar.dumpTensor.report.showAll`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN = `${COMMAND_PREFIX}.sidebar.dumpTensor.file.open`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH = `${COMMAND_PREFIX}.sidebar.dumpTensor.file.compareWith`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE = `${COMMAND_PREFIX}.sidebar.dumpTensor.compare`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_START = `${COMMAND_PREFIX}.sidebar.dumpTensor.compare.start`;
+
+export const COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_CANCEL = `${COMMAND_PREFIX}.sidebar.dumpTensor.compare.cancel`;
 
 export const INSIGHT_VERSION_MAPPINGS = [
   {

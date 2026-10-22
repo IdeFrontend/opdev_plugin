@@ -1,4 +1,37 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+import { createHash } from 'crypto';
+
 import { shellQuoteBash } from '@plugin/domain/utils/shell-env-exports';
+
+/**
+ * Deterministic VS Code command id for a single tree row.
+ *
+ * Tree rows that used to carry their identity in `TreeItem.command.arguments`
+ * cannot do so anymore (VS Code caches the argument-carrying command in the
+ * tree node's disposable store and drops it on every refresh), so the identity
+ * moves into the command id itself: one command per row, registered by the
+ * provider that renders the row. The digest keeps the id opaque, bounded in
+ * length and unique per key — the same key always yields the same id, which is
+ * what makes re-registration idempotent across refreshes.
+ *
+ * Callers must normalize the key first (e.g. `normalizeProjectPath` for paths).
+ */
+export function stableCommandId(prefix: string, key: string): string {
+  const digest = createHash('sha256')
+    .update(key)
+    .digest('hex')
+    .slice(0, 16);
+
+  return `${prefix}.${digest}`;
+}
 
 /**
  * Command generation configuration options

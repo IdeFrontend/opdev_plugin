@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -159,6 +168,41 @@ describe('apply-flavor', () => {
       .toBe('Operator Development');
   });
 
+  it('keeps the Ascend C language and grammar contributions in both flavors', () => {
+    const expectAscendCLanguage = () => {
+      const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+
+      expect(manifest.contributes.languages)
+        .toEqual([
+          {
+            id: 'ascend-c',
+            aliases: [
+              'Ascend C',
+              'ascend-c',
+            ],
+            extensions: ['.asc'],
+            icon: {
+              light: './out/web/branding/language-ascend-c.svg',
+              dark: './out/web/branding/language-ascend-c.svg',
+            },
+          },
+        ]);
+      expect(manifest.contributes.grammars)
+        .toEqual([
+          {
+            language: 'ascend-c',
+            scopeName: 'source.ascend-c',
+            path: './syntaxes/ascend-c.tmLanguage.json',
+          },
+        ]);
+    };
+
+    applyFlavor('ascend-c-toolkit');
+    expectAscendCLanguage();
+    applyFlavor('huawei');
+    expectAscendCLanguage();
+  });
+
   it('substitutes escaped viewPrefix in inline stop menu regex for ascend-c-toolkit', () => {
     applyFlavor('ascend-c-toolkit');
     const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
@@ -227,8 +271,6 @@ describe('apply-flavor', () => {
       .toContain('onView:ascendCToolkitHomeTree');
     expect(manifest.contributes.views['ascend-c-toolkit-sidebar'])
       .toBeDefined();
-    expect(manifest.contributes.views['ascend-c-toolkit-dump-tensor-panel-view'])
-      .toEqual(expect.arrayContaining([expect.objectContaining({ id: 'ascendCToolkitDumpTensorPanelView' })]));
     expect(manifest.contributes.submenus.some((entry: { id: string }) => entry.id === 'ascendCToolkit.operator.debug'))
       .toBe(true);
     expect(manifest.contributes.submenus.some((entry: { id: string }) => entry.id === 'ascendCToolkit.operator.performance'))
@@ -257,7 +299,7 @@ describe('apply-flavor', () => {
     expect(generated)
       .toContain("'operatorSupport.triton': false");
     expect(generated)
-      .toContain("DUMP_TENSOR_PANEL_VIEW_ID = 'ascendCToolkitDumpTensorPanelView'");
+      .toContain("DUMP_TENSOR_SIDEBAR_VIEW_ID = 'ascendCToolkitDumpTensorSidebarView'");
     expect(generated)
       .toContain("SUBMENU_OPERATOR_DEBUG_ID = 'ascendCToolkit.operator.debug'");
     expect(generated)

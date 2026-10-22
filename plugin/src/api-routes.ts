@@ -1,10 +1,17 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import { webviewMethods } from './controller/index';
 import { commonMethods } from './controller/common-controller';
 import { configMethods } from './controller/config-controller';
 import { scriptMethods } from './controller/script-controller';
 import { homeMethods } from './controller/home-controller';
-import { performanceMethods } from './controller/performance-data-controller';
-import { taskMethods } from './controller/task-controller';
 import { stTestMethods } from './controller/st-test-controller';
 import {
   dispatchOnBoard,
@@ -24,7 +31,7 @@ const opsMethods = {
   startSimulate: dispatchSimulator,
   startOnBoard: dispatchOnBoard,
 
-  // A5 new-tool (npu-compute / npusim) data-collection dialog.
+  // A5 new-tool (npu-compute / npu-emulate) data-collection dialog.
   getDataCollectionConfig: configMethods.getDataCollectionConfig,
   saveDataCollectionConfig: configMethods.saveDataCollectionConfig,
   startNewToolCollection: dispatchNewToolCollection,
@@ -36,8 +43,6 @@ const opsMethods = {
 
   runSanitizer: dispatchSanitizer,
 
-  importDumpTensorBinFile: taskMethods.importDumpTensorBinFile,
-
   getSelectedOperators: homeMethods.getSelectedOperators,
 
   loadStTestOptions: stTestMethods.loadOptions,
@@ -48,5 +53,4 @@ export const apis = {
   webview: webviewMethods,
   common: commonMethods,
   ops: opsMethods,
-  performance: { diffFiles: performanceMethods.diffFiles },
 };

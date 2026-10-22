@@ -1,4 +1,13 @@
 /**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+/**
  * Lock: deleted endpoints, keys, and symbols must stay absent.
  *
  * Cases:
@@ -261,29 +270,32 @@ describe('Lock: deleted symbols stay absent', () => {
       'package.nls.base.en.json',
     ];
     const allKeys = new Set<string>();
+    const deadByFile: Record<string, string[]> = {};
 
     for (const nlsFile of nlsFiles) {
       const keys = Object.keys(JSON.parse(fs.readFileSync(path.join(repoRoot, nlsFile), 'utf8')));
       const dead = keys.filter((key) => !refs.has(key));
 
+      if (dead.length > 0) {
+        deadByFile[nlsFile] = dead;
+      }
+
       for (const key of keys) {
         allKeys.add(key);
       }
-
-      expect({
-        nlsFile,
-        dead,
-      })
-        .toEqual({
-          nlsFile,
-          dead: [],
-        });
     }
 
-    const unreferencedRefs = [...refs].filter((ref) => !allKeys.has(ref));
-
-    expect(unreferencedRefs)
-      .toEqual([]);
+    // Both directions are reported in one shot: a key defined in nls but never
+    // referenced is dead weight, while a manifest reference with no key behind
+    // it makes the view render its raw `%key%` placeholder.
+    expect({
+      deadByFile,
+      unreferencedRefs: [...refs].filter((ref) => !allKeys.has(ref)),
+    })
+      .toEqual({
+        deadByFile: {},
+        unreferencedRefs: [],
+      });
   });
 
   it('docs do not mention absent endpoints, keys or file deletion', () => {

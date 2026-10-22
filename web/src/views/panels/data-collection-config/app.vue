@@ -1,3 +1,12 @@
+<!--
+  Copyright (c) 2025 Huawei Technologies Co., Ltd.
+  This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+  CANN Open Software License Agreement Version 2.0 (the "License").
+  Please refer to the License for details. You may not use this file except in compliance with the License.
+  THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+  See LICENSE in the root of the software repository for the full text of the License.
+-->
 <script setup lang="ts">
 import {
   ref, reactive, computed, onMounted, watch, nextTick,
@@ -16,7 +25,7 @@ import {
   DATA_COLLECTION_SECTIONS,
   DATA_COLLECTION_SETS,
   DATA_COLLECTION_SET_SECTIONS,
-  DATA_COLLECTION_SECTION_DESC,
+  DATA_COLLECTION_SECTION_LABELS,
   DATA_COLLECTION_UNSUPPORTED_SECTIONS,
   DATA_COLLECTION_UNSUPPORTED_SETS,
   buildDefaultCommandLine,
@@ -53,7 +62,7 @@ const sectionRows = computed(() => DATA_COLLECTION_SECTIONS
   .map((name) => ({
     key: name,
     name,
-    description: DATA_COLLECTION_SECTION_DESC,
+    description: DATA_COLLECTION_SECTION_LABELS[name],
   })));
 
 /** Rows for the Metrics table in set mode (description = the set's section list / placeholder). */
@@ -155,7 +164,7 @@ watch(() => config.common.forceOverwrite, () => {
   }
 });
 
-// npu-compute (onboard) takes `--section` flags; npusim (simulate) takes none.
+// npu-compute (onboard) takes `--section` flags; npu-emulate (simulate) takes none.
 // Re-seed the commandLine when the collection type flips so metric flags match.
 watch(() => config.collectionType, () => {
   if (!syncingMetrics && !seeding) {
@@ -290,7 +299,7 @@ onMounted(async () => {
       </div>
 
       <div class="dc-content">
-        <!-- Collection type: 上板 (npu-compute) / 仿真 (npusim) -->
+        <!-- Collection type: 上板 (npu-compute) / 仿真 (npu-emulate) -->
         <div class="dc-collection-type">
           <span class="dc-label">{{ t('web.dataCollection.collectionType') }}</span>
           <a-radio-group
@@ -381,13 +390,16 @@ onMounted(async () => {
               <a-textarea
                 v-model:value="config.common.commandLine"
                 :rows="3"
+                readonly
                 :placeholder="t('web.dataCollection.commandLinePlaceholder')"
               />
             </div>
           </a-collapse-panel>
 
-          <!-- Metrics panel -->
+          <!-- Metrics panel: npu-compute (onboard) only — npu-emulate collect
+               currently takes no metric/section options. -->
           <a-collapse-panel
+            v-if="config.collectionType === 'onboard'"
             key="metrics"
             :header="t('web.dataCollection.metrics')"
           >

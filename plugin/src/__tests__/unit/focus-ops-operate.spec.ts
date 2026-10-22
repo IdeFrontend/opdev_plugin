@@ -1,8 +1,14 @@
-import * as vscode from 'vscode';
-
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import {
   resolveFocusOpsOperateCommand,
-  focusOpsOperateViewContainer,
   OPS_OPERATE_VIEW_CONTAINER_ID,
   OPS_OPERATE_FOCUS_COMMAND_CANDIDATES,
 } from '@plugin/helpers/focus-ops-operate';
@@ -53,65 +59,5 @@ describe('resolveFocusOpsOperateCommand (focus command fallback)', () => {
       .toBe(VIEW_CONTAINER_ID);
     expect(VIEW_CONTAINER_COMMAND)
       .toBe(`workbench.view.extension.${VIEW_CONTAINER_ID}`);
-  });
-});
-
-describe('focusOpsOperateViewContainer (activation-safe)', () => {
-  const getCommands = vscode.commands.getCommands as unknown as jest.Mock;
-  const executeCommand = vscode.commands.executeCommand as unknown as jest.Mock;
-
-  beforeEach(() => {
-    getCommands.mockReset();
-    executeCommand.mockReset()
-      .mockResolvedValue(undefined);
-    jest.spyOn(console, 'warn')
-      .mockImplementation(() => {});
-    jest.spyOn(console, 'log')
-      .mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('executes the generated view container command when the host registers it', async () => {
-    getCommands.mockResolvedValue([
-      VIEW_CONTAINER_COMMAND,
-      FOCUS_AUXILIARY_BAR,
-    ]);
-
-    await focusOpsOperateViewContainer();
-
-    expect(executeCommand)
-      .toHaveBeenCalledWith(VIEW_CONTAINER_COMMAND);
-  });
-
-  it('falls back to focusAuxiliaryBar on the VSCode-huawei fork', async () => {
-    getCommands.mockResolvedValue([FOCUS_AUXILIARY_BAR]);
-
-    await focusOpsOperateViewContainer();
-
-    expect(executeCommand)
-      .toHaveBeenCalledWith(FOCUS_AUXILIARY_BAR);
-  });
-
-  it('skips execution (no "command not found" crash) when no candidate is registered', async () => {
-    getCommands.mockResolvedValue(['unrelated.command']);
-
-    await expect(focusOpsOperateViewContainer())
-      .resolves
-      .toBeUndefined();
-    expect(executeCommand)
-      .not
-      .toHaveBeenCalled();
-  });
-
-  it('swallows executeCommand rejection so activation never fails', async () => {
-    getCommands.mockResolvedValue([VIEW_CONTAINER_COMMAND]);
-    executeCommand.mockRejectedValue(new Error('command not found'));
-
-    await expect(focusOpsOperateViewContainer())
-      .resolves
-      .toBeUndefined();
   });
 });

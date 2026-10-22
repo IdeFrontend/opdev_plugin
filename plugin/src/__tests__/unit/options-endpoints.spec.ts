@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -377,5 +386,61 @@ describe('configMethods settings-native options endpoints', () => {
 
     expect(readSettings()['op-devtools.sanitizer.blockId'])
       .toBe(7);
+  });
+
+  it('saveNpuComputeSections writes all 8 booleans (true/false), getNpuComputeSections reads them back', async () => {
+    await configMethods.saveNpuComputeSections([
+      'Pipeline',
+      'Memory',
+    ]);
+
+    const parsed = readSettings();
+
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.pipeline'])
+      .toBe(true);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.memory'])
+      .toBe(true);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.pipeUtilization'])
+      .toBe(false);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio'])
+      .toBe(false);
+
+    expect(await configMethods.getNpuComputeSections())
+      .toEqual([
+        'Pipeline',
+        'Memory',
+      ]);
+  });
+
+  it('getNpuComputeSections returns all 8 sections when nothing is set (default true)', async () => {
+    expect(await configMethods.getNpuComputeSections())
+      .toEqual([
+        'PipeUtilization',
+        'Pipeline',
+        'L2Cache',
+        'Memory',
+        'MemoryL0',
+        'MemoryUB',
+        'ArithmeticUtilization',
+        'ResourceConflictRatio',
+      ]);
+  });
+
+  it('saveNpuComputeSections([]) clears all 8 booleans', async () => {
+    await ConfigService.writeOpDevtoolsDottedSettings({
+      'performanceTuning.onBoard.npuCompute.pipeline': true,
+      'performanceTuning.onBoard.npuCompute.memory': true,
+    }, tmpRoot);
+
+    await configMethods.saveNpuComputeSections([]);
+
+    const parsed = readSettings();
+
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.pipeline'])
+      .toBe(false);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.memory'])
+      .toBe(false);
+    expect(await configMethods.getNpuComputeSections())
+      .toEqual([]);
   });
 });

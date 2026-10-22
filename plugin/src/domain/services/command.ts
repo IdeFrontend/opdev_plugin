@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import { t } from 'i18next';
 import { resolveOpRecord } from '@plugin/domain/models/op-record';
 import { getProjectByPath } from '@plugin/domain/models/project-model';
@@ -473,7 +482,7 @@ export function getOnBoardCommand(
 }
 
 /**
- * Pieces the A5 new-tool (npu-compute / npusim) command builders need, resolved
+ * Pieces the A5 new-tool (npu-compute / npu-emulate) command builders need, resolved
  * through the same strategy path the legacy on-board / simulation flows use:
  * the Ascend env `source` prefix, the `cd` into the run/build dir, and the
  * compiled profiler target file (with the standard-custom example repoint).

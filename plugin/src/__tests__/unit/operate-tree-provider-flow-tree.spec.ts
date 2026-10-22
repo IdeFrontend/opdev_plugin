@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import {
   CONTEXT_PREFIX,
   TREE_VIEW_PERFORMANCE_RESULTS,
@@ -80,6 +89,7 @@ jest.mock('vscode', () => {
     commands: {
       executeCommand: jest.fn()
         .mockResolvedValue(undefined),
+      registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
     },
     env: { language: 'en' },
     window: {
@@ -155,6 +165,7 @@ import {
   OperateNode,
   OperateTreeProvider,
 } from '@plugin/class/operate-tree-provider';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 
 type SanitizerReportRecord = {
   title: string;
@@ -1900,26 +1911,22 @@ describe('OperateTreeProvider performance results panel', () => {
       .toHaveLength(1);
     expect(fileChildren[0].nodeId)
       .toBe('performanceFile');
+    // File identity lives in the command id; `arguments` would be cached per
+    // tree node by VS Code and dropped on every refresh.
     expect(fileChildren[0].command)
       .toEqual({
-        command: COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+        command: stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, '/reports/r1/folder-a/a.csv\ncsv'),
         title: 'a.csv',
-        arguments: [
-          '/reports/r1/folder-a/a.csv',
-          'csv',
-        ],
       });
+    expect(fileChildren[0].command?.arguments)
+      .toBeUndefined();
     expect(fileChildren[0].contextValue)
       .toBe(treeItemContextKey('performanceFile.csv'));
 
     expect(fileNode.command)
       .toEqual({
-        command: COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+        command: stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, '/reports/r1/b.bin\nbin'),
         title: 'b.bin',
-        arguments: [
-          '/reports/r1/b.bin',
-          'bin',
-        ],
       });
   });
 

@@ -1,10 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 import * as path from 'path';
 import * as fs from 'fs';
 import {
@@ -275,6 +277,20 @@ export class WorkspaceDetectorService {
         mergedOperators.push(existingOperator);
       }
     }
+
+    // Canonical path-sorted order: the operator ids handed out to the tree
+    // (check-multiple-operators) and decoded by project-model are positional
+    // indices into this list, so the persisted order must be deterministic.
+    // readdir order is not — an unsorted merge re-indexes operators between
+    // scans, which re-targets tree clicks and churns row identities.
+    // Bytewise comparison on the normalized path keeps the order identical
+    // across machines and locales.
+    mergedOperators.sort((a, b) => {
+      const ap = normalizeProjectPath(a.path);
+      const bp = normalizeProjectPath(b.path);
+
+      return ap < bp ? -1 : ap > bp ? 1 : 0;
+    });
 
     return mergedOperators;
   }

@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -206,10 +215,14 @@ export const homeMethods = {
         operatorIds = [];
       }
 
-      // Make sure operatorIds is a numeric array
-      const numericIds = operatorIds
-        .map((id) => typeof id === 'string' ? Number(id) : id)
-        .filter((id) => typeof id === 'number' && !isNaN(id));
+      // Make sure operatorIds is a numeric array, without duplicates: a
+      // duplicated id would persist duplicated paths and produce duplicate
+      // tree rows on the next refresh.
+      const numericIds = [
+        ...new Set(operatorIds
+          .map((id) => typeof id === 'string' ? Number(id) : id)
+          .filter((id) => typeof id === 'number' && !isNaN(id))),
+      ];
 
       console.log('[setSelectedOperators] Saved operator IDs:', numericIds);
 
@@ -252,9 +265,16 @@ export const homeMethods = {
     const result = await checkMultipleOperatorsCore(workspacePath);
     const operators = result.operators ?? [];
 
-    const selectedOperatorIds = selectedPaths
-      .map((selectedPath) => operators.find((op) => projectPathsEqual(op.path, selectedPath))?.id)
-      .filter((id): id is number => typeof id === 'number');
+    // Dedupe by normalized path BEFORE resolving: a duplicated persisted
+    // selection would otherwise produce duplicate ids and duplicate tree
+    // rows (VS Code throws 'Element with id X is already registered').
+    const uniquePaths = [...new Set(selectedPaths.map((selectedPath) => normalizeProjectPath(selectedPath)))];
+
+    const selectedOperatorIds = [
+      ...new Set(uniquePaths
+        .map((selectedPath) => operators.find((op) => projectPathsEqual(op.path, selectedPath))?.id)
+        .filter((id): id is number => typeof id === 'number')),
+    ];
 
     return selectedOperatorIds.length > 0 ? selectedOperatorIds : undefined;
   },

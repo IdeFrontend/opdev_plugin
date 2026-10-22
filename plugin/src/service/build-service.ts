@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -46,10 +55,13 @@ import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import {
   buildNpuComputeCommand,
-  buildNpusimCommand,
+  buildNpuEmulateCommand,
 } from '@plugin/domain/services/new-profiler-service';
 import type { DataCollectionConfig } from '@shared/data-collection-config';
-import { NEW_TOOL_REPORT_FILENAME } from '@shared/data-collection-config';
+import {
+  NEW_TOOL_REPORT_FILENAME,
+  resolveSelectedSections,
+} from '@shared/data-collection-config';
 import {
   buildOperatorSpawnContext,
   commandFailureMessage,
@@ -66,7 +78,6 @@ import {
 import {
   COMMAND_FLASH_DUMP_TENSOR_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
-  COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
   COMMAND_OPEN_PROFILING_REPORT,
 } from '@plugin/constants';
 import { decidePythonTargetAction } from '@plugin/helpers/sync-sanitizer-python-target';
@@ -949,7 +960,7 @@ export class BuildService {
   }
 
   /**
-   * A5 new-tool collection (npu-compute for on-board, npusim for simulation).
+   * A5 new-tool collection (npu-compute for on-board, npu-emulate for simulation).
    *
    * Compiles with the legacy build sequence (build_op + the standard-custom
    * example build), then hands the compiled target to the selected prototype
@@ -999,7 +1010,7 @@ export class BuildService {
     }
 
     // Per-run opprof directory the report link scans: <root>/<ideDir>/opprof/<runId>.
-    const runId = `${isSimulate ? 'npusim' : 'npu-compute'}_${Date.now()}`;
+    const runId = `${isSimulate ? 'npu-emulate' : 'npu-compute'}_${Date.now()}`;
     const opprofRunDir = joinIdeConfigPath(projectPath, 'opprof', runId);
 
     try {
@@ -1022,7 +1033,7 @@ export class BuildService {
       );
 
       const toolCmd = isSimulate
-        ? buildNpusimCommand({
+        ? buildNpuEmulateCommand({
           config: params.config,
           targetFile,
           opprofRunDir,
@@ -1031,6 +1042,7 @@ export class BuildService {
           config: params.config,
           targetFile,
           opprofRunDir,
+          sections: resolveSelectedSections(params.config),
         });
       const collectionCommand = joinCommands(sourceCannCmd, cdBuildCmd, toolCmd);
 
@@ -1395,7 +1407,7 @@ export class BuildService {
   }
 
   /**
-   * Post-process dump output, notify success, and open the Dump tensor panel.
+   * Post-process dump output, notify success, and refresh the Dump tensor results tree.
    */
   private async finalizeDumpTensorFlow(workspaceRoot: string): Promise<void> {
     const tempDataPath = joinIdeConfigPath(workspaceRoot, 'dump_tensor_temp_data');
@@ -1403,7 +1415,7 @@ export class BuildService {
 
     await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
     vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
-    await this.openDumpTensorPanel();
+    await this.refreshDumpTensorResults({ focusIfNew: true });
   }
 
   /**
@@ -1449,17 +1461,16 @@ export class BuildService {
   }
 
   /**
-   * Open dump tensor panel and refresh data.
+   * Refresh the Dump tensor results tree, optionally focusing the newest report.
    */
-  private async openDumpTensorPanel(): Promise<void> {
+  private async refreshDumpTensorResults(options?: { focusIfNew?: boolean }): Promise<void> {
     try {
-      console.log('[startDumpTensor] Opening dump tensor data panel');
-      await vscode.commands.executeCommand(COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW);
-      await vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA);
-      console.log('[startDumpTensor] Dump tensor panel opened and refreshed');
+      console.log('[startDumpTensor] Refreshing dump tensor results tree');
+      await vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA, options);
+      console.log('[startDumpTensor] Dump tensor results tree refreshed');
     }
     catch (error) {
-      console.error('[startDumpTensor] Failed to open dump tensor panel:', error);
+      console.error('[startDumpTensor] Failed to refresh dump tensor results tree:', error);
     }
   }
 
@@ -1515,7 +1526,7 @@ export class BuildService {
       // Post-process dump files and build tree data.
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
       vscode.window.showInformationMessage(t('build.importDumpTensorBinSuccess'));
-      await this.openDumpTensorPanel();
+      await this.refreshDumpTensorResults({ focusIfNew: true });
     }
     catch (error) {
       console.error('[importDumpTensorBinFile] Failed to import DumpTensor .bin file:', error);

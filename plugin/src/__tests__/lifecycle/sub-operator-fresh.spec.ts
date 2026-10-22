@@ -1,4 +1,13 @@
 /**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+/**
  * Lifecycle test: sub-operator creation on a FRESH standard-custom workspace.
  *
  * The workspace root is a real standard-custom collection (build.sh --help
@@ -93,6 +102,15 @@ describe('sub-operator creation on a fresh standard-custom workspace', () => {
         name: 'add',
         path: path.join(rootPath as string, 'add'),
       }));
+
+    // issue #83: 新创建的子算子自动被选中，并去除其它已选算子。
+    // selectedOperatorPaths 以 PATHS 形式持久化，与 opsList 中 path 同源。
+    const project = (cache as Record<string, unknown>).project as
+      | { selectedOperatorPaths?: string[] }
+      | undefined;
+
+    expect(project?.selectedOperatorPaths)
+      .toEqual([path.join(rootPath as string, 'add')]);
   });
 
   it('mirrors the registered root type into the workspace projectType setting', async () => {

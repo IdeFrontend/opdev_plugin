@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 jest.mock('i18next', () => ({
   t: jest.fn((key: string, params?: { error?: string }) =>
     params?.error ? `${key}: ${params.error}` : key),
@@ -433,6 +442,30 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
       .toHaveBeenCalledWith(expect.stringContaining('tree busy'));
     (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
     warnSpy.mockRestore();
+  });
+
+  it('auto-selects the new sub-operator and clears previous selection (issue #83)', async () => {
+    storedRoot = makeRoot();
+
+    await welcomeMethods.createdProject(params);
+
+    const cache: WorkspaceCache = {
+      schemaVersion: 1,
+      folders: {},
+      // 模拟此前已有别的算子被选中
+      project: {
+        selectedOperatorPaths: ['/repo/ops-math/math/old_op'],
+        compiledOpPaths: { '/repo/ops-math/math/old_op': true },
+      },
+    };
+
+    collectionAppendUpdater()(cache);
+
+    // 新算子路径被选中，原有选择被清空；compiledOpPaths 等兄弟字段保留
+    expect(cache.project?.selectedOperatorPaths)
+      .toEqual([childPath]);
+    expect(cache.project?.compiledOpPaths)
+      .toEqual({ '/repo/ops-math/math/old_op': true });
   });
 });
 

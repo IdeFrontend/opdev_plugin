@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -25,19 +34,19 @@ import * as vscode from 'vscode';
 const { apis } = require('@plugin/api-routes') as typeof import('@plugin/api-routes');
 
 /**
- * The complete RPC surface after the settings-native refactor, plus the two A5
- * new-tool (npu-compute / npusim) data-collection endpoints:
- * 39 endpoints total (webview 9 + common 10 + ops 19 + performance 1).
+ * The complete RPC surface after the dump-tensor native-tree port, plus the A5
+ * new-tool (npu-compute / npu-emulate) data-collection endpoints:
+ * 36 endpoints total (webview 7 + common 10 + ops 19). The dump-tensor webview
+ * RPCs (webview/getDumpTensorData, webview/openFile, ops/importDumpTensorBinFile)
+ * and the whole performance group are gone.
  */
 const EXPECTED_SURFACE = [
-  // webview (10)
+  // webview (7)
   'webview/getHome',
   'webview/getWorkspace',
   'webview/getProjectType',
-  'webview/openFile',
   'webview/remotePathSearch',
   'webview/createdProject',
-  'webview/getDumpTensorData',
   'webview/selectFolder',
   'webview/selectFile',
   // common (10)
@@ -65,18 +74,19 @@ const EXPECTED_SURFACE = [
   'ops/getOnBoardExecutionAvailable',
   'ops/getSimulatorSupportedMetrics',
   'ops/runSanitizer',
-  'ops/importDumpTensorBinFile',
   'ops/getSelectedOperators',
   'ops/loadStTestOptions',
   'ops/runStTestOptions',
-  // A5 new-tool (npu-compute / npusim) data-collection dialog.
+  // A5 new-tool (npu-compute / npu-emulate) data-collection dialog.
   'ops/getDataCollectionConfig',
+  'ops/saveDataCollectionConfig',
   'ops/startNewToolCollection',
-  // performance (1)
-  'performance/diffFiles',
 ];
 
-/** Registrations that must be absent (13 dead endpoints + 4 performance-only registrations). */
+/**
+ * Registrations that must be absent (13 dead endpoints + 4 performance-only
+ * registrations + 3 dump-tensor webview RPCs).
+ */
 const REMOVED_SURFACE = [
   'view/openCsvFile',
   'view/openInsight',
@@ -85,12 +95,15 @@ const REMOVED_SURFACE = [
   'webview/downloadData',
   'webview/deleteNode',
   'webview/jumpToFile',
+  'webview/getDumpTensorData',
+  'webview/openFile',
   'common/saveFileToLocal',
   'common/getFlavorFeatures',
   'ops/getConfigData',
   'ops/saveConfig',
   'ops/getSanitizerConfigs',
   'ops/saveSanitizerForm',
+  'ops/importDumpTensorBinFile',
   'performance/getRunData',
   'performance/toggleRecordMark',
   'performance/copyReport',
@@ -98,7 +111,7 @@ const REMOVED_SURFACE = [
 ];
 
 describe('api-routes RPC surface', () => {
-  it('exposes exactly 39 endpoints (webview 9 / common 10 / ops 19 / performance 1)', () => {
+  it('exposes exactly 36 endpoints (webview 7 / common 10 / ops 19)', () => {
     const flat = Object.entries(apis)
       .flatMap(([
         group,
@@ -110,10 +123,10 @@ describe('api-routes RPC surface', () => {
     expect([...flat].sort())
       .toEqual([...EXPECTED_SURFACE].sort());
     expect(flat)
-      .toHaveLength(39);
+      .toHaveLength(36);
   });
 
-  it('no longer registers any of the 17 removed endpoints', () => {
+  it('no longer registers any of the 20 removed endpoints', () => {
     const flat = new Set(Object.entries(apis)
       .flatMap(([
         group,
@@ -130,6 +143,13 @@ describe('api-routes RPC surface', () => {
 
   it('drops the whole `view` group (view-controller) from the surface', () => {
     expect('view' in apis)
+      .toBe(false);
+  });
+
+  it('drops the whole `performance` group (performance-data-controller) from the surface', () => {
+    // `performance/diffFiles` was the group's only registration; the native dump
+    // tensor tree calls dump-tensor-controller's diffFiles directly.
+    expect('performance' in apis)
       .toBe(false);
   });
 

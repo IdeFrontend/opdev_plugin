@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 const mockWorkspaceFolders: Array<{
   name: string;
   uri: { fsPath: string };
@@ -47,6 +56,11 @@ jest.mock('vscode', () => {
   return {
     env: { language: 'en' },
     workspace: { workspaceFolders: mockWorkspaceFolders },
+    commands: {
+      registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
+      executeCommand: jest.fn()
+        .mockResolvedValue(undefined),
+    },
     EventEmitter,
     TreeItem,
     ThemeIcon,
@@ -63,7 +77,9 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+import { COMMAND_ST_TEST_HISTORY_OPEN } from '@plugin/constants';
 import { StTestRunHistoryTreeProvider } from '@plugin/class/st-test-run-history-tree-provider';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 import { MAX_ST_TEST_HISTORY_RUNS } from '@plugin/domain/services/st-test-run-history';
 import type {
   StTestRunHistoryRecord,
@@ -128,7 +144,7 @@ describe('StTestRunHistoryTreeProvider', () => {
     provider.refresh();
     const roots = provider.getChildren();
 
-    expect(roots.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId))
+    expect(roots.map((item) => provider.getRecord(item.id as string)?.record.runId))
       .toEqual([
         'new',
         'old',
@@ -142,10 +158,16 @@ describe('StTestRunHistoryTreeProvider', () => {
         'multiply - workspace-a - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
         'add - workspace-b - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
       ]);
-    const selectedKey = roots[0].command?.arguments?.[0] as string;
+    // The record identity lives in the command id (a digest), so neither the
+    // workspace path nor the run id is readable from the row command.
+    const rowCommandId = roots[0].command?.command as string;
 
-    expect(selectedKey).not.toContain(workspaceA);
-    expect(selectedKey).not.toContain('new');
+    expect(rowCommandId)
+      .toBe(stableCommandId(COMMAND_ST_TEST_HISTORY_OPEN, roots[0].id as string));
+    expect(rowCommandId).not.toContain(workspaceA);
+    expect(rowCommandId).not.toContain('new');
+    expect(roots[0].command?.arguments)
+      .toBeUndefined();
     expect((roots[0].iconPath as vscode.ThemeIcon).id)
       .toBe('error');
     expect(provider.getChildren(roots[0]))
@@ -172,7 +194,7 @@ describe('StTestRunHistoryTreeProvider', () => {
 
     const runs = provider.getChildren();
 
-    expect(runs.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId))
+    expect(runs.map((item) => provider.getRecord(item.id as string)?.record.runId))
       .toEqual([
         'current',
         'persisted',
@@ -274,9 +296,9 @@ describe('StTestRunHistoryTreeProvider', () => {
 
     expect(runs)
       .toHaveLength(MAX_ST_TEST_HISTORY_RUNS);
-    expect(runs.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId)[0])
+    expect(runs.map((item) => provider.getRecord(item.id as string)?.record.runId)[0])
       .toBe('current');
-    expect(runs.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId))
+    expect(runs.map((item) => provider.getRecord(item.id as string)?.record.runId))
       .not.toContain('persisted-0');
   });
 
@@ -607,7 +629,7 @@ describe('StTestRunHistoryTreeProvider', () => {
 
       const roots = provider.getChildren();
 
-      expect(provider.getRecord(roots[0].command?.arguments?.[0] as string)?.record.runId)
+      expect(provider.getRecord(roots[0].id as string)?.record.runId)
         .toBe('linux-run');
     }
     finally {

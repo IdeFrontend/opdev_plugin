@@ -1,4 +1,13 @@
 /**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+/**
  * build-service flows: error mapping, user-stop cancels, env construction and
  * the standard-custom deploy paths that `build-service-de-id.spec.ts` does not
  * reach. Keeps the same mock wiring as that spec and adds the remaining
@@ -18,7 +27,8 @@
  *    success + panel flash; standard-custom example+deploy chain with the
  *    simulator `--soc=` compile option
  *  - startDumpTensor: temp dir lifecycle, env-exports prefix, remote
- *    transformers, show_kernel_debug_data non-blocking failure, panel open
+ *    transformers, show_kernel_debug_data non-blocking failure, results-tree
+ *    refresh
  *  - startUtTest failure mapping and cancel
  *  - captureActiveFileTargetForOptionsPanel / ensurePythonDeployTarget actions
  *  - importDumpTensorBinFile (copy, stale temp cleanup, copy failure)
@@ -43,7 +53,6 @@ jest.mock('fs', () => {
 import {
   COMMAND_FLASH_DUMP_TENSOR_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
-  COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
 } from '@plugin/constants';
 
 jest.mock('i18next', () => ({
@@ -1670,7 +1679,7 @@ describe('build-service flows', () => {
         .not.toHaveBeenCalled();
     });
 
-    it('builds the example with the ASCEND env exports and opens the panel (standard-custom)', async () => {
+    it('builds the example with the ASCEND env exports and refreshes the results tree (standard-custom)', async () => {
       await buildService.startDumpTensor({});
 
       const execMock = executeOperatorCommand as jest.Mock;
@@ -1697,10 +1706,11 @@ describe('build-service flows', () => {
         }));
       expect(vscode.window.showInformationMessage)
         .toHaveBeenCalledWith('build.dumpTensorSuccess');
+      // The webview panel is gone: the flow only refreshes the native tree.
       expect(vscode.commands.executeCommand)
-        .toHaveBeenCalledWith(COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW);
+        .toHaveBeenCalledTimes(1);
       expect(vscode.commands.executeCommand)
-        .toHaveBeenCalledWith(COMMAND_FLASH_DUMP_TENSOR_DATA);
+        .toHaveBeenCalledWith(COMMAND_FLASH_DUMP_TENSOR_DATA, { focusIfNew: true });
     });
 
     it('runs show_kernel_debug_data with the workspace environment script sourced', async () => {
@@ -1739,8 +1749,8 @@ describe('build-service flows', () => {
         .toHaveBeenCalledWith('build.dumpTensorSuccess');
     });
 
-    it('keeps the flow going when opening the panel throws', async () => {
-      vscode.commands.executeCommand.mockRejectedValueOnce(new Error('panel failed'));
+    it('keeps the flow going when refreshing the results tree throws', async () => {
+      vscode.commands.executeCommand.mockRejectedValueOnce(new Error('refresh failed'));
 
       await buildService.startDumpTensor({});
 
@@ -1931,7 +1941,7 @@ describe('build-service flows', () => {
         .toHaveBeenCalledWith('build.workspacePathNotFound');
     });
 
-    it('copies the .bin into the temp dir, post-processes and opens the panel', async () => {
+    it('copies the .bin into the temp dir, post-processes and refreshes the results tree', async () => {
       const binFilePath = path.join(root, 'dump.bin');
 
       fs.writeFileSync(binFilePath, 'bin-data');
@@ -1946,8 +1956,11 @@ describe('build-service flows', () => {
         .toContain('show_kernel_debug_data');
       expect(vscode.window.showInformationMessage)
         .toHaveBeenCalledWith('build.importDumpTensorBinSuccess');
+      // The webview panel is gone: the flow only refreshes the native tree.
       expect(vscode.commands.executeCommand)
-        .toHaveBeenCalledWith(COMMAND_FLASH_DUMP_TENSOR_DATA);
+        .toHaveBeenCalledTimes(1);
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(COMMAND_FLASH_DUMP_TENSOR_DATA, { focusIfNew: true });
     });
 
     it('continues when removing the stale temp directory fails', async () => {

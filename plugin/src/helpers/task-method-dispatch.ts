@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import { t } from 'i18next';
 import type {
   StartBuildParams,
@@ -332,7 +341,7 @@ export const dispatchSimulator = dispatchFlowFromWebview<StartSimulateParams>(
 );
 
 /**
- * A5 new-tool (npu-compute / npusim) collection from the "数据采集配置" webview.
+ * A5 new-tool (npu-compute / npu-emulate) collection from the "数据采集配置" webview.
  * Routes through the same flow node the legacy on-board / simulation actions use
  * (picked by `config.collectionType`) so the sidebar gate/queue behaves alike.
  */

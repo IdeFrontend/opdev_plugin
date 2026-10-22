@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -81,6 +90,7 @@ jest.mock('vscode', () => {
     commands: {
       executeCommand: jest.fn()
         .mockResolvedValue(undefined),
+      registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
     },
     env: {
       language: 'en',
@@ -133,6 +143,7 @@ import {
   COMMAND_SIDEBAR_SANITIZER_STACK_JUMP,
 } from '../../constants';
 import { treeItemContextKey } from '@shared/flavor';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 import {
   OperateNode,
   OperateTreeProvider,
@@ -1069,12 +1080,14 @@ describe('OperateTreeProvider sanitizer message grouping', () => {
       .toHaveLength(3);
     expect(messages[0].nodeId)
       .toBe('sanitizerMessage');
+    // Message identity lives in the command id, not in `command.arguments`.
     expect(messages[0].command)
       .toEqual({
-        command: COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP,
+        command: stableCommandId(COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP, '0'),
         title: 'illegal read of size 4',
-        arguments: ['0'],
       });
+    expect(messages[0].command?.arguments)
+      .toBeUndefined();
     expect((messages[0].iconPath as vscode.ThemeIcon).id)
       .toBe('error');
     expect(messages[0].description)

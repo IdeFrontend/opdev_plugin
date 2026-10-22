@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import * as vscode from 'vscode';
 import fs from 'fs-extra';
 import path from 'path';
@@ -122,7 +131,7 @@ export function normalizeCannSoc(cannSoc?: string | null): string {
     .toLowerCase();
 }
 
-/** Chip Name or probe text → default CANN SOC slug (see docs/ascend-env-spec.md §4). */
+/** Chip Name or probe text → default CANN SOC slug (see design-docs/ascend-env-spec.md §4). */
 export function socFromCoreName(coreName?: string): string | undefined {
   if (!coreName) {
     return undefined;
@@ -683,7 +692,7 @@ function resolveSocVersion(
  * spawn env, profiler, build-service, model defaults, …) call this so they
  * cannot disagree.
  *
- * Precedence (canonical contract — also captured in `docs/ascend-env-spec.md`):
+ * Precedence (canonical contract — also captured in `design-docs/ascend-env-spec.md`):
  *
  * - **`simulatorType`** (only when `isSimulator`):
  *   1. Workspace `op-devtools.performanceTuning.simulation.simulatorType` (explicit).

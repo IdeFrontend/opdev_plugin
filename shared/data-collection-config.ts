@@ -1,10 +1,12 @@
 /**
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 /**
  * Shared types for the A5 "数据采集配置" (Data Collection Config) dialog and the
  * new-tool profiler command generation. Consumed by both the plugin
@@ -12,20 +14,24 @@
  *
  * On A5 (`ascend950`) the on-board / simulation analysis can be switched to the
  * replacement prototype tools:
- *   - on-board  → `npu-compute` (see npu-compute使用文档.md)
- *   - simulation → `npusim`     (see NPUSim_使用文档.md)
+ *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
+ *   - simulation → `npu-emulate`
+ *
+ * `npu-emulate` is enabled on A5 (default simulation tool); its `collect`
+ * subcommand currently takes no metric/section options (see
+ * ConfigService.getSimulationTool).
  */
 
 /** On-board profiling tool: the new `npu-compute` prototype or the legacy `msprof`. */
 export type OnBoardTool = 'npu-compute' | 'msprof';
 
-/** Simulation tool: the new `npusim` prototype or the legacy `msprof`. */
-export type SimulationTool = 'npusim' | 'msprof';
+/** Simulation tool: the new `npu-emulate` prototype or the legacy `msprof`. */
+export type SimulationTool = 'npu-emulate' | 'msprof';
 
 /** Which collection the dialog is configuring; also preselects the top switch. */
 export type CollectionType = 'onboard' | 'simulate';
 
-/** Common (npu-compute/npusim shared) collection options — the dialog's "Common" panel. */
+/** Common (npu-compute/npu-emulate shared) collection options — the dialog's "Common" panel. */
 export interface DataCollectionCommon {
   /** `--export` / `-o` output file path; empty → tool default under opprof. */
   outputFile: string;
@@ -85,12 +91,59 @@ export const DATA_COLLECTION_SECTIONS: readonly string[] = [
  * disabled in the UI, and they are filtered out when building `--section` flags
  * and when expanding named sets, so an unsupported section never reaches the
  * tool command line.
+ *
+ * As of the latest A5 npu-compute build, all sections listed in
+ * {@link DATA_COLLECTION_SECTIONS} are supported on-board, so this set is
+ * empty — every section row is selectable and reaches the command line.
  */
-export const DATA_COLLECTION_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
-  'Pipeline',
-  'ArithmeticUtilization',
-  'ResourceConflictRatio',
-]);
+export const DATA_COLLECTION_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set<string>();
+
+/**
+ * camelCase setting key suffix for each npu-compute section, used to derive the
+ * per-section boolean setting keys (`performanceTuning.onBoard.npuCompute.<camel>`).
+ * Order matches {@link DATA_COLLECTION_SECTIONS}.
+ */
+export const DATA_COLLECTION_SECTION_TO_CAMEL: Record<string, string> = {
+  PipeUtilization: 'pipeUtilization',
+  Pipeline: 'pipeline',
+  L2Cache: 'l2Cache',
+  Memory: 'memory',
+  MemoryL0: 'memoryL0',
+  MemoryUB: 'memoryUB',
+  ArithmeticUtilization: 'arithmeticUtilization',
+  ResourceConflictRatio: 'resourceConflictRatio',
+};
+
+/** Reverse of {@link DATA_COLLECTION_SECTION_TO_CAMEL} (camel suffix → section name). */
+export const DATA_COLLECTION_CAMEL_TO_SECTION: Record<string, string> = Object.fromEntries(Object.entries(DATA_COLLECTION_SECTION_TO_CAMEL)
+  .map(([
+    section,
+    camel,
+  ]) => [
+    camel,
+    section,
+  ]));
+
+/**
+ * Relative (dotted) workspace-setting keys for the 8 npu-compute section
+ * booleans (no flavor prefix; the controller prepends the setting namespace).
+ * These are the single source of truth for on-board npu-compute section
+ * selection — the dialog reads/writes them, and the command line is built from
+ * them. Order matches {@link DATA_COLLECTION_SECTIONS}.
+ */
+export const NPU_COMPUTE_SECTION_DOTTED_KEYS: readonly string[] = DATA_COLLECTION_SECTIONS.map((section) => `performanceTuning.onBoard.npuCompute.${DATA_COLLECTION_SECTION_TO_CAMEL[section]}`);
+
+/** Per-section boolean selection (mirror of the 8 npu-compute setting keys). */
+export interface NpuComputeSectionSelection {
+  pipeUtilization?: boolean;
+  pipeline?: boolean;
+  l2Cache?: boolean;
+  memory?: boolean;
+  memoryL0?: boolean;
+  memoryUB?: boolean;
+  arithmeticUtilization?: boolean;
+  resourceConflictRatio?: boolean;
+}
 
 /**
  * Sets that are visible in the Metrics table but not yet supported (no
@@ -137,10 +190,13 @@ export const DATA_COLLECTION_SET_SECTIONS: Record<string, readonly string[]> = {
   detailed: [],
   full: [
     'PipeUtilization',
+    'Pipeline',
     'L2Cache',
     'Memory',
     'MemoryL0',
     'MemoryUB',
+    'ArithmeticUtilization',
+    'ResourceConflictRatio',
   ],
   hccl: [],
   roofline: [],
@@ -152,8 +208,24 @@ export const DATA_COLLECTION_SET_UNSUPPORTED = '暂不支持' as const;
 /** Description shown for the `Custom` (free-form) set row. */
 export const DATA_COLLECTION_SET_CUSTOM_DESC = '默认参数' as const;
 
-/** Single Description shared by every section row (section mode). */
-export const DATA_COLLECTION_SECTION_DESC = 'Detail analysis of the compute resource...' as const;
+/**
+ * Chinese label for each npu-compute section, shown in the dialog Metrics table
+ * (section mode) Description column so each row identifies its metric (the old
+ * uniform placeholder left every row indistinguishable). Mirrors the per-section
+ * boolean's NLS description (config.op-devtools.performanceTuning.onBoard.npuCompute.<camel>.description)
+ * so the dialog and the VS Code settings UI stay consistent. Keys are section ids
+ * (see {@link DATA_COLLECTION_SECTIONS}).
+ */
+export const DATA_COLLECTION_SECTION_LABELS: Record<string, string> = {
+  PipeUtilization: '流水线利用率',
+  Pipeline: '流水线',
+  L2Cache: 'L2Cache',
+  Memory: 'Memory',
+  MemoryL0: 'MemoryL0',
+  MemoryUB: 'MemoryUB',
+  ArithmeticUtilization: '算力利用率',
+  ResourceConflictRatio: '资源冲突率',
+};
 
 /**
  * Description text shown in the Metrics table for a given set: the `Custom`
@@ -234,17 +306,20 @@ export function resolveSelectedSections(config: DataCollectionConfig): string[] 
  * Build a sensible default `commandLine` text from the structured metrics/common
  * selections. Only npu-compute (on-board) consumes metric flags, and it accepts
  * one repeated `--section <id>` per section (no `--set`, no comma/space lists —
- * npu-compute使用文档.md §7). Simulation (npusim) takes no section/set flags, so
+ * npu-compute使用文档.md §7). Simulation (npu-emulate) takes no section/set flags, so
  * metrics contribute nothing to its command line.
  */
 export function buildDefaultCommandLine(config: DataCollectionConfig): string {
   const tokens: string[] = [];
 
   if (config.collectionType === 'onboard') {
-    resolveSelectedSections(config)
-      .forEach((section) => {
-        tokens.push(`--section ${section}`);
-      });
+    // Reuse buildNpuComputeSectionFlags so the preview matches the actual tool
+    // invocation order (DATA_COLLECTION_SECTIONS order, deduped).
+    const flags = buildNpuComputeSectionFlags(resolveSelectedSections(config));
+
+    if (flags) {
+      tokens.push(flags);
+    }
 
     if (config.common.forceOverwrite) {
       tokens.push('--force');
@@ -252,6 +327,20 @@ export function buildDefaultCommandLine(config: DataCollectionConfig): string {
   }
 
   return tokens.join(' ');
+}
+
+/**
+ * Build the `--section <id>` flags (space-joined) for npu-compute from the
+ * selected sections, preserving {@link DATA_COLLECTION_SECTIONS} order. Returns
+ * an empty string when no section is selected. This is the single npu-compute
+ * command-line section source — the dialog's `commandLine` preview and the
+ * actual tool invocation both derive from it.
+ */
+export function buildNpuComputeSectionFlags(sections: readonly string[]): string {
+  return DATA_COLLECTION_SECTIONS
+    .filter((section) => sections.includes(section))
+    .map((section) => `--section ${section}`)
+    .join(' ');
 }
 
 /**
@@ -286,7 +375,7 @@ export function buildDefaultDataCollectionConfig(collectionType: CollectionType)
 /**
  * Relative (dotted) workspace-setting key the dialog config for a collection type
  * is persisted under, so reopening the dialog restores the last confirmed config.
- * Kept per collection type because on-board (npu-compute) and simulation (npusim)
+ * Kept per collection type because on-board (npu-compute) and simulation (npu-emulate)
  * carry different option sets — one shared blob would leak the other tool's args.
  */
 export function dataCollectionConfigSettingKey(collectionType: CollectionType): string {
@@ -300,57 +389,69 @@ export function dataCollectionConfigSettingKey(collectionType: CollectionType): 
  * recognized shapes are adopted; anything missing or malformed keeps the default.
  * `collectionType` always comes from the caller (which side the dialog opened),
  * never from the saved blob.
+ *
+ * For on-board (`collectionType === 'onboard'`), the caller passes the sections
+ * derived from the 8 per-section boolean settings (the single source of truth)
+ * via `sectionSelection`; these override any `saved.metrics.sections`. The
+ * `common.commandLine` is never restored verbatim — it is regenerated from the
+ * resolved sections so the preview always reflects the current booleans.
  */
 export function mergeSavedDataCollectionConfig(
   collectionType: CollectionType,
   saved: unknown,
+  sectionSelection?: readonly string[],
 ): DataCollectionConfig {
   const config = buildDefaultDataCollectionConfig(collectionType);
 
-  if (!saved || typeof saved !== 'object') {
-    return config;
-  }
+  if (saved && typeof saved === 'object') {
+    const savedCommon = (saved as { common?: unknown }).common;
 
-  const savedCommon = (saved as { common?: unknown }).common;
+    if (savedCommon && typeof savedCommon === 'object') {
+      const c = savedCommon as Record<string, unknown>;
 
-  if (savedCommon && typeof savedCommon === 'object') {
-    const c = savedCommon as Record<string, unknown>;
+      if (typeof c.outputFile === 'string') {
+        config.common.outputFile = c.outputFile;
+      }
 
-    if (typeof c.outputFile === 'string') {
-      config.common.outputFile = c.outputFile;
+      if (typeof c.forceOverwrite === 'boolean') {
+        config.common.forceOverwrite = c.forceOverwrite;
+      }
+      // commandLine is intentionally NOT restored — it is regenerated below.
     }
 
-    if (typeof c.forceOverwrite === 'boolean') {
-      config.common.forceOverwrite = c.forceOverwrite;
-    }
+    const savedMetrics = (saved as { metrics?: unknown }).metrics;
 
-    if (typeof c.commandLine === 'string') {
-      config.common.commandLine = c.commandLine;
-    }
-  }
+    if (savedMetrics && typeof savedMetrics === 'object') {
+      const m = savedMetrics as Record<string, unknown>;
 
-  const savedMetrics = (saved as { metrics?: unknown }).metrics;
+      if (m.kind === 'section' || m.kind === 'set') {
+        config.metrics.kind = m.kind;
+      }
 
-  if (savedMetrics && typeof savedMetrics === 'object') {
-    const m = savedMetrics as Record<string, unknown>;
-
-    if (m.kind === 'section' || m.kind === 'set') {
-      config.metrics.kind = m.kind;
-    }
-
-    if (typeof m.set === 'string'
-      && DATA_COLLECTION_SETS.includes(m.set)
-      && !DATA_COLLECTION_UNSUPPORTED_SETS.has(m.set)
-    ) {
-      config.metrics.set = m.set;
-    }
-
-    if (Array.isArray(m.sections)) {
-      config.metrics.sections = m.sections
-        .filter((s): s is string => typeof s === 'string')
-        .filter((s) => !DATA_COLLECTION_UNSUPPORTED_SECTIONS.has(s));
+      if (typeof m.set === 'string'
+        && DATA_COLLECTION_SETS.includes(m.set)
+        && !DATA_COLLECTION_UNSUPPORTED_SETS.has(m.set)
+      ) {
+        config.metrics.set = m.set;
+      }
+      // metrics.sections is intentionally NOT restored from saved — on-board uses
+      // the caller-provided sectionSelection (source of truth); simulate keeps the
+      // fresh default (npu-emulate collect takes no section flags).
     }
   }
+
+  // On-board: the 8 booleans are the single source of truth for sections.
+  if (sectionSelection) {
+    config.metrics.sections = [...sectionSelection];
+    // kind=section so resolveSelectedSections uses these sections (not a preset
+    // set expansion); set is still tracked so the UI can highlight the matching
+    // preset (or Custom when none matches).
+    config.metrics.kind = 'section';
+    config.metrics.set = matchSetForSections(sectionSelection);
+  }
+
+  // Regenerate the read-only commandLine preview from the resolved selections.
+  config.common.commandLine = buildDefaultCommandLine(config);
 
   return config;
 }

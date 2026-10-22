@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 import { CANN_SOC_ASCEND_950 } from './cann-env-constants';
 
 /**
@@ -14,7 +23,7 @@ import { CANN_SOC_ASCEND_950 } from './cann-env-constants';
  *
  * Add a lowercase, trimmed CANN SOC slug to a set below only once the metric is
  * verified on that platform's real simulator via manual `msprof op simulator` CLI
- * (see docs/simulator-options-spec.md §8). Slugs are added per-SOC independently.
+ * (see design-docs/simulator-options-spec.md §8). Slugs are added per-SOC independently.
  *
  * A5 (`ascend950`): `ResourceConflictRatio` and `PMSampling` confirmed §8.1 (2026-06-26).
  * Never add `ascend910_93` for `ResourceConflictRatio` (GC-22 rejection).
