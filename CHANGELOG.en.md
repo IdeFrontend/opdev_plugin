@@ -26,7 +26,7 @@ Release: remote NPU execution for CPU-host operator development, including artif
 - **Remote-aware operation availability** — The Actions tree and relevant option panels recognize either local NPU hardware or a configured remote tool, guiding CPU-host users to configure `remote_tool.sh` instead of blocking supported flows too early.
 - **Standard-custom capability detection and package deployment ([#66](https://gitcode.com/opdevtools/plugin_release/issues/66))** — Detect standard-custom capabilities through the public `build.sh --help` interface. Before deploying a `.run` package, detect whether its installer supports `--force` and pass the option only when supported.
 
-Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
+Notable changes to **Ascend C Toolkits** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
 ## 1.4.0 — 2026-07-24
 
@@ -85,14 +85,12 @@ Patch release: new-project UI refresh, compile/run queue coordination, sanitizer
 
 ## 1.3.5 — 2026-06-26
 
-Patch release: Triton simulation profiling and sanitizer support, simulation profiler fixes, NPU debug and sanitizer improvements.
 
-- **Triton profiling and sanitizer** — Triton projects can run **simulation profiling** (`msprof`) and **sanitizer** (`mssanitizer`) from the plugin. Sanitizer quick-options add detection scope, block ID, and logging controls; the active `.py` target is synced from the editor into runtime config; `--log-file` paths are shell-quoted.
-- **SOC-gated simulation `--aic-metrics`** — `msprof op simulator` only accepts metrics supported by the platform selected via `--soc-version`. A3 (`ascend910_93`, i.e. `Ascend910C`) does not support `ResourceConflictRatio`, yet the default simulate config passed `--aic-metrics=ResourceConflictRatio,PMSampling`, failing with `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`. Optional metrics are emitted only when the resolved CANN SOC slug is allow-listed in `SIMULATOR_OPTIONAL_METRIC_SOCS` (`shared/msprof-simulator-metrics.ts`); the command builder and simulator-options webview share this single source of truth. A2/A3 still emit only the mandatory `PipeUtilization` base; the `PipeUtilization` / `ResourceConflictRatio` mutual-exclusion rule is unchanged. **A5 (`ascend950`)** is now allow-listed for `ResourceConflictRatio` and `PMSampling` after §8.1 CLI verification — both checkboxes appear on A5 simulation quick-options; the default simulate command changes from `--aic-metrics=PipeUtilization` to `--aic-metrics=ResourceConflictRatio`. See `docs/simulator-options-spec.md`.
+- **SOC-gated simulation `--aic-metrics`** — `msprof op simulator` only accepts metrics supported by the platform selected via `--soc-version`. The Atlas A3 series (`ascend910_93`, i.e. `Ascend910C`) does not support `ResourceConflictRatio`, yet the default simulate config passed `--aic-metrics=ResourceConflictRatio,PMSampling`, failing with `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`. Optional metrics are emitted only when the resolved CANN SOC slug is allow-listed in `SIMULATOR_OPTIONAL_METRIC_SOCS` (`shared/msprof-simulator-metrics.ts`); the command builder and simulator-options webview share this single source of truth. Atlas A2/A3 series still emit only the mandatory `PipeUtilization` base; the `PipeUtilization` / `ResourceConflictRatio` mutual-exclusion rule is unchanged. **The Ascend950PR&950DT series (`ascend950`)** is now allow-listed for `ResourceConflictRatio` and `PMSampling` after §8.1 CLI verification — both checkboxes appear on Ascend950PR&950DT series simulation quick-options; the default simulate command changes from `--aic-metrics=PipeUtilization` to `--aic-metrics=ResourceConflictRatio`. See `docs/simulator-options-spec.md`.
 - **Fix missing operator/platform in standard-custom “run example”** — `build.sh --run_example` reads the example name and mode from **positional** args (`<op> <mode> <pkg_mode>`), not from `--ops`. Without them the script printed empty `name:` / `mode:` and fell back to usage. `CannCommandStrategy.buildExampleCommand` now appends `<op> <mode> cust` consistently with `AscendCommandStrategy` and ensures `--soc` (via `{soc_version}`) when not already present in `compileOption`.
 - **Per-operator run_example mode auto-detection** — example mode (`eager` vs `graph`) is detected by scanning the operator’s `examples/` directory (mirroring build.sh’s layout, skipping `experimental/`). The global `executionMode` setting is a tiebreaker only when both modes exist. Filename matchers default to `^test_aclnn_.*\.cpp$` / `^test_geir_.*\.cpp$` and are overridable via `eagerExamplePattern` / `graphExamplePattern`. Positional args are appended only when the run script uses the `--run_example` interface.
 - **NPU debug launch.json auto-adapt** — before debug launch, `launch.json` targets are resolved under the **selected operator’s own** `build/` directory (not workspace-root `build/`), using plugin default names (`test_aclnn_<op>`, then `<op>`, graph binaries, and build_example targets). Multi-operator selection uses the first selected operator; legacy root `build/` placeholders are replaced; a user warning is shown when auto-adapt cannot resolve a target.
-- **Sanitizer A5 CMake template fixes** — CANN project templates patch SOC-aware sanitizer compile/link flags at generation time: A5 gets `-g` only; non-A5 keeps `--cce-enable-sanitizer` and link flags. Only SOC-varying suffixes use placeholders so shared options (`-O2`, `--cce-fatobj-link`) stay literal.
+- **Sanitizer CMake template fixes for the Ascend950PR&950DT series** — CANN project templates patch SOC-aware sanitizer compile/link flags at generation time: the Ascend950PR&950DT series gets `-g` only; other series keep `--cce-enable-sanitizer` and link flags. Only SOC-varying suffixes use placeholders so shared options (`-O2`, `--cce-fatobj-link`) stay literal.
 - **MindStudio Debug VSIX 1.0.9** — bundled debug extension updated from 1.0.8 to 1.0.9.
 
 ## 1.3.3 — 2026-06-15
@@ -103,10 +101,10 @@ Patch release: simulation profiler fixes, UX improvements, deploy correction, an
 - **Welcome screen** — redesigned welcome panel layout and copy; welcome webview tab icon resolved from extension branding assets.
 - **Open Welcome from Actions view** — new sidebar command group and menu entry on the Actions tree to reopen the welcome page.
 - **Command palette** — user-facing commands grouped under the product name (`%config.title%`); UI-only sidebar/operate commands hidden from the palette.
-- **`.run` deploy** — append `--force` when reinstalling packages on **A2** and **A5** SOCs (`ascend910b`, `ascend950`, …); A3 (`ascend910_93`) unchanged.
+- **`.run` deploy** — append `--force` when reinstalling packages on **Atlas A2 series** and **Ascend950PR&950DT series** SOCs (`ascend910b`, `ascend950`, …); the Atlas A3 series (`ascend910_93`) unchanged.
 - Simulation profiling passes the **simulator directory name** (e.g. `Ascend910B3`, `Ascend910C`, `Ascend950PR_9589`) to `msprof op simulator --soc-version`, not the CANN SOC slug — restores pre-1.3.2 behavior and matches msopprof / CANN `tools/simulator` layout.
 - Simulation profiling no longer emits `PipeUtilization` and `ResourceConflictRatio` together; when conflict ratio is enabled, only `ResourceConflictRatio` (+ optional `PMSampling`) is passed, matching msprof mutual-exclusion rules.
-- Canonical specification for `--soc-version` vs slug vs spawn env added in `docs/ascend-env-spec.md` §8.1; performance and A3/A5 env docs reconciled.
+- Canonical specification for `--soc-version` vs slug vs spawn env added in `docs/ascend-env-spec.md` §8.1; performance and Atlas A3 series / Ascend950PR&950DT series env docs reconciled.
 
 ## 1.3.2 — 2026-06-08
 
@@ -115,12 +113,12 @@ Patch release: Ascend env resolution and explicit command-line exports, standard
 - When creating a sub-operator inside a standard-custom collection, scaffolding completes at the chosen path without prompting to open in the current window, avoiding misclassification as a standalone project.
 - Standard-custom operator creation prefers the project’s own `build.sh --genop`; new **genOpCommand** setting (default `bash build.sh --genop={path}/{operatorname}`) with transparent fallback to plugin templates when genop is missing, fails, or produces no source.
 - Standard-custom build, debug, and tuning flows inject operator names via the `--ops={operatorNames}` placeholder in script templates (legacy scripts without the placeholder still supported).
-- Centralized Ascend series detection: chip name normalization, A3 `Ascend910_93xx` recognition, and A2 Pro/Premium/901 `dav-1001` handling.
-- Atlas A3 represented as CANN SOC `ascend910_93` across detection, warning examples, and docs; `Ascend910A` mapped to the 910B family.
+- Centralized Ascend series detection: chip name normalization, Atlas A3 series `Ascend910_93xx` recognition, and Atlas A2 series Pro/Premium/901 `dav-1001` handling.
+- The Atlas A3 series is represented as CANN SOC `ascend910_93` across detection, warning examples, and docs; `Ascend910A` mapped to the 910B family.
 - **SOC settings** from the SOC-not-detected warning and the gear **Project Config** entry open the same **Workspace**-scope settings view (User-scope values were previously ignored by the resolver).
-- Simulation profiling passed the CANN SOC slug (e.g. `ascend910_93`) to `msprof op simulator --soc-version` instead of the simulator device directory name (e.g. `Ascend910C`). **Superseded in 1.3.3** — slug is not accepted by msopprof on A2/A5 field toolkits; see `docs/ascend-env-spec.md` §8.1.
-- A5/A3 Ascend variables are exported explicitly in command strings (auditable, ordered); standard-custom projects bake `SOC_VERSION`/`NPU_ARCH` placeholders and `SUPPORT_*` defaults into generated CMake instead of polluting spawn env.
-- CANN and `add_custom` project template CMake placeholders and A5 build notes updated.
+- Simulation profiling passed the CANN SOC slug (e.g. `ascend910_93`) to `msprof op simulator --soc-version` instead of the simulator device directory name (e.g. `Ascend910C`). **Superseded in 1.3.3** — slug is not accepted by msopprof on Atlas A2 series / Ascend950PR&950DT series field toolkits; see `docs/ascend-env-spec.md` §8.1.
+- Ascend950PR&950DT series / Atlas A3 series Ascend variables are exported explicitly in command strings (auditable, ordered); standard-custom projects bake `SOC_VERSION`/`NPU_ARCH` placeholders and `SUPPORT_*` defaults into generated CMake instead of polluting spawn env.
+- CANN and `add_custom` project template CMake placeholders and Ascend950PR&950DT series build notes updated.
 - Before NPU debug launch, `launch.json` debug target auto-adapts to `build/<operatorName>` when still a placeholder or pointing at a missing file; a valid user-set target is preserved.
 - One-time legacy settings migration; runtime uses VS Code workspace settings; watches main config changes.
 - Fixed profiler server **Error:OTHER** in VS Code caused by default log path permissions (explicit `--logPath`).
@@ -129,11 +127,11 @@ Patch release: Ascend env resolution and explicit command-line exports, standard
 
 ## 1.3.1 — 2026-05-28
 
-Patch release: A5 environment alignment, standard-custom workflow fixes, faster startup, smaller download, output UX, and bug fixes.
+Patch release: Ascend950PR&950DT series environment alignment, standard-custom workflow fixes, faster startup, smaller download, output UX, and bug fixes.
 
-- Standard Custom builds use chip-specific environment variables injected from resolved SoC instead of hard-coded A3 defaults in generated CMake.
-- CANN project templates support A5 build and simulation; **SoC version** and **NPU arch** can be passed as CMake arguments (`-DSOC_VERSION=`, `-DNPU_ARCH=`) or via environment variables when not set on the command line. Builds from the extension inject chip env vars automatically.
-- When SoC is configured or detected as Atlas A5 (`ascend950`), on-board **performance tuning** quick options show **PC sampling** instead of **Cache heatmap**.
+- Standard Custom builds use chip-specific environment variables injected from resolved SoC instead of hard-coded Atlas A3 series defaults in generated CMake.
+- CANN project templates support Ascend950PR&950DT series build and simulation; **SoC version** and **NPU arch** can be passed as CMake arguments (`-DSOC_VERSION=`, `-DNPU_ARCH=`) or via environment variables when not set on the command line. Builds from the extension inject chip env vars automatically.
+- When SoC is configured or detected as the Ascend950PR&950DT series (`ascend950`), on-board **performance tuning** quick options show **PC sampling** instead of **Cache heatmap**.
 - **SoC version** and **simulator type** settings default to unset; SOC is resolved at runtime (workspace settings, global environment variables such as `SOC_VERSION`, or host detection via Ascend tooling). Unset simulator type selects a default matching the resolved SOC for simulation. Updated setting descriptions explain resolution order.
 - Warning when SoC version cannot be auto-detected (Ascend tooling such as `asys` / `npu-smi` unavailable).
 - **`--force`** appended when installing generated `.run` packages after compile (Ascend Build deploy and standard-custom on-board/simulation profiling pre-steps).
@@ -160,8 +158,8 @@ Patch release: A5 environment alignment, standard-custom workflow fixes, faster 
 
 ## 2026-04-20
 
-- Standard custom operator simulation analysis aligned with chip configuration (A5 environment).
-- Project chip type can be generated automatically from the environment in project configuration (A5 environment).
+- Standard custom operator simulation analysis aligned with chip configuration (Ascend950PR&950DT series environment).
+- Project chip type can be generated automatically from the environment in project configuration (Ascend950PR&950DT series environment).
 
 ## 2026-03-27
 

@@ -1,8 +1,8 @@
 {
-  "name": "huawei-op-devtools-vscode-plugin",
-  "displayName": "Huawei OP DevTools",
+  "name": "asc-toolkit",
+  "displayName": "Ascend C Toolkits",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
-  "publisher": "huawei",
+  "publisher": "cann-pub",
   "version": "1.5.4-beta8",
   "engines": {
     "node": ">=16.0.0",
@@ -14,7 +14,7 @@
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
   "activationEvents": [
-    "onView:opdevtoolsHomeTree",
+    "onView:ascendCToolkitHomeTree",
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
@@ -210,100 +210,100 @@
     },
     "configuration": [
       {
-        "id": "op-devtools.compileAndDeploy",
+        "id": "ascendCToolkit.compileAndDeploy",
         "title": "%config.category.compileAndDeploy.title%",
         "type": "object",
         "properties": {
-          "op-devtools.debugMode": {
+          "ascendCToolkit.debugMode": {
             "type": "boolean",
             "default": true,
-            "description": "%config.op-devtools.debugMode.description%"
+            "description": "%config.ascendCToolkit.debugMode.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.operatorNameToCompile": {
             "type": "string",
             "order": 100,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.operatorNameToCompile.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.deployCommandOrRunCommand": {
             "type": "string",
             "order": 101,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.compileCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.compileCommand": {
             "type": "string",
             "order": 102,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.compileCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.compileCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.utTestCompileCommand": {
             "type": "string",
             "order": 103,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.utTestCompileCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.npuDebugCompileCommand": {
             "type": "string",
             "order": 104,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.npuDebugCompileCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.cpuDebugCompileCommand": {
             "type": "string",
             "order": 105,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.cpuDebugCompileCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.sanitizerCompileCommand": {
             "type": "string",
             "order": 106,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.sanitizerCompileCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.onBoardCompileCommand": {
             "type": "string",
             "order": 107,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.onBoardCompileCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.simulationCompileCommand": {
             "type": "string",
             "order": 108,
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.simulationCompileCommand.description%"
           },
-          "op-devtools.compileAndDeploy.buildConfig.genOpCommand": {
+          "ascendCToolkit.compileAndDeploy.buildConfig.genOpCommand": {
             "type": "string",
             "order": 108.5,
             "default": "bash build.sh --genop={path}/{operatorname}",
-            "description": "%config.op-devtools.compileAndDeploy.buildConfig.genOpCommand.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.buildConfig.genOpCommand.description%"
           },
-          "op-devtools.compileAndDeploy.exampleBuildConfig.executionMode": {
+          "ascendCToolkit.compileAndDeploy.exampleBuildConfig.executionMode": {
             "type": "string",
             "order": 109,
             "enum": [
               "eager",
               "graph"
             ],
-            "description": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.executionMode.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.exampleBuildConfig.executionMode.description%"
           },
-          "op-devtools.compileAndDeploy.exampleBuildConfig.runCommand": {
+          "ascendCToolkit.compileAndDeploy.exampleBuildConfig.runCommand": {
             "type": "string",
             "order": 111,
-            "markdownDescription": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription%"
           },
-          "op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern": {
+          "ascendCToolkit.compileAndDeploy.exampleBuildConfig.eagerExamplePattern": {
             "type": "string",
             "order": 113,
             "default": "^test_aclnn_.*\\.cpp$",
-            "description": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.exampleBuildConfig.eagerExamplePattern.description%"
           },
-          "op-devtools.compileAndDeploy.exampleBuildConfig.graphExamplePattern": {
+          "ascendCToolkit.compileAndDeploy.exampleBuildConfig.graphExamplePattern": {
             "type": "string",
             "order": 115,
             "default": "^test_geir_.*\\.cpp$",
-            "description": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.graphExamplePattern.description%"
+            "description": "%config.ascendCToolkit.compileAndDeploy.exampleBuildConfig.graphExamplePattern.description%"
           }
         }
       },
       {
-        "id": "op-devtools.stTest",
+        "id": "ascendCToolkit.stTest",
         "title": "%config.category.stTest.title%",
         "type": "object",
         "properties": {
-          "op-devtools.stTest.selectedModes": {
+          "ascendCToolkit.stTest.selectedModes": {
             "type": "array",
             "scope": "resource",
             "order": 100,
@@ -318,9 +318,9 @@
                 "e2e"
               ]
             },
-            "description": "%config.op-devtools.stTest.selectedModes.description%"
+            "description": "%config.ascendCToolkit.stTest.selectedModes.description%"
           },
-          "op-devtools.stTest.kernel.arguments": {
+          "ascendCToolkit.stTest.kernel.arguments": {
             "type": "array",
             "scope": "resource",
             "order": 101,
@@ -332,9 +332,9 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "%config.op-devtools.stTest.kernel.arguments.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.stTest.kernel.arguments.markdownDescription%"
           },
-          "op-devtools.stTest.aclnn.arguments": {
+          "ascendCToolkit.stTest.aclnn.arguments": {
             "type": "array",
             "scope": "resource",
             "order": 102,
@@ -342,9 +342,9 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "%config.op-devtools.stTest.aclnn.arguments.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.stTest.aclnn.arguments.markdownDescription%"
           },
-          "op-devtools.stTest.e2e.arguments": {
+          "ascendCToolkit.stTest.e2e.arguments": {
             "type": "array",
             "scope": "resource",
             "order": 103,
@@ -352,98 +352,98 @@
             "items": {
               "type": "string"
             },
-            "markdownDescription": "%config.op-devtools.stTest.e2e.arguments.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.stTest.e2e.arguments.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.sanitizer",
+        "id": "ascendCToolkit.sanitizer",
         "title": "%config.category.sanitizer.title%",
         "type": "object",
         "properties": {
-          "op-devtools.sanitizer.showQuickOptions": {
+          "ascendCToolkit.sanitizer.showQuickOptions": {
             "type": "boolean",
             "default": true,
             "order": 100,
-            "description": "%config.op-devtools.sanitizer.showQuickOptions.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.showQuickOptions.markdownDescription%"
+            "description": "%config.ascendCToolkit.sanitizer.showQuickOptions.description%",
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.showQuickOptions.markdownDescription%"
           },
-          "op-devtools.sanitizer.toolType": {
+          "ascendCToolkit.sanitizer.toolType": {
             "type": "string",
             "enum": [
               "mssanitizer",
               "npu-check"
             ],
             "order": 110,
-            "description": "%config.op-devtools.sanitizer.toolType.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.toolType.markdownDescription%"
+            "description": "%config.ascendCToolkit.sanitizer.toolType.description%",
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.toolType.markdownDescription%"
           },
-          "op-devtools.sanitizer.enableMsAgentAiFix": {
+          "ascendCToolkit.sanitizer.enableMsAgentAiFix": {
             "type": "boolean",
             "default": true,
             "order": 400,
-            "description": "%config.op-devtools.sanitizer.enableMsAgentAiFix.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.enableMsAgentAiFix.markdownDescription%"
+            "description": "%config.ascendCToolkit.sanitizer.enableMsAgentAiFix.description%",
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.enableMsAgentAiFix.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.sanitizerNpuCheck",
+        "id": "ascendCToolkit.sanitizerNpuCheck",
         "title": "%config.category.sanitizerNpuCheck.title%",
         "type": "object",
         "properties": {
-          "op-devtools.sanitizer.memCheck": {
+          "ascendCToolkit.sanitizer.memCheck": {
             "type": "boolean",
             "default": true,
             "order": 200,
-            "description": "%config.op-devtools.sanitizer.memCheck.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.memCheck.markdownDescription%"
+            "description": "%config.ascendCToolkit.sanitizer.memCheck.description%",
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.memCheck.markdownDescription%"
           },
-          "op-devtools.sanitizer.sync": {
+          "ascendCToolkit.sanitizer.sync": {
             "type": "boolean",
             "default": true,
             "order": 201,
-            "description": "%config.op-devtools.sanitizer.sync.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.sync.markdownDescription%"
+            "description": "%config.ascendCToolkit.sanitizer.sync.description%",
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.sync.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.sanitizerMsSanitizer",
+        "id": "ascendCToolkit.sanitizerMsSanitizer",
         "title": "%config.category.sanitizerMsSanitizer.title%",
         "type": "object",
         "properties": {
-          "op-devtools.sanitizer.memory": {
+          "ascendCToolkit.sanitizer.memory": {
             "type": "boolean",
             "default": true,
             "order": 200,
-            "markdownDescription": "%config.op-devtools.sanitizer.memory.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.memory.markdownDescription%"
           },
-          "op-devtools.sanitizer.race": {
+          "ascendCToolkit.sanitizer.race": {
             "type": "boolean",
             "default": true,
             "order": 201,
-            "markdownDescription": "%config.op-devtools.sanitizer.race.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.race.markdownDescription%"
           },
-          "op-devtools.sanitizer.uninitialized": {
+          "ascendCToolkit.sanitizer.uninitialized": {
             "type": "boolean",
             "default": true,
             "order": 202,
-            "markdownDescription": "%config.op-devtools.sanitizer.uninitialized.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.uninitialized.markdownDescription%"
           },
-          "op-devtools.sanitizer.memoryLeak": {
+          "ascendCToolkit.sanitizer.memoryLeak": {
             "type": "boolean",
             "default": true,
             "order": 210,
-            "markdownDescription": "%config.op-devtools.sanitizer.memoryLeak.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.memoryLeak.markdownDescription%"
           },
-          "op-devtools.sanitizer.allocUnused": {
+          "ascendCToolkit.sanitizer.allocUnused": {
             "type": "boolean",
             "default": true,
             "order": 211,
-            "markdownDescription": "%config.op-devtools.sanitizer.allocUnused.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.allocUnused.markdownDescription%"
           },
-          "op-devtools.sanitizer.reportLogLevel": {
+          "ascendCToolkit.sanitizer.reportLogLevel": {
             "type": "string",
             "order": 212,
             "enum": [
@@ -451,25 +451,25 @@
               "warn",
               "error"
             ],
-            "description": "%config.op-devtools.sanitizer.reportLogLevel.description%"
+            "description": "%config.ascendCToolkit.sanitizer.reportLogLevel.description%"
           },
-          "op-devtools.sanitizer.maxSingleLogFileSize": {
+          "ascendCToolkit.sanitizer.maxSingleLogFileSize": {
             "type": "number",
             "order": 213,
             "minimum": 1,
             "maximum": 10240,
-            "markdownDescription": "%config.op-devtools.sanitizer.maxSingleLogFileSize.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.maxSingleLogFileSize.markdownDescription%"
           },
-          "op-devtools.sanitizer.detectionScope": {
+          "ascendCToolkit.sanitizer.detectionScope": {
             "type": "string",
             "order": 214,
             "enum": [
               "global",
               "singleBlock"
             ],
-            "markdownDescription": "%config.op-devtools.sanitizer.detectionScope.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.sanitizer.detectionScope.markdownDescription%"
           },
-          "op-devtools.sanitizer.blockId": {
+          "ascendCToolkit.sanitizer.blockId": {
             "type": [
               "number",
               "null"
@@ -477,316 +477,295 @@
             "order": 215,
             "minimum": 0,
             "maximum": 200,
-            "description": "%config.op-devtools.sanitizer.blockId.description%"
+            "description": "%config.ascendCToolkit.sanitizer.blockId.description%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceTuning",
+        "id": "ascendCToolkit.performanceTuning",
         "title": "%config.category.performanceTuning.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.onBoard.showQuickOptions": {
+          "ascendCToolkit.performanceTuning.onBoard.showQuickOptions": {
             "type": "boolean",
             "default": true,
             "order": 309,
-            "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.showQuickOptions.description%",
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
           },
-          "op-devtools.performanceTuning.simulation.showQuickOptions": {
+          "ascendCToolkit.performanceTuning.simulation.showQuickOptions": {
             "type": "boolean",
             "default": true,
             "order": 298,
-            "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
+            "description": "%config.ascendCToolkit.performanceTuning.simulation.showQuickOptions.description%",
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.simulation.showQuickOptions.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceTuning.onBoard",
+        "id": "ascendCToolkit.performanceTuning.onBoard",
         "title": "%config.category.performanceTuning.onBoard.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.onBoard.tool": {
+          "ascendCToolkit.performanceTuning.onBoard.tool": {
             "type": "string",
             "enum": [
               "npu-compute",
               "msprof"
             ],
-            "enumDescriptions": [
-              "%config.op-devtools.performanceTuning.onBoard.tool.enumDescription.npuCompute%",
-              "%config.op-devtools.performanceTuning.onBoard.tool.enumDescription.msprof%"
-            ],
             "order": 308,
-            "description": "%config.op-devtools.performanceTuning.onBoard.tool.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.tool.markdownDescription%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.tool.description%",
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.tool.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceTuning.onBoard.npuCompute",
+        "id": "ascendCToolkit.performanceTuning.onBoard.npuCompute",
         "title": "%config.category.performanceTuning.onBoard.npuCompute.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.dataCollection.onboard": {
+          "ascendCToolkit.performanceTuning.dataCollection.onboard": {
             "type": "object",
             "order": 330,
             "default": {},
-            "markdownDescription": "%config.op-devtools.performanceTuning.dataCollection.onboard.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.dataCollection.onboard.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.pipeUtilization": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.pipeUtilization": {
             "type": "boolean",
             "order": 331,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.pipeUtilization.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.pipeUtilization.description%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.pipeline": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.pipeline": {
             "type": "boolean",
             "order": 332,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.pipeline.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.pipeline.description%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.l2Cache": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.l2Cache": {
             "type": "boolean",
             "order": 333,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.l2Cache.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.l2Cache.description%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.memory": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.memory": {
             "type": "boolean",
             "order": 334,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.memory.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.memory.description%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.memoryL0": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.memoryL0": {
             "type": "boolean",
             "order": 335,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.memoryL0.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.memoryL0.description%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.memoryUB": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.memoryUB": {
             "type": "boolean",
             "order": 336,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.memoryUB.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.memoryUB.description%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.arithmeticUtilization": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.arithmeticUtilization": {
             "type": "boolean",
             "order": 337,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.arithmeticUtilization.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.arithmeticUtilization.description%"
           },
-          "op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio": {
+          "ascendCToolkit.performanceTuning.onBoard.npuCompute.resourceConflictRatio": {
             "type": "boolean",
             "order": 338,
             "default": true,
-            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.npuCompute.resourceConflictRatio.description%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceTuning.onBoard.msprof",
+        "id": "ascendCToolkit.performanceTuning.onBoard.msprof",
         "title": "%config.category.performanceTuning.onBoard.msprof.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.onBoard.interCoreLoad": {
+          "ascendCToolkit.performanceTuning.onBoard.interCoreLoad": {
             "type": "boolean",
             "order": 310,
-            "description": "%config.op-devtools.performanceTuning.onBoard.interCoreLoad.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.interCoreLoad.description%"
           },
-          "op-devtools.performanceTuning.onBoard.roofline": {
+          "ascendCToolkit.performanceTuning.onBoard.roofline": {
             "type": "boolean",
             "order": 311,
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.roofline.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.roofline.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.operatorCodeHotspot": {
+          "ascendCToolkit.performanceTuning.onBoard.operatorCodeHotspot": {
             "type": "boolean",
             "order": 312,
-            "description": "%config.op-devtools.performanceTuning.onBoard.operatorCodeHotspot.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.operatorCodeHotspot.description%"
           },
-          "op-devtools.performanceTuning.onBoard.cacheHeatmap": {
+          "ascendCToolkit.performanceTuning.onBoard.cacheHeatmap": {
             "type": "boolean",
             "order": 313,
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.cacheHeatmap.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.cacheHeatmap.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.pcSampling": {
+          "ascendCToolkit.performanceTuning.onBoard.pcSampling": {
             "type": "boolean",
             "order": 314,
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.pcSampling.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.pcSampling.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.operatorMetrics": {
+          "ascendCToolkit.performanceTuning.onBoard.operatorMetrics": {
             "type": "boolean",
             "order": 315,
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.operatorMetrics.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.operatorMetrics.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio": {
+          "ascendCToolkit.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio": {
             "type": "boolean",
             "order": 316,
-            "description": "%config.op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio.description%"
           },
-          "op-devtools.performanceTuning.onBoard.l2CacheHitRate": {
+          "ascendCToolkit.performanceTuning.onBoard.l2CacheHitRate": {
             "type": "boolean",
             "order": 317,
-            "description": "%config.op-devtools.performanceTuning.onBoard.l2CacheHitRate.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.l2CacheHitRate.description%"
           },
-          "op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth": {
+          "ascendCToolkit.performanceTuning.onBoard.memoryReadWriteBandwidth": {
             "type": "boolean",
             "order": 318,
-            "description": "%config.op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.memoryReadWriteBandwidth.description%"
           },
-          "op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth": {
+          "ascendCToolkit.performanceTuning.onBoard.l0ReadWriteBandwidth": {
             "type": "boolean",
             "order": 319,
-            "description": "%config.op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.l0ReadWriteBandwidth.description%"
           },
-          "op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth": {
+          "ascendCToolkit.performanceTuning.onBoard.ubReadWriteBandwidth": {
             "type": "boolean",
             "order": 320,
-            "description": "%config.op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.ubReadWriteBandwidth.description%"
           },
-          "op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio": {
+          "ascendCToolkit.performanceTuning.onBoard.computeAndMoveUnitTimeRatio": {
             "type": "boolean",
             "order": 321,
-            "description": "%config.op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.computeAndMoveUnitTimeRatio.description%"
           },
-          "op-devtools.performanceTuning.onBoard.resourceConflictRatio": {
+          "ascendCToolkit.performanceTuning.onBoard.resourceConflictRatio": {
             "type": "boolean",
             "order": 322,
-            "description": "%config.op-devtools.performanceTuning.onBoard.resourceConflictRatio.description%"
+            "description": "%config.ascendCToolkit.performanceTuning.onBoard.resourceConflictRatio.description%"
           },
-          "op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling": {
+          "ascendCToolkit.performanceTuning.onBoard.enableKernelCodeSegmentProfiling": {
             "type": "boolean",
             "order": 323,
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.enableKernelCodeSegmentProfiling.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.parameters": {
+          "ascendCToolkit.performanceTuning.onBoard.parameters": {
             "type": "object",
             "order": 324,
             "default": {},
             "additionalProperties": {
               "type": "string"
             },
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.parameters.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.onBoard.parameters.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceTuning.simulation",
+        "id": "ascendCToolkit.performanceTuning.simulation",
         "title": "%config.category.performanceTuning.simulation.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.simulation.tool": {
+          "ascendCToolkit.performanceTuning.simulation.tool": {
             "type": "string",
             "enum": [
               "npu-emulate",
               "msprof"
             ],
-            "enumDescriptions": [
-              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.npuEmulate%",
-              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.msprof%"
-            ],
             "order": 299,
-            "description": "%config.op-devtools.performanceTuning.simulation.tool.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.tool.markdownDescription%"
+            "description": "%config.ascendCToolkit.performanceTuning.simulation.tool.description%",
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.simulation.tool.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceTuning.simulation.npuEmulate",
+        "id": "ascendCToolkit.performanceTuning.simulation.npuEmulate",
         "title": "%config.category.performanceTuning.simulation.npuEmulate.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.dataCollection.simulate": {
+          "ascendCToolkit.performanceTuning.dataCollection.simulate": {
             "type": "object",
             "order": 340,
             "default": {},
-            "markdownDescription": "%config.op-devtools.performanceTuning.dataCollection.simulate.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.dataCollection.simulate.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceTuning.simulation.msprof",
+        "id": "ascendCToolkit.performanceTuning.simulation.msprof",
         "title": "%config.category.performanceTuning.simulation.msprof.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.simulation.simulatorType": {
+          "ascendCToolkit.performanceTuning.simulation.simulatorType": {
             "type": "string",
             "order": 300,
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.simulation.simulatorType.markdownDescription%"
           },
-          "op-devtools.performanceTuning.simulation.memoryThroughputWaveform": {
+          "ascendCToolkit.performanceTuning.simulation.memoryThroughputWaveform": {
             "type": "boolean",
             "order": 301,
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.memoryThroughputWaveform.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.simulation.memoryThroughputWaveform.markdownDescription%"
           },
-          "op-devtools.performanceTuning.simulation.resourceConflictRatio": {
+          "ascendCToolkit.performanceTuning.simulation.resourceConflictRatio": {
             "type": "boolean",
             "order": 302,
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.resourceConflictRatio.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.simulation.resourceConflictRatio.markdownDescription%"
           },
-          "op-devtools.performanceTuning.simulation.parameters": {
+          "ascendCToolkit.performanceTuning.simulation.parameters": {
             "type": "object",
             "order": 303,
             "default": {},
             "additionalProperties": {
               "type": "string"
             },
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.parameters.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.performanceTuning.simulation.parameters.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.environment",
+        "id": "ascendCToolkit.environment",
         "title": "%config.category.environment.title%",
         "type": "object",
         "properties": {
-          "op-devtools.environment.environmentScript": {
+          "ascendCToolkit.environment.environmentScript": {
             "type": "string",
             "default": "/etc/profile",
             "order": 400,
-            "markdownDescription": "%config.op-devtools.environment.environmentScript.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.environment.environmentScript.markdownDescription%"
           },
-          "op-devtools.environment.socVersion": {
+          "ascendCToolkit.environment.socVersion": {
             "type": "string",
             "order": 401,
-            "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.environment.socVersion.markdownDescription%"
           },
-          "op-devtools.environment.npuArch": {
+          "ascendCToolkit.environment.npuArch": {
             "type": "string",
             "order": 402,
-            "markdownDescription": "%config.op-devtools.environment.npuArch.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.environment.npuArch.markdownDescription%"
           },
-          "op-devtools.environment.insightPath": {
+          "ascendCToolkit.environment.insightPath": {
             "type": "string",
             "order": 403,
-            "markdownDescription": "%config.op-devtools.environment.insightPath.markdownDescription%"
+            "markdownDescription": "%config.ascendCToolkit.environment.insightPath.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.execution",
+        "id": "ascendCToolkit.execution",
         "title": "%config.category.execution.title%",
         "type": "object",
         "properties": {
-          "op-devtools.execution.commandTimeoutSeconds": {
+          "ascendCToolkit.execution.commandTimeoutSeconds": {
             "type": "number",
             "default": 1800,
             "minimum": 0,
             "order": 450,
-            "description": "%config.op-devtools.execution.commandTimeoutSeconds.description%"
-          }
-        }
-      },
-      {
-        "id": "op-devtools.operatorSupport",
-        "title": "%config.category.operatorSupport.title%",
-        "type": "object",
-        "properties": {
-          "op-devtools.operatorSupport.triton": {
-            "type": "boolean",
-            "default": false,
-            "order": 500,
-            "description": "%config.op-devtools.operatorSupport.triton.description%"
+            "description": "%config.ascendCToolkit.execution.commandTimeoutSeconds.description%"
           }
         }
       }
@@ -835,1342 +814,1342 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "mindstudio-opssuite-vscode-plugin",
+          "id": "ascend-c-toolkit-sidebar",
           "title": "%viewContainer.activitybar.title%",
           "icon": "out/web/branding/activitybar_logo_mono.svg"
         }
       ]
     },
     "views": {
-      "mindstudio-opssuite-vscode-plugin": [
+      "ascend-c-toolkit-sidebar": [
         {
-          "id": "opdevtoolsHomeTree",
+          "id": "ascendCToolkitHomeTree",
           "name": "%view.homeTree.name%",
-          "when": "opDevtools.showHomeTree"
+          "when": "ascendCToolkit.showHomeTree"
         },
         {
-          "id": "opdevtoolsOperatorProjectsTree",
+          "id": "ascendCToolkitOperatorProjectsTree",
           "name": "%view.operatorProjects.name%",
-          "when": "opDevtools.showOperatorProjects"
+          "when": "ascendCToolkit.showOperatorProjects"
         },
         {
-          "id": "opdevtoolsOperateTree",
+          "id": "ascendCToolkitOperateTree",
           "name": "%view.opsOperate.name%",
-          "when": "opDevtools.showOperateTree"
+          "when": "ascendCToolkit.showOperateTree"
         },
         {
-          "id": "opdevtoolsSanitizerResultsTree",
+          "id": "ascendCToolkitSanitizerResultsTree",
           "name": "%view.sanitizerResultsTree.name%",
-          "when": "opDevtools.showOperateTree"
+          "when": "ascendCToolkit.showOperateTree"
         },
         {
-          "id": "opdevtoolsPerformanceResultsTree",
+          "id": "ascendCToolkitPerformanceResultsTree",
           "name": "%view.performanceResultsTree.name%",
-          "when": "opDevtools.showOperateTree"
+          "when": "ascendCToolkit.showOperateTree"
         },
         {
-          "id": "opdevtoolsDumpTensorSidebarView",
+          "id": "ascendCToolkitDumpTensorSidebarView",
           "name": "%view.dumpTensorResultsTree.name%",
-          "when": "opDevtools.showOperateTree"
+          "when": "ascendCToolkit.showOperateTree"
         },
         {
-          "id": "opdevtoolsStTestHistoryTree",
+          "id": "ascendCToolkitStTestHistoryTree",
           "name": "%view.stTestHistoryTree.name%",
-          "when": "opDevtools.showStTestHistory"
+          "when": "ascendCToolkit.showStTestHistory"
         }
       ],
       "explorer": []
     },
     "commands": [
       {
-        "command": "huawei-op-devtools.open",
+        "command": "ascend-c-toolkit.open",
         "title": "%command.open.title%",
         "icon": "$(add)",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.openProject",
+        "command": "ascend-c-toolkit.openProject",
         "title": "%command.openProject.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.buildOps",
+        "command": "ascend-c-toolkit.buildOps",
         "title": "%command.buildOps.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.toggleOpsOperate",
+        "command": "ascend-c-toolkit.toggleOpsOperate",
         "title": "%command.toggleOpsOperate.title%",
         "category": "%config.title%",
         "icon": "out/web/branding/operate_icon_mono.svg"
       },
       {
-        "command": "huawei-op-devtools.leftNaV",
+        "command": "ascend-c-toolkit.leftNaV",
         "title": "%command.leftNav.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.createOps",
+        "command": "ascend-c-toolkit.createOps",
         "title": "%command.createOps.title%",
         "icon": "out/web/branding/ops_icon_mono.svg",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.jsonButtonAction",
+        "command": "ascend-c-toolkit.jsonButtonAction",
         "title": "%command.jsonButtonAction.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.openCsv",
+        "command": "ascend-c-toolkit.openCsv",
         "title": "%command.openCsv.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.openProfilingReport",
+        "command": "ascend-c-toolkit.openProfilingReport",
         "title": "%command.openProfilingReport.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.test",
+        "command": "ascend-c-toolkit.test",
         "title": "%command.test.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.welcome",
+        "command": "ascend-c-toolkit.welcome",
         "title": "%command.welcome.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.clearWelcomeCount",
+        "command": "ascend-c-toolkit.clearWelcomeCount",
         "title": "%command.clearWelcomeCount.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.vscodeJumpToFile",
+        "command": "ascend-c-toolkit.vscodeJumpToFile",
         "title": "%command.vscodeJumpToFile.title%"
       },
       {
-        "command": "huawei-op-devtools.flashMsSanitizerRunData",
+        "command": "ascend-c-toolkit.flashMsSanitizerRunData",
         "title": "%command.flashMsSanitizer.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.flashPerformanceRunData",
+        "command": "ascend-c-toolkit.flashPerformanceRunData",
         "title": "%command.flashPerformance.title%",
         "icon": "$(refresh)",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.createOperatorInWorkspace",
+        "command": "ascend-c-toolkit.createOperatorInWorkspace",
         "title": "%command.createOperatorInWorkspace.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.clearLastProjectPath",
+        "command": "ascend-c-toolkit.clearLastProjectPath",
         "title": "%command.clearLastProjectPath.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.resetProjectConfiguration",
+        "command": "ascend-c-toolkit.resetProjectConfiguration",
         "title": "%command.resetProjectConfiguration.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.simulatorOptions",
+        "command": "ascend-c-toolkit.simulatorOptions",
         "title": "%command.simulatorOptions.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.onBoardOptions",
+        "command": "ascend-c-toolkit.onBoardOptions",
         "title": "%command.onBoardOptions.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.sanitizerOptions",
+        "command": "ascend-c-toolkit.sanitizerOptions",
         "title": "%command.sanitizerOptions.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.markAsOperatorProject",
+        "command": "ascend-c-toolkit.markAsOperatorProject",
         "title": "%command.markAsOperatorProject.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.markAsMultiOperatorProject",
+        "command": "ascend-c-toolkit.markAsMultiOperatorProject",
         "title": "%command.markAsMultiOperatorProject.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.unmarkAsOperatorProject",
+        "command": "ascend-c-toolkit.unmarkAsOperatorProject",
         "title": "%command.unmarkAsOperatorProject.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.unmarkAsMultiOperatorProject",
+        "command": "ascend-c-toolkit.unmarkAsMultiOperatorProject",
         "title": "%command.unmarkAsMultiOperatorProject.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectBuild",
+        "command": "ascend-c-toolkit.operatorProjectBuild",
         "title": "%command.operatorProjectBuild.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectRun",
+        "command": "ascend-c-toolkit.operatorProjectRun",
         "title": "%command.operatorProjectRun.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectCpuDebug",
+        "command": "ascend-c-toolkit.operatorProjectCpuDebug",
         "title": "%command.operatorProjectCpuDebug.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectCpuDebugConfig",
+        "command": "ascend-c-toolkit.operatorProjectCpuDebugConfig",
         "title": "%command.operatorProjectCpuDebugConfig.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectSanitizer",
+        "command": "ascend-c-toolkit.operatorProjectSanitizer",
         "title": "%command.operatorProjectSanitizer.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectOnBoard",
+        "command": "ascend-c-toolkit.operatorProjectOnBoard",
         "title": "%command.operatorProjectOnBoard.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectSimulation",
+        "command": "ascend-c-toolkit.operatorProjectSimulation",
         "title": "%command.operatorProjectSimulation.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.reportVisualizationSanitizer",
+        "command": "ascend-c-toolkit.reportVisualizationSanitizer",
         "title": "%command.reportVisualizationSanitizer.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.reportVisualizationOnBoard",
+        "command": "ascend-c-toolkit.reportVisualizationOnBoard",
         "title": "%command.reportVisualizationOnBoard.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.reportVisualizationSimulation",
+        "command": "ascend-c-toolkit.reportVisualizationSimulation",
         "title": "%command.reportVisualizationSimulation.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.reportVisualizationPerformance",
+        "command": "ascend-c-toolkit.reportVisualizationPerformance",
         "title": "%command.reportVisualizationPerformance.title%",
         "icon": "$(add)",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.refreshFolderDecorations",
+        "command": "ascend-c-toolkit.refreshFolderDecorations",
         "title": "%command.refreshFolderDecorations.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.importDumpTensorBinFile",
+        "command": "ascend-c-toolkit.importDumpTensorBinFile",
         "title": "%command.importDumpTensorBinFile.title%",
         "icon": "$(add)",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.projectConfig",
+        "command": "ascend-c-toolkit.sidebar.projectConfig",
         "title": "Project Config",
         "icon": "$(gear)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.resetProjectConfiguration",
+        "command": "ascend-c-toolkit.sidebar.resetProjectConfiguration",
         "title": "%command.resetProjectConfiguration.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.build",
+        "command": "ascend-c-toolkit.sidebar.build",
         "title": "Compile & Deploy"
       },
       {
-        "command": "huawei-op-devtools.sidebar.run",
+        "command": "ascend-c-toolkit.sidebar.run",
         "title": "Run",
         "icon": "$(opdevtools-run)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.cpuDebug",
+        "command": "ascend-c-toolkit.sidebar.cpuDebug",
         "title": "CPU Debug"
       },
       {
-        "command": "huawei-op-devtools.sidebar.npuDebug",
+        "command": "ascend-c-toolkit.sidebar.npuDebug",
         "title": "NPU Debug"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer",
+        "command": "ascend-c-toolkit.sidebar.sanitizer",
         "title": "Sanitizer"
       },
       {
-        "command": "huawei-op-devtools.sidebar.onBoard",
+        "command": "ascend-c-toolkit.sidebar.onBoard",
         "title": "On-board Analysis"
       },
       {
-        "command": "huawei-op-devtools.sidebar.simulation",
+        "command": "ascend-c-toolkit.sidebar.simulation",
         "title": "Simulation Analysis"
       },
       {
-        "command": "huawei-op-devtools.sidebar.utTest",
+        "command": "ascend-c-toolkit.sidebar.utTest",
         "title": "UT Test"
       },
       {
-        "command": "huawei-op-devtools.sidebar.stTest",
+        "command": "ascend-c-toolkit.sidebar.stTest",
         "title": "%command.sidebar.stTest.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor",
         "title": "Dump Tensor"
       },
       {
-        "command": "huawei-op-devtools.operate.debugSettings",
+        "command": "ascend-c-toolkit.operate.debugSettings",
         "title": "Debug Settings",
         "icon": "$(gear)"
       },
       {
-        "command": "huawei-op-devtools.operate.sanitizerSettings",
+        "command": "ascend-c-toolkit.operate.sanitizerSettings",
         "title": "Sanitizer Settings",
         "icon": "$(gear)"
       },
       {
-        "command": "huawei-op-devtools.operate.onBoardSettings",
+        "command": "ascend-c-toolkit.operate.onBoardSettings",
         "title": "On-board Settings",
         "icon": "$(gear)"
       },
       {
-        "command": "huawei-op-devtools.operate.simulationSettings",
+        "command": "ascend-c-toolkit.operate.simulationSettings",
         "title": "Simulation Settings",
         "icon": "$(gear)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.selectOperators",
+        "command": "ascend-c-toolkit.sidebar.selectOperators",
         "title": "Select Operator Projects"
       },
       {
-        "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+        "command": "ascend-c-toolkit.sidebar.clearSelectedOperators",
         "title": "%command.sidebar.clearSelectedOperators.title%",
         "icon": "$(clear-all)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.searchOperators",
+        "command": "ascend-c-toolkit.sidebar.searchOperators",
         "title": "Search Operator Projects",
         "icon": "$(search)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.clearOperatorProjectsSearch",
+        "command": "ascend-c-toolkit.sidebar.clearOperatorProjectsSearch",
         "title": "%command.sidebar.clearOperatorProjectsSearch.title%",
         "icon": "$(clear-all)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.toggleOperator",
+        "command": "ascend-c-toolkit.sidebar.toggleOperator",
         "title": "Toggle Operator"
       },
       {
-        "command": "huawei-op-devtools.sidebar.selectAllCompiledOperators",
+        "command": "ascend-c-toolkit.sidebar.selectAllCompiledOperators",
         "title": "%command.sidebar.selectAll.title%",
         "icon": "$(check-all)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.selectAllPreparedOperators",
+        "command": "ascend-c-toolkit.sidebar.selectAllPreparedOperators",
         "title": "%command.sidebar.selectAll.title%",
         "icon": "$(check-all)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.selectAllOperators",
+        "command": "ascend-c-toolkit.sidebar.selectAllOperators",
         "title": "%command.sidebar.selectAll.title%",
         "icon": "$(check-all)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.deselectAllPreparedOperators",
+        "command": "ascend-c-toolkit.sidebar.deselectAllPreparedOperators",
         "title": "%command.sidebar.clearSelectedOperators.title%",
         "icon": "$(clear-all)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.stopFlowTask",
+        "command": "ascend-c-toolkit.sidebar.stopFlowTask",
         "title": "%command.sidebar.stopFlowTask.title%",
         "icon": "$(debug-stop)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.stopAllOperatorActions",
+        "command": "ascend-c-toolkit.sidebar.stopAllOperatorActions",
         "title": "%command.sidebar.stopAllOperatorActions.title%",
         "icon": "$(debug-stop)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.openWelcome",
+        "command": "ascend-c-toolkit.sidebar.openWelcome",
         "title": "%command.sidebar.openWelcome.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.openHelp",
+        "command": "ascend-c-toolkit.sidebar.openHelp",
         "title": "Open Help Guide"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.select",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.select",
         "title": "%command.sidebar.sanitizer.report.select.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.copyPath",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.copyPath",
         "title": "%command.sidebar.sanitizer.report.copyPath.title%",
         "icon": "$(copy)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.toggleMark",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.toggleMark",
         "title": "%command.sidebar.sanitizer.report.toggleMark.title%",
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.mark",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.mark",
         "title": "%command.sidebar.sanitizer.report.mark.title%",
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.unmark",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.unmark",
         "title": "%command.sidebar.sanitizer.report.unmark.title%",
         "icon": "$(opdevtools-flag-filled)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.sortTime",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.sortTime",
         "title": "%command.sidebar.sanitizer.report.sortTime.title%",
         "icon": "$(sort-precedence)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.filterMarked",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.filterMarked",
         "title": "%command.sidebar.sanitizer.report.showMarkedOnly.title%",
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.showAll",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.showAll",
         "title": "%command.sidebar.sanitizer.report.showAll.title%",
         "icon": "$(opdevtools-flag-filled)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.report.add",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.report.add",
         "title": "%command.sidebar.sanitizer.report.add.title%",
         "icon": "$(add)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.message.jump",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.message.jump",
         "title": "%command.sidebar.sanitizer.message.jump.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.message.aiFix",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.message.aiFix",
         "title": "%command.sidebar.sanitizer.message.aiFix.title%",
         "icon": "$(sparkle)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClass",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByClass",
         "title": "%command.sidebar.sanitizer.results.groupByClass.title%",
         "icon": "$(opdevtools-group-class)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClassActive",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByClassActive",
         "title": "%command.sidebar.sanitizer.results.groupByClass.title%",
         "icon": "$(opdevtools-group-class-pressed)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverity",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupBySeverity",
         "title": "%command.sidebar.sanitizer.results.groupBySeverity.title%",
         "icon": "$(opdevtools-group-severity-warning)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverityActive",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupBySeverityActive",
         "title": "%command.sidebar.sanitizer.results.groupBySeverity.title%",
         "icon": "$(opdevtools-group-severity-warning-pressed)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByType",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByType",
         "title": "%command.sidebar.sanitizer.results.groupByType.title%",
         "icon": "$(opdevtools-group-type)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByTypeActive",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByTypeActive",
         "title": "%command.sidebar.sanitizer.results.groupByType.title%",
         "icon": "$(opdevtools-group-type-pressed)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFile",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByFile",
         "title": "%command.sidebar.sanitizer.results.groupByFile.title%",
         "icon": "$(opdevtools-group-file)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFileActive",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByFileActive",
         "title": "%command.sidebar.sanitizer.results.groupByFile.title%",
         "icon": "$(opdevtools-group-file-pressed)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.hideDuplicates",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.hideDuplicates",
         "title": "%command.sidebar.sanitizer.results.hideDuplicates.title%",
         "icon": "$(layers)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.showDuplicates",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.showDuplicates",
         "title": "%command.sidebar.sanitizer.results.showDuplicates.title%",
         "icon": "$(layers-active)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.sanitizer.results.openGroupFile",
+        "command": "ascend-c-toolkit.sidebar.sanitizer.results.openGroupFile",
         "title": "%command.sidebar.sanitizer.results.openGroupFile.title%",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.actionsQuickPick",
+        "command": "ascend-c-toolkit.sidebar.actionsQuickPick",
         "title": "Actions",
         "icon": "$(play-circle)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.select",
+        "command": "ascend-c-toolkit.sidebar.performance.report.select",
         "title": "%command.sidebar.performance.report.select.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.copyPath",
+        "command": "ascend-c-toolkit.sidebar.performance.report.copyPath",
         "title": "%command.sidebar.performance.report.copyPath.title%",
         "icon": "$(copy)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.download",
+        "command": "ascend-c-toolkit.sidebar.performance.report.download",
         "title": "%command.sidebar.performance.report.download.title%",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.mark",
+        "command": "ascend-c-toolkit.sidebar.performance.report.mark",
         "title": "%command.sidebar.performance.report.mark.title%",
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.unmark",
+        "command": "ascend-c-toolkit.sidebar.performance.report.unmark",
         "title": "%command.sidebar.performance.report.unmark.title%",
         "icon": "$(opdevtools-flag-filled)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.sortTime",
+        "command": "ascend-c-toolkit.sidebar.performance.report.sortTime",
         "title": "%command.sidebar.performance.report.sortTime.title%",
         "icon": "$(sort-precedence)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.filterMarked",
+        "command": "ascend-c-toolkit.sidebar.performance.report.filterMarked",
         "title": "%command.sidebar.performance.report.showMarkedOnly.title%",
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.report.showAll",
+        "command": "ascend-c-toolkit.sidebar.performance.report.showAll",
         "title": "%command.sidebar.performance.report.showAll.title%",
         "icon": "$(opdevtools-flag-filled)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.performance.file.open",
+        "command": "ascend-c-toolkit.sidebar.performance.file.open",
         "title": "%command.sidebar.performance.file.open.title%",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "huawei-op-devtools.showPerformanceHints",
+        "command": "ascend-c-toolkit.showPerformanceHints",
         "title": "%command.showPerformanceHints.title%",
         "category": "%config.title%"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.report.copyPath",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.report.copyPath",
         "title": "%command.sidebar.dumpTensor.report.copyPath.title%",
         "icon": "$(copy)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.report.download",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.report.download",
         "title": "%command.sidebar.dumpTensor.report.download.title%",
         "icon": "$(cloud-download)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.report.mark",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.report.mark",
         "title": "%command.sidebar.dumpTensor.report.mark.title%",
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.report.unmark",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.report.unmark",
         "title": "%command.sidebar.dumpTensor.report.unmark.title%",
         "icon": "$(opdevtools-flag-filled)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.report.sortTime",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.report.sortTime",
         "title": "%command.sidebar.dumpTensor.report.sortTime.title%",
         "icon": "$(sort-precedence)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.report.filterMarked",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.report.filterMarked",
         "title": "%command.sidebar.dumpTensor.report.showMarkedOnly.title%",
         "icon": "$(opdevtools-flag-outlined)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.report.showAll",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.report.showAll",
         "title": "%command.sidebar.dumpTensor.report.showAll.title%",
         "icon": "$(opdevtools-flag-filled)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.file.open",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.file.open",
         "title": "%command.sidebar.dumpTensor.file.open.title%",
         "icon": "$(go-to-file)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.file.compareWith",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.file.compareWith",
         "title": "%command.sidebar.dumpTensor.file.compareWith.title%",
         "icon": "$(diff)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.compare",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.compare",
         "title": "%command.sidebar.dumpTensor.compare.title%",
         "icon": "$(diff)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.compare.start",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.compare.start",
         "title": "%command.sidebar.dumpTensor.compare.start.title%",
         "icon": "$(check)"
       },
       {
-        "command": "huawei-op-devtools.sidebar.dumpTensor.compare.cancel",
+        "command": "ascend-c-toolkit.sidebar.dumpTensor.compare.cancel",
         "title": "%command.sidebar.dumpTensor.compare.cancel.title%",
         "icon": "$(close)"
       }
     ],
     "viewsWelcome": [
       {
-        "view": "opdevtoolsHomeTree",
+        "view": "ascendCToolkitHomeTree",
         "contents": "%view.welcome.homeTree.intro%"
       },
       {
-        "view": "opdevtoolsHomeTree",
+        "view": "ascendCToolkitHomeTree",
         "contents": "%view.welcome.homeTree.newOperatorProject%"
       },
       {
-        "view": "opdevtoolsHomeTree",
+        "view": "ascendCToolkitHomeTree",
         "contents": "%view.welcome.homeTree.openOperatorProject%"
       }
     ],
     "submenus": [
       {
-        "id": "opdevtools.operator.debug",
+        "id": "ascendCToolkit.operator.debug",
         "label": "%submenu.operator.debug.label%"
       },
       {
-        "id": "opdevtools.operator.performance",
+        "id": "ascendCToolkit.operator.performance",
         "label": "%submenu.operator.performance.label%"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "huawei-op-devtools.toggleOpsOperate",
-          "when": "opDevtools.hasDevtoolConfig"
+          "command": "ascend-c-toolkit.toggleOpsOperate",
+          "when": "ascendCToolkit.hasDevtoolConfig"
         },
         {
-          "command": "huawei-op-devtools.vscodeJumpToFile",
+          "command": "ascend-c-toolkit.vscodeJumpToFile",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.projectConfig",
+          "command": "ascend-c-toolkit.sidebar.projectConfig",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.resetProjectConfiguration",
+          "command": "ascend-c-toolkit.sidebar.resetProjectConfiguration",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.build",
+          "command": "ascend-c-toolkit.sidebar.build",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.run",
+          "command": "ascend-c-toolkit.sidebar.run",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.cpuDebug",
+          "command": "ascend-c-toolkit.sidebar.cpuDebug",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.npuDebug",
+          "command": "ascend-c-toolkit.sidebar.npuDebug",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer",
+          "command": "ascend-c-toolkit.sidebar.sanitizer",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.onBoard",
+          "command": "ascend-c-toolkit.sidebar.onBoard",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.simulation",
+          "command": "ascend-c-toolkit.sidebar.simulation",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.utTest",
+          "command": "ascend-c-toolkit.sidebar.utTest",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.stTest",
+          "command": "ascend-c-toolkit.sidebar.stTest",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.operate.debugSettings",
+          "command": "ascend-c-toolkit.operate.debugSettings",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.operate.sanitizerSettings",
+          "command": "ascend-c-toolkit.operate.sanitizerSettings",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.operate.onBoardSettings",
+          "command": "ascend-c-toolkit.operate.onBoardSettings",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.operate.simulationSettings",
+          "command": "ascend-c-toolkit.operate.simulationSettings",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.selectOperators",
+          "command": "ascend-c-toolkit.sidebar.selectOperators",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+          "command": "ascend-c-toolkit.sidebar.clearSelectedOperators",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.searchOperators",
+          "command": "ascend-c-toolkit.sidebar.searchOperators",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.clearOperatorProjectsSearch",
+          "command": "ascend-c-toolkit.sidebar.clearOperatorProjectsSearch",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.toggleOperator",
+          "command": "ascend-c-toolkit.sidebar.toggleOperator",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.selectAllCompiledOperators",
+          "command": "ascend-c-toolkit.sidebar.selectAllCompiledOperators",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.selectAllPreparedOperators",
+          "command": "ascend-c-toolkit.sidebar.selectAllPreparedOperators",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.selectAllOperators",
+          "command": "ascend-c-toolkit.sidebar.selectAllOperators",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.deselectAllPreparedOperators",
+          "command": "ascend-c-toolkit.sidebar.deselectAllPreparedOperators",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.stopFlowTask",
+          "command": "ascend-c-toolkit.sidebar.stopFlowTask",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.stopAllOperatorActions",
+          "command": "ascend-c-toolkit.sidebar.stopAllOperatorActions",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.openWelcome",
+          "command": "ascend-c-toolkit.sidebar.openWelcome",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.openHelp",
+          "command": "ascend-c-toolkit.sidebar.openHelp",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.select",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.select",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.copyPath",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.copyPath",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.toggleMark",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.toggleMark",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.mark",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.mark",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.unmark",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.unmark",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.sortTime",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.sortTime",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.filterMarked",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.filterMarked",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.showAll",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.showAll",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.add",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.add",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.message.jump",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.message.jump",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.message.aiFix",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.message.aiFix",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClass",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByClass",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClassActive",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByClassActive",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverity",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupBySeverity",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverityActive",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupBySeverityActive",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByType",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByType",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByTypeActive",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByTypeActive",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFile",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByFile",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFileActive",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByFileActive",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.hideDuplicates",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.hideDuplicates",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.showDuplicates",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.showDuplicates",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.openGroupFile",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.openGroupFile",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.actionsQuickPick",
+          "command": "ascend-c-toolkit.sidebar.actionsQuickPick",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.select",
+          "command": "ascend-c-toolkit.sidebar.performance.report.select",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.copyPath",
+          "command": "ascend-c-toolkit.sidebar.performance.report.copyPath",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.download",
+          "command": "ascend-c-toolkit.sidebar.performance.report.download",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.mark",
+          "command": "ascend-c-toolkit.sidebar.performance.report.mark",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.unmark",
+          "command": "ascend-c-toolkit.sidebar.performance.report.unmark",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.sortTime",
+          "command": "ascend-c-toolkit.sidebar.performance.report.sortTime",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.filterMarked",
+          "command": "ascend-c-toolkit.sidebar.performance.report.filterMarked",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.showAll",
+          "command": "ascend-c-toolkit.sidebar.performance.report.showAll",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.file.open",
+          "command": "ascend-c-toolkit.sidebar.performance.file.open",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.showPerformanceHints",
+          "command": "ascend-c-toolkit.showPerformanceHints",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.copyPath",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.copyPath",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.download",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.download",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.mark",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.mark",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.unmark",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.unmark",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.sortTime",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.sortTime",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.filterMarked",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.filterMarked",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.showAll",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.showAll",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.file.open",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.file.open",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.file.compareWith",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.file.compareWith",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.compare",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.compare",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.start",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.compare.start",
           "when": "false"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.cancel",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.compare.cancel",
           "when": "false"
         }
       ],
       "menuBar/file/new": [
         {
-          "command": "huawei-op-devtools.open",
+          "command": "ascend-c-toolkit.open",
           "title": "%menu.file.new.open.title%"
         }
       ],
       "view/title": [
         {
-          "command": "huawei-op-devtools.sidebar.stopAllOperatorActions",
-          "when": "view == opdevtoolsOperateTree && opDevtools.operatorActionQueueStopAllVisible",
+          "command": "ascend-c-toolkit.sidebar.stopAllOperatorActions",
+          "when": "view == ascendCToolkitOperateTree && ascendCToolkit.operatorActionQueueStopAllVisible",
           "group": "navigation@0"
         },
         {
-          "command": "huawei-op-devtools.open",
-          "when": "view == opdevtoolsOperateTree",
+          "command": "ascend-c-toolkit.open",
+          "when": "view == ascendCToolkitOperateTree",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.projectConfig",
-          "when": "view == opdevtoolsOperateTree",
+          "command": "ascend-c-toolkit.sidebar.projectConfig",
+          "when": "view == ascendCToolkitOperateTree",
           "group": "navigation@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.resetProjectConfiguration",
-          "when": "view == opdevtoolsOperateTree",
+          "command": "ascend-c-toolkit.sidebar.resetProjectConfiguration",
+          "when": "view == ascendCToolkitOperateTree",
           "group": "overflow@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.openWelcome",
-          "when": "view == opdevtoolsOperateTree",
+          "command": "ascend-c-toolkit.sidebar.openWelcome",
+          "when": "view == ascendCToolkitOperateTree",
           "group": "overflow@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.add",
-          "when": "view == opdevtoolsSanitizerResultsTree",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.add",
+          "when": "view == ascendCToolkitSanitizerResultsTree",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.sortTime",
-          "when": "view == opdevtoolsSanitizerResultsTree",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.sortTime",
+          "when": "view == ascendCToolkitSanitizerResultsTree",
           "group": "navigation@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.hideDuplicates",
-          "when": "view == opdevtoolsSanitizerResultsTree && !opDevtools.sanitizerDuplicatesHidden",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.hideDuplicates",
+          "when": "view == ascendCToolkitSanitizerResultsTree && !ascendCToolkit.sanitizerDuplicatesHidden",
           "group": "navigation@3"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.showDuplicates",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerDuplicatesHidden",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.showDuplicates",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerDuplicatesHidden",
           "group": "navigation@3"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.filterMarked",
-          "when": "view == opdevtoolsSanitizerResultsTree && !opDevtools.sanitizerMarkedOnly",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.filterMarked",
+          "when": "view == ascendCToolkitSanitizerResultsTree && !ascendCToolkit.sanitizerMarkedOnly",
           "group": "navigation@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.showAll",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerMarkedOnly",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.showAll",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerMarkedOnly",
           "group": "navigation@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClass",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'class'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByClass",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy != 'class'",
           "group": "navigation@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClassActive",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'class'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByClassActive",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy == 'class'",
           "group": "navigation@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByType",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'type'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByType",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy != 'type'",
           "group": "navigation@6"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByTypeActive",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'type'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByTypeActive",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy == 'type'",
           "group": "navigation@6"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverity",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'severity'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupBySeverity",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy != 'severity'",
           "group": "navigation@7"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverityActive",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'severity'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupBySeverityActive",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy == 'severity'",
           "group": "navigation@7"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFile",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'file'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByFile",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy != 'file'",
           "group": "navigation@8"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFileActive",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'file'",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.groupByFileActive",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerResultsGroupBy == 'file'",
           "group": "navigation@8"
         },
         {
-          "command": "huawei-op-devtools.reportVisualizationPerformance",
-          "when": "view == opdevtoolsPerformanceResultsTree",
+          "command": "ascend-c-toolkit.reportVisualizationPerformance",
+          "when": "view == ascendCToolkitPerformanceResultsTree",
           "group": "navigation@0"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.sortTime",
-          "when": "view == opdevtoolsPerformanceResultsTree",
+          "command": "ascend-c-toolkit.sidebar.performance.report.sortTime",
+          "when": "view == ascendCToolkitPerformanceResultsTree",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.filterMarked",
-          "when": "view == opdevtoolsPerformanceResultsTree && !opDevtools.performanceMarkedOnly",
+          "command": "ascend-c-toolkit.sidebar.performance.report.filterMarked",
+          "when": "view == ascendCToolkitPerformanceResultsTree && !ascendCToolkit.performanceMarkedOnly",
           "group": "navigation@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.showAll",
-          "when": "view == opdevtoolsPerformanceResultsTree && opDevtools.performanceMarkedOnly",
+          "command": "ascend-c-toolkit.sidebar.performance.report.showAll",
+          "when": "view == ascendCToolkitPerformanceResultsTree && ascendCToolkit.performanceMarkedOnly",
           "group": "navigation@3"
         },
         {
-          "command": "huawei-op-devtools.flashPerformanceRunData",
-          "when": "view == opdevtoolsPerformanceResultsTree",
+          "command": "ascend-c-toolkit.flashPerformanceRunData",
+          "when": "view == ascendCToolkitPerformanceResultsTree",
           "group": "navigation@4"
         },
         {
-          "command": "huawei-op-devtools.importDumpTensorBinFile",
-          "when": "view == opdevtoolsDumpTensorSidebarView",
+          "command": "ascend-c-toolkit.importDumpTensorBinFile",
+          "when": "view == ascendCToolkitDumpTensorSidebarView",
           "group": "navigation@0"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.compare",
-          "when": "view == opdevtoolsDumpTensorSidebarView && !opDevtools.dumpTensorComparing",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.compare",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && !ascendCToolkit.dumpTensorComparing",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.start",
-          "when": "view == opdevtoolsDumpTensorSidebarView && opDevtools.dumpTensorComparing",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.compare.start",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && ascendCToolkit.dumpTensorComparing",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.compare.cancel",
-          "when": "view == opdevtoolsDumpTensorSidebarView && opDevtools.dumpTensorComparing",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.compare.cancel",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && ascendCToolkit.dumpTensorComparing",
           "group": "navigation@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.sortTime",
-          "when": "view == opdevtoolsDumpTensorSidebarView",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.sortTime",
+          "when": "view == ascendCToolkitDumpTensorSidebarView",
           "group": "navigation@3"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.filterMarked",
-          "when": "view == opdevtoolsDumpTensorSidebarView && !opDevtools.dumpTensorMarkedOnly",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.filterMarked",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && !ascendCToolkit.dumpTensorMarkedOnly",
           "group": "navigation@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.showAll",
-          "when": "view == opdevtoolsDumpTensorSidebarView && opDevtools.dumpTensorMarkedOnly",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.showAll",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && ascendCToolkit.dumpTensorMarkedOnly",
           "group": "navigation@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.selectAllOperators",
-          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && !opDevtools.allOperatorsSelected",
+          "command": "ascend-c-toolkit.sidebar.selectAllOperators",
+          "when": "view == ascendCToolkitOperatorProjectsTree && ascendCToolkit.showOperatorSearch && !ascendCToolkit.allOperatorsSelected",
           "group": "navigation@3"
         },
         {
-          "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
-          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && opDevtools.allOperatorsSelected",
+          "command": "ascend-c-toolkit.sidebar.clearSelectedOperators",
+          "when": "view == ascendCToolkitOperatorProjectsTree && ascendCToolkit.showOperatorSearch && ascendCToolkit.allOperatorsSelected",
           "group": "navigation@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.clearOperatorProjectsSearch",
-          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && opDevtools.operatorProjectsSearchActive",
+          "command": "ascend-c-toolkit.sidebar.clearOperatorProjectsSearch",
+          "when": "view == ascendCToolkitOperatorProjectsTree && ascendCToolkit.showOperatorSearch && ascendCToolkit.operatorProjectsSearchActive",
           "group": "navigation@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.searchOperators",
-          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch",
+          "command": "ascend-c-toolkit.sidebar.searchOperators",
+          "when": "view == ascendCToolkitOperatorProjectsTree && ascendCToolkit.showOperatorSearch",
           "group": "navigation@6"
         }
       ],
       "view/item/context": [
         {
-          "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
-          "when": "view == opdevtoolsOperatorProjectsTree && viewItem =~ /operator-projects-selected/",
+          "command": "ascend-c-toolkit.sidebar.clearSelectedOperators",
+          "when": "view == ascendCToolkitOperatorProjectsTree && viewItem =~ /operator-projects-selected/",
           "group": "inline@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.stopFlowTask",
-          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.flowRunning/",
+          "command": "ascend-c-toolkit.sidebar.stopFlowTask",
+          "when": "view == ascendCToolkitOperateTree && viewItem =~ /ascendCToolkit\\.flowRunning/",
           "group": "inline@1"
         },
         {
-          "command": "huawei-op-devtools.operate.debugSettings",
-          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.debug/",
+          "command": "ascend-c-toolkit.operate.debugSettings",
+          "when": "view == ascendCToolkitOperateTree && viewItem =~ /ascendCToolkit\\.debug/",
           "group": "inline@2"
         },
         {
-          "command": "huawei-op-devtools.operate.sanitizerSettings",
-          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.sanitizer/",
+          "command": "ascend-c-toolkit.operate.sanitizerSettings",
+          "when": "view == ascendCToolkitOperateTree && viewItem =~ /ascendCToolkit\\.sanitizer/",
           "group": "inline@2"
         },
         {
-          "command": "huawei-op-devtools.operate.onBoardSettings",
-          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.onboard/",
+          "command": "ascend-c-toolkit.operate.onBoardSettings",
+          "when": "view == ascendCToolkitOperateTree && viewItem =~ /ascendCToolkit\\.onboard/",
           "group": "inline@2"
         },
         {
-          "command": "huawei-op-devtools.operate.simulationSettings",
-          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.simulation/",
+          "command": "ascend-c-toolkit.operate.simulationSettings",
+          "when": "view == ascendCToolkitOperateTree && viewItem =~ /ascendCToolkit\\.simulation/",
           "group": "inline@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.copyPath",
-          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem/",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.copyPath",
+          "when": "view == ascendCToolkitSanitizerResultsTree && viewItem =~ /ascendCToolkit\\.sanitizerReportItem/",
           "group": "inline@3"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.unmark",
-          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem\\.marked/",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.unmark",
+          "when": "view == ascendCToolkitSanitizerResultsTree && viewItem =~ /ascendCToolkit\\.sanitizerReportItem\\.marked/",
           "group": "inline@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.report.mark",
-          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem\\.unmarked/",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.report.mark",
+          "when": "view == ascendCToolkitSanitizerResultsTree && viewItem =~ /ascendCToolkit\\.sanitizerReportItem\\.unmarked/",
           "group": "inline@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.results.openGroupFile",
-          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerPathGroupItem/",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.results.openGroupFile",
+          "when": "view == ascendCToolkitSanitizerResultsTree && viewItem =~ /ascendCToolkit\\.sanitizerPathGroupItem/",
           "group": "inline@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.sanitizer.message.aiFix",
-          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerAiFixAvailable && viewItem =~ /opdevtools\\.sanitizerMessage\\.aiFix/",
+          "command": "ascend-c-toolkit.sidebar.sanitizer.message.aiFix",
+          "when": "view == ascendCToolkitSanitizerResultsTree && ascendCToolkit.sanitizerAiFixAvailable && viewItem =~ /ascendCToolkit\\.sanitizerMessage\\.aiFix/",
           "group": "inline@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.copyPath",
-          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.(marked|unmarked)/",
+          "command": "ascend-c-toolkit.sidebar.performance.report.copyPath",
+          "when": "view == ascendCToolkitPerformanceResultsTree && viewItem =~ /ascendCToolkit\\.performanceReportItem\\.(marked|unmarked)/",
           "group": "inline@3"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.download",
-          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.(marked|unmarked)/",
+          "command": "ascend-c-toolkit.sidebar.performance.report.download",
+          "when": "view == ascendCToolkitPerformanceResultsTree && viewItem =~ /ascendCToolkit\\.performanceReportItem\\.(marked|unmarked)/",
           "group": "inline@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.unmark",
-          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.marked/",
+          "command": "ascend-c-toolkit.sidebar.performance.report.unmark",
+          "when": "view == ascendCToolkitPerformanceResultsTree && viewItem =~ /ascendCToolkit\\.performanceReportItem\\.marked/",
           "group": "inline@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.report.mark",
-          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.unmarked/",
+          "command": "ascend-c-toolkit.sidebar.performance.report.mark",
+          "when": "view == ascendCToolkitPerformanceResultsTree && viewItem =~ /ascendCToolkit\\.performanceReportItem\\.unmarked/",
           "group": "inline@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.performance.file.open",
-          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceFile\\./",
+          "command": "ascend-c-toolkit.sidebar.performance.file.open",
+          "when": "view == ascendCToolkitPerformanceResultsTree && viewItem =~ /ascendCToolkit\\.performanceFile\\./",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.showPerformanceHints",
-          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceFile\\.npu-rep/",
+          "command": "ascend-c-toolkit.showPerformanceHints",
+          "when": "view == ascendCToolkitPerformanceResultsTree && viewItem =~ /ascendCToolkit\\.performanceFile\\.npu-rep/",
           "group": "navigation@2"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.copyPath",
-          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.(marked|unmarked)/",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.copyPath",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && viewItem =~ /ascendCToolkit\\.dumpTensorReportItem\\.(marked|unmarked)/",
           "group": "inline@3"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.download",
-          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.(marked|unmarked)/",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.download",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && viewItem =~ /ascendCToolkit\\.dumpTensorReportItem\\.(marked|unmarked)/",
           "group": "inline@4"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.unmark",
-          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.marked/",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.unmark",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && viewItem =~ /ascendCToolkit\\.dumpTensorReportItem\\.marked/",
           "group": "inline@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.report.mark",
-          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorReportItem\\.unmarked/",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.report.mark",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && viewItem =~ /ascendCToolkit\\.dumpTensorReportItem\\.unmarked/",
           "group": "inline@5"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.file.open",
-          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorFile\\./",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.file.open",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && viewItem =~ /ascendCToolkit\\.dumpTensorFile\\./",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.sidebar.dumpTensor.file.compareWith",
-          "when": "view == opdevtoolsDumpTensorSidebarView && viewItem =~ /opdevtools\\.dumpTensorFile\\.bin/",
+          "command": "ascend-c-toolkit.sidebar.dumpTensor.file.compareWith",
+          "when": "view == ascendCToolkitDumpTensorSidebarView && viewItem =~ /ascendCToolkit\\.dumpTensorFile\\.bin/",
           "group": "navigation@2"
         }
       ],
       "editor/title": [
         {
-          "command": "huawei-op-devtools.toggleOpsOperate",
+          "command": "ascend-c-toolkit.toggleOpsOperate",
           "group": "navigation",
-          "when": "opDevtools.hasDevtoolConfig"
+          "when": "ascendCToolkit.hasDevtoolConfig"
         },
         {
-          "command": "huawei-op-devtools.sidebar.actionsQuickPick",
+          "command": "ascend-c-toolkit.sidebar.actionsQuickPick",
           "group": "navigation@1",
-          "when": "opDevtools.hasDevtoolConfig"
+          "when": "ascendCToolkit.hasDevtoolConfig"
         },
         {
-          "command": "huawei-op-devtools.openProfilingReport",
+          "command": "ascend-c-toolkit.openProfilingReport",
           "group": "navigation@2",
-          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep') && activeCustomEditorId != 'opdevtoolsNpuRepViewer'"
+          "when": "ascendCToolkit.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep') && activeCustomEditorId != 'opdevtoolsNpuRepViewer'"
         }
       ],
       "explorer/context": [
         {
-          "command": "huawei-op-devtools.createOperatorInWorkspace",
+          "command": "ascend-c-toolkit.createOperatorInWorkspace",
           "when": "explorerViewletVisible && resourceScheme == 'file'",
           "group": "navigation@1"
         },
         {
-          "command": "huawei-op-devtools.openProfilingReport",
+          "command": "ascend-c-toolkit.openProfilingReport",
           "when": "resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep')",
           "group": "navigation@2"
         },
         {
-          "command": "huawei-op-devtools.markAsOperatorProject",
+          "command": "ascend-c-toolkit.markAsOperatorProject",
           "when": "explorerResourceIsFolder",
           "group": "operator@1"
         },
         {
-          "command": "huawei-op-devtools.markAsMultiOperatorProject",
+          "command": "ascend-c-toolkit.markAsMultiOperatorProject",
           "when": "explorerResourceIsFolder",
           "group": "operator@1"
         },
         {
-          "command": "huawei-op-devtools.unmarkAsOperatorProject",
+          "command": "ascend-c-toolkit.unmarkAsOperatorProject",
           "when": "explorerResourceIsFolder",
           "group": "operator@2"
         },
         {
-          "command": "huawei-op-devtools.unmarkAsMultiOperatorProject",
+          "command": "ascend-c-toolkit.unmarkAsMultiOperatorProject",
           "when": "explorerResourceIsFolder",
           "group": "operator@2"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectBuild",
+          "command": "ascend-c-toolkit.operatorProjectBuild",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3.1"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectRun",
+          "command": "ascend-c-toolkit.operatorProjectRun",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3.2"
         },
         {
-          "submenu": "opdevtools.operator.debug",
+          "submenu": "ascendCToolkit.operator.debug",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3.3"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectSanitizer",
+          "command": "ascend-c-toolkit.operatorProjectSanitizer",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3.4"
         },
         {
-          "submenu": "opdevtools.operator.performance",
+          "submenu": "ascendCToolkit.operator.performance",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3.5"
         },
         {
-          "command": "huawei-op-devtools.reportVisualizationSanitizer",
+          "command": "ascend-c-toolkit.reportVisualizationSanitizer",
           "when": "resourceScheme == 'file' && resourceExtname == '.log'",
           "group": "operator@3.6"
         },
         {
-          "command": "huawei-op-devtools.reportVisualizationPerformance",
+          "command": "ascend-c-toolkit.reportVisualizationPerformance",
           "when": "explorerResourceIsFolder",
           "group": "operator@3.6"
         },
         {
-          "command": "huawei-op-devtools.importDumpTensorBinFile",
+          "command": "ascend-c-toolkit.importDumpTensorBinFile",
           "when": "resourceScheme == 'file' && resourceExtname == '.bin'",
           "group": "operator@3.7"
         }
       ],
-      "opdevtools.operator.debug": [
+      "ascendCToolkit.operator.debug": [
         {
-          "command": "huawei-op-devtools.operatorProjectCpuDebug"
+          "command": "ascend-c-toolkit.operatorProjectCpuDebug"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectCpuDebugConfig"
+          "command": "ascend-c-toolkit.operatorProjectCpuDebugConfig"
         }
       ],
-      "opdevtools.operator.performance": [
+      "ascendCToolkit.operator.performance": [
         {
-          "command": "huawei-op-devtools.operatorProjectOnBoard"
+          "command": "ascend-c-toolkit.operatorProjectOnBoard"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectSimulation"
+          "command": "ascend-c-toolkit.operatorProjectSimulation"
         }
       ]
     },
     "customEditors": [
       {
-        "viewType": "opdevtoolsCsvViewer",
+        "viewType": "ascendCToolkitCsvViewer",
         "displayName": "%customEditor.csvViewer.displayName%",
         "selector": [
           {

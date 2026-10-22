@@ -1,54 +1,81 @@
-# Huawei OP DevTools
+# asc-vscode
 
-**Huawei OP DevTools（华为算子一站式开发工具）** 是面向 Ascend 算子开发的 Visual Studio Code 扩展，支持在编辑器内完成算子工程创建、编译部署、运行验证、CPU/NPU 调试、异常检测、性能调优和结果可视化。
+本仓库是 **Ascend C Toolkits** 插件的源码仓库。Ascend C Toolkits是一款面向Ascend C算子开发的一站式VS Code插件，覆盖算子工程创建、代码开发、编译部署、运行调试、异常检测和性能分析的全流程，支持CANNLab云上开发环境和本地开发环境两种使用方式。
 
-**使用指导：** <https://gitcode.com/opdevtools/plugin_release>
+## 概述
 
-**问题反馈：** <https://gitcode.com/opdevtools/plugin_release/issues>
+### 功能定位
 
-## 核心特性
+插件基于VS Code扩展机制实现，本身不携带算子编译与仿真运行时，而是负责工程管理和流程编排：根据用户选择的工程类型和操作，自动生成并执行CANN工具链命令，最后将执行结果以树视图和报告页面的形式呈现。
 
-- 在 VS Code 中一站式完成算子开发相关操作，贴合主流编辑器使用习惯。
-- 支持 Ascend C、标准自定义算子、PyAsc、Triton 等工程类型。
-- 支持编译部署、运行验证、CPU/NPU 调试、Sanitizer 异常检测、上板分析、仿真分析、dumptensor、UT等。
-- 自动处理常用环境变量、SoC / NPU_ARCH 设置、`.asc` 文件高亮和调试配置。
-- 通过原生侧边栏展示算子列表、操作入口、异常检测结果和性能结果。
+### 主要功能
 
-## 系统要求
+| 功能 | 说明 |
+|------|------|
+| 算子代码开发 | 提供Ascend C语法高亮、代码跳转等编辑能力。 |
+| 编译部署与运行 | 一键完成算子编译、部署与运行。 |
+| 算子调试 | 支持CPU孪生调试和NPU上板调试。 |
+| 异常检测 | 集成msSanitizer、npu-check工具，检测算子的内存、竞争、同步等潜在问题。 |
+| 性能调优 | 集成msprof、npu-compute、npu-emulate工具，完成上板和仿真性能数据采集，并提供可视化报告。 |
 
-- Visual Studio Code 1.80 或更高版本。
-- CANN / Ascend 工具链和运行环境。具体版本与镜像以团队或官方环境说明为准。
-- 远程开发建议安装 Remote SSH。环境中没有任何 C/C++ 语言扩展时，插件会提示安装 Microsoft C/C++ 扩展（可选择不再提示）；CANN 头文件路径由插件在运行时自动解析。
+> **名词说明**：标准自定义算子工程指与 [ops-math](https://gitcode.com/cann/ops-math) 等算子样例仓工程框架一致的自定义算子工程，工程内包含算子实现代码和配套的example测试代码，是最常用的算子工程形态。
 
-## 快速开始
+### 架构
 
-1. 在 VS Code 扩展视图中安装 **Huawei OP DevTools**。
-2. 打开算子仓库或用于创建工程的工作区。
-3. 在 **算子一站式开发平台操作面板** 中选择 **新建算子工程** 或 **打开算子工程**。
-4. 新建工程时选择模板、工程目录、工程名称和打开方式。选择 **在本窗口打开** 时会复用当前窗口。
-5. 打开已有工程后，在 **算子** 视图选择需要操作的算子，再在 **操作** 视图执行编译、运行、调试、异常检测或性能调优。
+```mermaid
+flowchart LR
+  subgraph IDE["VS Code / WebIDE"]
+    UI["Ascend C Toolkits 插件<br/>（工程管理、编译运行、<br/>调试、异常检测、性能调优）"]
+    View["结果展示<br/>（树视图、报告页面）"]
+  end
+  subgraph Env["算子开发环境（已安装 CANN）"]
+    Tools["CANN 工具链<br/>（编译器、msdebug、<br/>msSanitizer、npu-compute、<br/>msprof、npu-emulate）"]
+  end
+  UI -->|生成并执行命令| Tools
+  Tools -->|报告与日志| View
+```
 
-## 标准自定义算子仓
+## 目录结构说明
 
-对于 `ops-nn` / `ops-math` 这类标准自定义算子仓，建议直接打开仓库根目录，然后在 **算子** 视图中选择目标算子。
+```text
+.
+├── plugin/              # 插件主工程：命令、服务、视图与算子工程模板
+├── web/                 # 插件 Webview 前端（基于 Vue）
+├── shared/              # 插件与 Webview 共享的代码与配置
+├── profiling-report/    # 性能分析报告可视化组件
+├── syntaxes/            # 语法高亮定义
+├── docs/                # 功能设计与使用文档
+├── flavors/             # 多形态构建配置
+├── scripts/             # 构建与发布脚本
+└── testdata/            # 测试数据
+```
 
-- 文档示例统一使用 `ops-nn` 场景；如果你的仓库是 `ops-math`，请按实际目录名称替换，不要混用截图或路径。
-- `experimental/` 下的算子会自动携带 `--experimental`。
-- 上板分析、仿真分析和异常检测会根据构建出的 example 目标选择运行文件，不再固定为 `test_${算子名}`。
-- 如果工作区没有显式设置 `op-devtools.environment.socVersion`，插件会从项目、环境变量或主机检测解析；无法解析时会提示先设置 SoC 并重新执行命令。
+## 快速入门
 
-## 创建算子与创建工程
+### 环境准备
 
-右键菜单中的 **在当前目录下新建算子** 会打开同一个新建工程面板，并自动填入当前目录作为目标路径。这是当前统一入口；请在面板中确认模板、工程名称和路径后生成。
+支持以下两种环境，任选其一即可，详细步骤请参见《[使用操作文档](docs/user-guide.md)》：
 
-旧文档中描述的中间选择页和部分截图已经过期；以当前扩展面板实际展示为准。
+- 云上环境（推荐）：在[CANNLab](https://gitcode.com/org/cann/cannlab/environment)创建并启动连接云上环境，即可直接使用插件。
+- 本地环境：准备一台已安装CANN的Linux环境（物理机或容器均可），可通过VS Code的Remote - SSH插件从Windows本机连接远端环境，或使用CANNLab提供的VS Code本地连接方式直接接入。
 
-## 配置与结果
+### 开发流程
 
-- 工作区设置集中在 `op-devtools.*`；源码仓中的 `docs/workspace-settings.md` 有补充说明。
-- 编译、运行、调试和调优流程可参考源码仓中的 `docs/build-integration.md`、`docs/run-integration.md`、`docs/debug-integration.md` 和 `docs/performance.md`。
-- Sanitizer 使用说明可参考源码仓中的 `docs/sanitizer.md`。
+算子开发整体分为以下五步，详细操作请参阅《[使用操作文档](docs/user-guide.md)》：
 
-## 语言
+1. 创建算子工程。
+2. 开发算子：编写算子代码，完成编译和运行。
+3. 调试算子：使用CPU孪生调试或NPU上板调试定位问题。
+4. 异常检测：使用msSanitizer或npu-check检测算子的潜在问题。
+5. 性能分析：采集性能数据，并通过可视化报告定位性能瓶颈。
 
-扩展与 Web 界面支持 **简体中文（zh-cn）** 与 **English**。语言跟随 VS Code 显示语言；可在命令面板中执行 **Configure Display Language** 后重启 VS Code。
+## 相关资源
+
+- [算子样例仓ops-math](https://gitcode.com/cann/ops-math)
+- [插件发布仓](https://gitcode.com/opdevtools/plugin_release/releases)
+- 问题反馈：[asc-vscode](https://gitcode.com/cann/asc-vscode/issues)（推荐）或[plugin_release](https://gitcode.com/opdevtools/plugin_release/issues)
+- [mssanitizer使用文档](https://gitcode.com/Ascend/mssanitizer/blob/master/docs/zh/user_guide/mssanitizer_user_guide.md)
+- [npu-check用户手册](https://gitcode.com/cann/asc-tools/blob/experimental/npu_tools/npu_check/npu_check.md)
+- [npu-compute使用文档](https://gitcode.com/cann/asc-tools/blob/experimental/docs/06_npu_compute.md)
+- [msopprof使用文档](https://gitcode.com/Ascend/msopprof/blob/master/docs/zh/user_guide/msopprof_user_guide.md)
+- [性能分析报告功能说明](./profiling-report.md)
