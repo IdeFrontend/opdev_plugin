@@ -74,20 +74,24 @@ export function isAscendA2A3CannSoc(socVersion: string | undefined): boolean {
 export type SanitizerToolType = 'mssanitizer' | 'npu-check';
 
 /**
- * 支持 npu-check 的 <<<>>>（内核调用符直调）算子工程类型：
- * - 'ascend-c'    结构探测值（CMakeLists + .asc）
- * - 'cann'        <<<>>> 新建工程写入的存储值（helloworld / addn / torch_library 模板）
- * - 'torch-library' torch library 形态的规范探测值
+ * 支持 npu-check 的算子工程类型（<<<>>> 内核调用符直调 + 标准自定义算子工程）：
+ * - 'ascend-c'        结构探测值（CMakeLists + .asc）
+ * - 'cann'            <<<>>> 新建工程写入的存储值（helloworld / addn / torch_library 模板）
+ * - 'torch-library'   torch library 形态的规范探测值
+ * - 'standard-custom' 标准自定义算子工程的结构探测值（无工程记录/设置时的兜底取值）
+ * - 'ascend'          标准自定义算子工程的存储值（工程记录 / 工作区 projectType 设置）
  */
 const NPU_CHECK_PROJECT_TYPES: ReadonlySet<string> = new Set([
   'ascend-c',
   'cann',
   'torch-library',
+  'standard-custom',
+  'ascend',
 ]);
 
 /**
- * npu-check 是否支持该工程类型：仅在 <<<>>> 算子工程中可用，
- * 其他类型（standard-custom / 'ascend'、pyasc、triton 等）不支持。
+ * npu-check 是否支持该工程类型：仅在 <<<>>> 与标准自定义算子工程中可用，
+ * 其他类型（pyasc、triton 等）不支持。
  */
 export function isNpuCheckProjectTypeSupported(projectType: string | null | undefined): boolean {
   const normalized = (projectType ?? '').trim()
@@ -109,7 +113,7 @@ export function defaultSanitizerToolTypeForSoc(socVersion: string | undefined): 
 
 /**
  * 综合 SOC 与工程类型解析默认 sanitizer toolType：
- * A2/A3 SOC 或非 <<<>>> 算子工程 → mssanitizer；其余 → npu-check。
+ * A2/A3 SOC 或不支持的算子工程 → mssanitizer；其余 → npu-check。
  * 供 plugin ConfigService 和 webview app.vue 复用。
  */
 export function resolveSanitizerToolType(

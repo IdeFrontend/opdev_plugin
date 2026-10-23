@@ -90,8 +90,8 @@ export const PROFILING_REPORT_PANEL_TYPE = `${FLAVOR_VIEW_PREFIX}ProfilingReport
 /** Custom readonly editor for binary `.npu-rep` / `.npu.rep` (must match package.json). */
 export const NPU_REP_EDITOR_VIEW_TYPE = 'opdevtoolsNpuRepViewer';
 
-// cannbot (CANNAssist) plugin command: fills its chat input box with the given text.
-export const CANN_ASSIST_SET_INPUT_TEXT = 'cannwork.setInputText';
+// cannbot (CANNWork) plugin command: invokes its agent with the given prompt text, resolves to { sessionId }.
+export const CANN_ASSIST_INVOKE_AGENT = 'cannwork.invokeAgent';
 
 // Folder right-click menu commands
 export const COMMAND_MARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsOperatorProject`;
@@ -198,6 +198,8 @@ export const COMMAND_SIDEBAR_OPEN_HELP = `${COMMAND_PREFIX}.sidebar.openHelp`;
 export const COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT = `${COMMAND_PREFIX}.sidebar.sanitizer.report.select`;
 
 export const COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH = `${COMMAND_PREFIX}.sidebar.sanitizer.report.copyPath`;
+
+export const COMMAND_SIDEBAR_SANITIZER_REPORT_OPEN_FILE = `${COMMAND_PREFIX}.sidebar.sanitizer.report.openFile`;
 
 export const COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK = `${COMMAND_PREFIX}.sidebar.sanitizer.report.toggleMark`;
 

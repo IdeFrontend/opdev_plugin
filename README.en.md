@@ -9,7 +9,6 @@
 ## Features
 
 - One-stop VS Code workflow for operator development.
-- Supports Ascend C, CANN standard-custom operators, PyAsc, Triton, and related project types.
 - Build/deploy, run, CPU/NPU debug, sanitizer, on-board profiling, and simulation profiling.
 - Handles common environment values, SoC / NPU_ARCH resolution, `.asc` highlighting, and debug configuration.
 - Native sidebars for operators, actions, sanitizer reports, and performance reports.

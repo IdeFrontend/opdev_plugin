@@ -483,6 +483,7 @@ export default {
   'web.sanitizerPanel.other': '其他',
   'web.sanitizerPanel.problem': '问题',
   'web.sanitizerPanel.selectReportHint': '请选择左侧报告查看检测结果',
+  'web.sanitizerPanel.openFileFailed': '打开文件失败：{{path}}',
   'web.sanitizerPanel.handler.illegalRead': '非法读写异常信息的产生是由于算子程序中，通过读或写的方式访问了一块未分配的内存。此错误一般发生在GM或片上内存上，GM异常是由于GM分配的大小与实际算子程序中访问的范围不一致导致，而片上内存的异常是由于算子程序的访问范围超过硬件容量上限导致。',
   'web.sanitizerPanel.handler.illegalWrite': '非法读写异常信息的产生是由于算子程序中，通过读或写的方式访问了一块未分配的内存。此错误一般发生在GM或片上内存上，GM异常是由于GM分配的大小与实际算子程序中访问的范围不一致导致，而片上内存的异常是由于算子程序的访问范围超过硬件容量上限导致。',
   'web.sanitizerPanel.handler.outOfBounds': 'AI Core是昇腾AI处理器中的计算核心，AI处理器内部有多个AI Core，算子运行就在这些AI Core上。这些AI Core会在计算过程中从GM上搬入或搬出数据。当没有显式地进行核间同步时，如果各个核之间访问的GM内存存在重叠并且至少有一个核对重叠地址进行写入时，则会发生多核踩踏问题。这里我们通过所有者的概念来保证多核之间不会发生踩踏问题，当一块内存被某一个核写入后，这块内存就由该核所有。当其他核对这块内存进行访问时就会产生out of bounds异常。',

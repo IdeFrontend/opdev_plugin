@@ -161,10 +161,11 @@ export interface OnBoardConfig {
 
 export interface SanitizerConfig {
   script: string;
-  // Sanitizer command selection: A2/A3 SOC or a non-<<<>>> operator project
-  // forces mssanitizer; every other case honors the persisted
+  // Sanitizer command selection: A2/A3 SOC or an unsupported operator project
+  // (pyasc / triton) forces mssanitizer; every other case honors the persisted
   // sanitizer.toolType setting and otherwise defaults to npu-check
-  // (getDefaultSanitizerToolType — npu-check is <<<>>>-project-only).
+  // (getDefaultSanitizerToolType — npu-check supports <<<>>> and standard-custom
+  // operator projects only).
   toolType: 'mssanitizer' | 'npu-check';
   // Partial sanitizer settings leave unset fields ABSENT (no defaults merged).
   // Only the fully-unset case falls back to the full defaults
@@ -870,7 +871,7 @@ export class ConfigService {
 
   /**
    * Default sanitizer command for the detected CANN SOC and the given project
-   * type: A2/A3 or a non-<<<>>> operator project → mssanitizer, others → npu-check.
+   * type: A2/A3 or an unsupported operator project → mssanitizer, others → npu-check.
    */
   static getDefaultSanitizerToolType(projectType?: string | null): SanitizerToolType {
     return resolveSanitizerToolType(resolveEffectiveCannSoc(), projectType);
@@ -1120,10 +1121,10 @@ export class ConfigService {
     const memoryLeak = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memoryLeak');
     const allocUnused = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.allocUnused');
     // A2/A3 SOC only ships mssanitizer — the persisted toolType is ignored
-    // there; npu-check is a <<<>>>-operator-project-only tool — the persisted
-    // value is likewise ignored for every other project type. Every other case
-    // honors a valid persisted value and falls back to the project-aware
-    // default otherwise.
+    // there; npu-check supports <<<>>> and standard-custom operator projects
+    // only — the persisted value is likewise ignored for every other project
+    // type. Every other case honors a valid persisted value and falls back to
+    // the project-aware default otherwise.
     const projectType = getProjectByPath(projectPath)?.project_type ?? null;
     const toolType: SanitizerConfig['toolType'] = ConfigService.getDefaultSanitizerToolType(projectType) === 'mssanitizer'
       ? 'mssanitizer'

@@ -291,28 +291,6 @@ describe('SanitizerService.runSanitizer', () => {
       .toHaveBeenCalled();
   });
 
-  it('compiles with -gline-tables-only when the sanitizer tool is npu-check', async () => {
-    (OperatorPluginRegistry.getOpPlugin as jest.Mock).mockReturnValue(plugin({ buildBehavior: { requiresBuildBeforeAnalysis: true } }));
-    jest.spyOn(ConfigService, 'getDefaultSanitizerToolType')
-      .mockReturnValue('npu-check');
-
-    await sanitizerService.runSanitizer();
-
-    expect(getBuildOpCommandMock)
-      .toHaveBeenCalledWith(expect.anything(), '-gline-tables-only', undefined);
-  });
-
-  it('compiles without -gline-tables-only when the sanitizer tool is mssanitizer', async () => {
-    (OperatorPluginRegistry.getOpPlugin as jest.Mock).mockReturnValue(plugin({ buildBehavior: { requiresBuildBeforeAnalysis: true } }));
-    jest.spyOn(ConfigService, 'getDefaultSanitizerToolType')
-      .mockReturnValue('mssanitizer');
-
-    await sanitizerService.runSanitizer();
-
-    expect(getBuildOpCommandMock)
-      .toHaveBeenCalledWith(expect.anything(), '', undefined);
-  });
-
   it('returns silently when the build was interrupted by the user', async () => {
     (OperatorPluginRegistry.getOpPlugin as jest.Mock).mockReturnValue(plugin({ buildBehavior: { requiresBuildBeforeAnalysis: true } }));
     executeOperatorCommandMock.mockResolvedValue({

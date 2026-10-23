@@ -20,6 +20,7 @@ import { getRemoteToolSeries } from '@plugin/helpers/remote-command';
 const ASYS_TIMEOUT_MS = 8000;
 const NPU_SMI_TIMEOUT_MS = 8000;
 const WHICH_TIMEOUT_MS = 2000;
+const REMOTE_PROBE_MAX_ATTEMPTS = 3;
 
 const execAsync = promisify(exec);
 
@@ -131,10 +132,22 @@ async function tryProbeViaNpuSmi(setEnv: ResolvedSetEnvScript | undefined): Prom
   return probeCommandResponded(quickResult, 'npu-smi');
 }
 
+// Slow machines may still be loading the environment (PATH etc.) when the first
+// attempt runs, so retry on any "unavailable" result before giving up.
 async function tryProbeViaRemoteToolConfig(): Promise<boolean> {
-  const series = await getRemoteToolSeries();
+  for (let attempt = 1; attempt <= REMOTE_PROBE_MAX_ATTEMPTS; attempt++) {
+    const series = await getRemoteToolSeries();
 
-  return series !== undefined;
+    if (series !== undefined) {
+      return true;
+    }
+
+    if (attempt < REMOTE_PROBE_MAX_ATTEMPTS) {
+      console.warn(`[npu-hardware-probe] remote tool probe attempt ${attempt}/${REMOTE_PROBE_MAX_ATTEMPTS} failed, retrying`);
+    }
+  }
+
+  return false;
 }
 
 async function runNpuHardwareProbe(): Promise<boolean> {
