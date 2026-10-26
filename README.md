@@ -69,6 +69,27 @@ flowchart LR
 4. 异常检测：使用msSanitizer或npu-check检测算子的潜在问题。
 5. 性能分析：采集性能数据，并通过可视化报告定位性能瓶颈。
 
+## 版本号规则
+
+版本号采用三段式 **主版本号.次版本号.修订号**（MAJOR.MINOR.PATCH）：
+
+- **主版本号（MAJOR）**：不兼容的 API 修改。
+- **次版本号（MINOR）**：向下兼容的功能性新增。
+- **修订版本号（PATCH）**：向下兼容的问题修正。
+
+发布时打标签示例：
+
+```bash
+# 主版本：不兼容的 API 修改
+git tag -a v2.0.0 -m "Breaking changes in API"
+
+# 次版本：向下兼容的功能性新增
+git tag -a v1.1.0 -m "Add new export feature"
+
+# 修订版本：向下兼容的问题修正
+git tag -a v1.0.1 -m "Fixed memory leak issue"
+```
+
 ## 相关资源
 
 - [算子样例仓ops-math](https://gitcode.com/cann/ops-math)

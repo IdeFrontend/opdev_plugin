@@ -1,5 +1,26 @@
 # 更新日志
 
+## 1.5.5 — 2026-10-22
+
+本版本面向 Ascend950PR&950DT系列产品 引入新一代异常检测工具 npu-check 与仿真采集工具 npu-emulate，性能调优设置与数据采集配置按「分析类型 → 工具」层级重构，DumpTensor 结果与性能提示迁移为原生视图，并包含 CANNWork 智能分析联动及多项体验改进与修复。
+
+- **异常检测支持 npu-check 工具（Ascend950PR&950DT系列产品）** — Ascend950PR&950DT系列产品环境异常检测可切换至新工具 `npu-check`（原 npu-sanitizer）。报告默认输出到 `npu-check-log` 目录（文件名 `npu-check_<时间戳>.log`，报告标题直接使用文件名），结果按问题分组平铺展示；编译阶段自动追加 `-gline-tables-only` 以获取调用栈，报告跳转规则改为从调用栈 #0 帧起定位第一处位于工程目录内的代码。`npu-check` 暂不支持芯片状态检测与溢出检测，竞争检测与未初始化检测将在后续版本开放；mssanitizer 流程及其报告目录不受影响。
+- **仿真采集工具定名 npu-emulate** — 仿真采集工具正式定名 `npu-emulate`：Ascend950PR&950DT系列产品环境默认经 `npu-emulate collect --output <结果目录>/result.npu-rep` 采集并产出 `.npu-rep` 报告（可通过 `ascendCToolkit.performanceTuning.simulation.tool` 固定为 msprof），其他系列产品仍使用 msprof；仿真分析编译命令行的 `--simulator` 标志按产品系列与所选仿真工具动态调整，非 Ascend950PR&950DT系列产品环境选择新工具时会被拦截并提示。
+- **性能调优设置按层级拆分** — 设置树以「性能分析 → 上板分析/仿真分析 → 工具」3 级层级展示；npu-compute 上板分析的各 section 拆分为独立 boolean 设置项（唯一真相源）并默认全选；`ascendCToolkit.performanceTuning.onBoard.tool` / `simulation.tool` 枚举设置支持在 VS Code 设置界面直接切换 npu-compute/npu-emulate 与 msprof。
+- **数据采集配置弹窗（Ascend950PR&950DT系列产品）** — 新增数据采集配置弹窗：支持采集类型（上板/仿真）切换、Common 参数面板与 Metrics section/set 选择，并按当前工具支持情况禁选不可用指标（如 Pipeline、ArithmeticUtilization、ResourceConflictRatio 与 detailed、hccl、roofline）；配置按采集类型持久化到工作区设置，下次打开自动回显。
+- **性能提示以原生诊断呈现** — 性能调优产生的 performance hints 作为 VS Code 原生诊断（问题面板）展示，不再仅存在于报告中。
+- **.npu-rep 报告直接查看** — `.npu-rep` 文件支持使用内置性能报告查看器直接打开，资源管理器右键菜单新增「打开性能报告」入口；报告查看器已处于活动状态时隐藏工具栏重复按钮。
+- **报告语言随 IDE 同步** — 性能报告界面语言跟随 VS Code 显示语言（中/英文）切换。
+- **CANNWork 智能分析联动** — 报告智能分析对接更名后的 CANNWork 插件（`cannwork.setInputText`），未安装或版本过低时给出明确安装提示；分析请求携带报告来源标识，区分上板与仿真报告；仿真分析统计报告支持一键调起 CANNWork 分析并在调用后自动提交。
+- **DumpTensor 结果树原生化（GC-87）** — DumpTensor 结果由 Webview 面板替换为侧边栏原生结果树，与异常检测、性能结果树并列；保留打开 `.txt`、双文件对比、导入 `.bin`、下载报告目录、复制路径、标记/按标记过滤、按时间排序等操作，运行后自动刷新并聚焦新结果。
+- **Ascend C 语言支持（GC-84）** — 注册 `ascend-c` 语言及 `.asc` 文件关联与 tmLanguage 语法高亮；当前图标主题缺少对应语言图标时回退显示内置语言图标。
+- **操作树体验改进（GC-80 / GC-86）** — 因互斥选择被禁用的算子行悬停显示原因提示；快速连续点击时算子选中状态不再丢失。
+- **自动识别 examples 目录算子（GC-82）** — 自动识别工程根 `examples/` 目录下的算子。
+- **命令输出通道追加显示（GC-73）** — 每类操作使用独立输出通道并追加写入历史输出，不再覆盖。
+- **插件主视图移至主活动栏（GC-71）** — 插件主视图容器从辅助侧栏迁移至主活动栏。
+- **标准自定义工程支持创建其它类型算子（[#83](https://gitcode.com/opdevtools/plugin_release/issues/83)）** — 支持在标准自定义算子工程中创建其它类型算子，创建后自动选中新算子。
+- **其它修复与改进** — NPU 与远程脚本均不可用时 ST 测试入口正确置灰；MindStudio Debug 内置插件在版本变化时自动升级；扩展安装包体积优化（移除 source map、重编码演示视频、截图转 WebP）；许可证更新为 CANN Open Software License V2.0。
+
 ## 1.5.3 — 2026-08-31
 
 本版本将上板/仿真分析的编译与 `.run` 安装包部署合并为携带 `--force` 的单条命令，新增NPU_ARCH覆盖设置与可配置执行超时，并改进构建目标选择、报告自动打开和设置读写健壮性。
