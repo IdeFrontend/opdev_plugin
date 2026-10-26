@@ -74,6 +74,8 @@ const SANITIZER_DOTTED_KEYS = [
   'sanitizer.memory',
   'sanitizer.memCheck',
   'sanitizer.sync',
+  'sanitizer.raceCheck',
+  'sanitizer.initCheck',
   'sanitizer.race',
   'sanitizer.uninitialized',
   'sanitizer.memoryLeak',

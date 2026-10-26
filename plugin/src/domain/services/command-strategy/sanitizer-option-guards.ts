@@ -39,8 +39,8 @@ const VALID_TOOLS = [
 const VALID_NPU_TOOLS = [
   'memcheck',
   'synccheck',
-  // 'racecheck', // npu-check 竞争检测暂未开发完毕，下个版本开放
-  // 'initcheck', // npu-check 未初始化检测暂未开发完毕，下个版本开放
+  'racecheck',
+  'initcheck',
 ] as const;
 const VALID_SANITIZER_COMMANDS = [
   'mssanitizer',
@@ -145,13 +145,16 @@ export function createSanitizerCommand(commandName: 'mssanitizer' | 'npu-check')
 
 /**
  * npu-check maps its own detection fields to the CLI `--tool` values: the Mem
- * Check setting lives in `npumemcheck` (NOT the mssanitizer `memcheck`/Memory
- * field, which must never leak into an npu-check run). Unmapped keys
- * (`memcheck`/`racecheck`/`initcheck`) are mssanitizer-only and dropped.
+ * Check setting lives in `npumemcheck`, Race Check in `npuracecheck`, and Init
+ * Check in `npuinitcheck` (NOT the mssanitizer `memcheck`/`racecheck`/`initcheck`
+ * fields, which must never leak into an npu-check run). The unmapped `memcheck`
+ * key is mssanitizer-only and dropped.
  */
 const NPU_TOOL_KEY_MAP: Record<string, string> = {
   npumemcheck: 'memcheck',
   synccheck: 'synccheck',
+  npuracecheck: 'racecheck',
+  npuinitcheck: 'initcheck',
 };
 
 /**

@@ -10,7 +10,7 @@ For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`, env script sourcin
 
 | Layer | Responsibility |
 |-------|----------------|
-| **CLI** | `mssanitizer` (external binary) performs memcheck / race / init checks |
+| **CLI** | `mssanitizer` / `npu-check` (external binaries) perform memcheck / race / init / sync checks |
 | **Plugin** | Pre-build, optional example build, command assembly, shell execution, log path setup |
 | **Config** | Workspace settings ([`workspace-settings.md`](./workspace-settings.md) § Sanitizer); `.vscode/cache.json` for `fileMapLists.sanitizer` and `sanitizerPythonTarget` |
 | **Results UI** | Tree view `opdevtoolsSanitizerResultsTree` (report list → grouped messages) |
@@ -146,6 +146,7 @@ Steps in detail:
 - **Strategy:** `CommandStrategyFactory.getStrategy(operator.op_type)` → `buildSanitizerCommand` on ascend / cann / triton (not pyasc).
 - **Target binary:** `strategy.getProfilerTargetFile` — the **ascend** strategy reads `exampleBuildConfig.targetFile` (workspace setting, fallback `OperatorPluginRegistry.getDefaultPaths`); **cann** / **pyasc** / **triton** read the `build_op` deploy key — [`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings)); optional `operatorNames` rewrites `test_aclnn_*` segment for standard custom.
 - **cann strategy** (`cann-strategy.ts`): builds `mssanitizer` with `tool` (`memcheck` / `racecheck` / `initcheck`), memcheck options (`leak-check` / `check-unused-memory`), `log-level`, `max-debuglog-size`, `block-id`, `--log-file` under `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log`, prefixed with CANN env sourcing + `cdBuildCmd` (`mkdir -p <op>/build && cd <op>/build`).
+- **npu-check command** (same strategies via `addSanitizerToolOptions`): `--tool` values come from the npu-check-only tool keys — `npumemcheck` / `synccheck` / `npuracecheck` / `npuinitcheck` map to `memcheck` / `synccheck` / `racecheck` / `initcheck` (the mssanitizer `memcheck` / `racecheck` / `initcheck` fields never leak into an npu-check run); `--log-file` under `<workspaceRoot>/<ideConfig>/npu-check-log/npu-check_<ts>.log`.
 - **ascend strategy** (`ascend-strategy.ts`): same option set, with `--log-file` under the **same workspace-root** `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log` (the reader only looks there; `operator.op_path` is used only when no workspace folder is known), prefixed with CANN env sourcing + `cd` to the operator path (`cdCmd`).
 
 Runtime config for the sanitizer row: the sanitizer section DAO `ConfigService.getSanitizerConfig(projectPath, op)` — keys and mapping in [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer). Cache-only fields such as **`fileMapLists.sanitizer`** and **`sanitizerPythonTarget`** stay in `.vscode/cache.json`.

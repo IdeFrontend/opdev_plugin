@@ -156,6 +156,8 @@ describe('normalizeNpuSanitizerTools (npu-check tool allow-list)', () => {
       .toEqual([
         'memcheck',
         'synccheck',
+        'racecheck',
+        'initcheck',
       ]);
   });
 

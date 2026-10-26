@@ -412,6 +412,20 @@
             "order": 201,
             "description": "%config.op-devtools.sanitizer.sync.description%",
             "markdownDescription": "%config.op-devtools.sanitizer.sync.markdownDescription%"
+          },
+          "op-devtools.sanitizer.raceCheck": {
+            "type": "boolean",
+            "default": true,
+            "order": 202,
+            "description": "%config.op-devtools.sanitizer.raceCheck.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.raceCheck.markdownDescription%"
+          },
+          "op-devtools.sanitizer.initCheck": {
+            "type": "boolean",
+            "default": true,
+            "order": 203,
+            "description": "%config.op-devtools.sanitizer.initCheck.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.initCheck.markdownDescription%"
           }
         }
       },

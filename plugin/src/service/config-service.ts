@@ -76,6 +76,8 @@ export const DEFAULT_SANITIZER_DETECTION_OPTIONS = {
   tool: {
     memcheck: true,
     npumemcheck: true,
+    npuracecheck: true,
+    npuinitcheck: true,
     racecheck: true,
     initcheck: true,
     synccheck: false,
@@ -172,6 +174,8 @@ export interface SanitizerConfig {
   // (getSanitizerConfig fresh branch).
   tool?: { memcheck?: boolean;
     npumemcheck?: boolean;
+    npuracecheck?: boolean;
+    npuinitcheck?: boolean;
     synccheck?: boolean;
     racecheck?: boolean;
     initcheck?: boolean };
@@ -333,6 +337,8 @@ function sanitizerUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDe
   assignIfDefined(updates, 'sanitizer.memory', tool.memcheck);
   assignIfDefined(updates, 'sanitizer.memCheck', tool.npumemcheck);
   assignIfDefined(updates, 'sanitizer.sync', tool.synccheck);
+  assignIfDefined(updates, 'sanitizer.raceCheck', tool.npuracecheck);
+  assignIfDefined(updates, 'sanitizer.initCheck', tool.npuinitcheck);
   assignIfDefined(updates, 'sanitizer.race', tool.racecheck);
   assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
   assignIfDefined(updates, 'sanitizer.memoryLeak', mem['leak-check']);
@@ -1116,6 +1122,8 @@ export class ConfigService {
     const memcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memory');
     const npumemcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memCheck');
     const synccheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.sync');
+    const npuracecheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.raceCheck');
+    const npuinitcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.initCheck');
     const racecheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.race');
     const initcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.uninitialized');
     const memoryLeak = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memoryLeak');
@@ -1140,6 +1148,8 @@ export class ConfigService {
       || memcheck !== undefined
       || npumemcheck !== undefined
       || synccheck !== undefined
+      || npuracecheck !== undefined
+      || npuinitcheck !== undefined
       || racecheck !== undefined
       || initcheck !== undefined
       || memoryLeak !== undefined
@@ -1154,6 +1164,8 @@ export class ConfigService {
         tool: {
           memcheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.memcheck,
           npumemcheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.npumemcheck,
+          npuracecheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.npuracecheck,
+          npuinitcheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.npuinitcheck,
           racecheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.racecheck,
           initcheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.initcheck,
         },
@@ -1186,6 +1198,14 @@ export class ConfigService {
 
     if (synccheck !== undefined) {
       tool.synccheck = synccheck;
+    }
+
+    if (npuracecheck !== undefined) {
+      tool.npuracecheck = npuracecheck;
+    }
+
+    if (npuinitcheck !== undefined) {
+      tool.npuinitcheck = npuinitcheck;
     }
 
     if (racecheck !== undefined) {

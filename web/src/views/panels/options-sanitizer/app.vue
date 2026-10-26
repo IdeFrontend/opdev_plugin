@@ -50,6 +50,8 @@ const form = ref({
   tool: {
     memcheck: true,
     npumemcheck: true,
+    npuracecheck: true,
+    npuinitcheck: true,
     synccheck: true,
     racecheck: true,
     initcheck: true,
@@ -149,6 +151,14 @@ async function loadSanitizerForm() {
     form.value.tool.synccheck = options.sync;
   }
 
+  if (options.raceCheck !== undefined) {
+    form.value.tool.npuracecheck = options.raceCheck;
+  }
+
+  if (options.initCheck !== undefined) {
+    form.value.tool.npuinitcheck = options.initCheck;
+  }
+
   if (options.race !== undefined) {
     form.value.tool.racecheck = options.race;
   }
@@ -188,6 +198,8 @@ function buildSavePayload(): SanitizerOptions {
     memory: form.value.tool.memcheck,
     memCheck: form.value.tool.npumemcheck,
     sync: form.value.tool.synccheck,
+    raceCheck: form.value.tool.npuracecheck,
+    initCheck: form.value.tool.npuinitcheck,
     race: form.value.tool.racecheck,
     uninitialized: form.value.tool.initcheck,
     memoryLeak: form.value.memcheckOption['leak-check'],
@@ -377,26 +389,22 @@ const handleConfirm = async () => {
               {{ t('web.options.sanitizer.npuSyncCheck') }}
             </a-checkbox>
           </div>
-          <!-- npu-check 竞争检测暂未开发完毕，下个版本开放
           <div class="check-item-row">
             <a-checkbox
-              v-model:checked="form.tool.racecheck"
+              v-model:checked="form.tool.npuracecheck"
               @change="saveSanitizerForm"
             >
               {{ t('web.options.sanitizer.npuRaceCheck') }}
             </a-checkbox>
           </div>
-          -->
-          <!-- npu-check 未初始化检测暂未开发完毕，下个版本开放
           <div class="check-item-row">
             <a-checkbox
-              v-model:checked="form.tool.initcheck"
+              v-model:checked="form.tool.npuinitcheck"
               @change="saveSanitizerForm"
             >
               {{ t('web.options.sanitizer.npuInitCheck') }}
             </a-checkbox>
           </div>
-          -->
         </template>
 
         <div
