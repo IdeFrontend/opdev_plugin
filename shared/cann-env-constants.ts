@@ -80,7 +80,8 @@ export function isAscend950CannSoc(socVersion: string | null | undefined): boole
 export type SanitizerToolType = 'mssanitizer' | 'npu-check';
 
 /**
- * 支持 npu-check 的算子工程类型（<<<>>> 内核调用符直调 + 标准自定义算子工程）：
+ * npu-check 与 A5 新 profiling 工具（npu-compute / npu-emulate）支持的算子工程类型
+ * （<<<>>> 内核调用符直调 + 标准自定义算子工程）：
  * - 'ascend-c'        结构探测值（CMakeLists + .asc）
  * - 'cann'            <<<>>> 新建工程写入的存储值（helloworld / addn / torch_library 模板）
  * - 'torch-library'   torch library 形态的规范探测值
@@ -93,16 +94,6 @@ const KERNEL_DIRECT_CALL_PROJECT_TYPES: ReadonlySet<string> = new Set([
   'torch-library',
   'standard-custom',
   'ascend',
-]);
-
-/**
- * <<<>>>（内核调用符直调）算子工程类型集合（严格语义，不含标准自定义算子）：
- * A5 新 profiling 工具（npu-compute / npu-emulate）仅支持该类工程。
- */
-const KERNEL_DIRECT_CALL_ONLY_PROJECT_TYPES: ReadonlySet<string> = new Set([
-  'ascend-c',
-  'cann',
-  'torch-library',
 ]);
 
 /**
@@ -126,15 +117,15 @@ export function isNpuCheckProjectTypeSupported(projectType: string | null | unde
 
 /**
  * A5 新 profiling 工具（上板 npu-compute / 仿真 npu-emulate）的适用条件：
- * 仅 ascend950（A5）环境 **且** 为 <<<>>>（内核调用符直调）算子工程时可用；
- * 其他 SOC 或 standard-custom / pyasc / triton 等工程类型一律回退 msprof 旧流程。
+ * ascend950（A5）环境 **且** 为 <<<>>>（内核调用符直调）或标准自定义算子工程时可用；
+ * 其他 SOC 或 pyasc / triton 等工程类型一律回退 msprof 旧流程。
  */
 export function isNewProfilerToolSupportedForProject(
   socVersion: string | null | undefined,
   projectType: string | null | undefined,
 ): boolean {
   return isAscend950CannSoc(socVersion)
-    && KERNEL_DIRECT_CALL_ONLY_PROJECT_TYPES.has((projectType ?? '').trim()
+    && KERNEL_DIRECT_CALL_PROJECT_TYPES.has((projectType ?? '').trim()
       .toLowerCase());
 }
 

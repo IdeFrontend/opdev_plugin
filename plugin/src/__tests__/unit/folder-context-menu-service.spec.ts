@@ -113,6 +113,10 @@ const mockGetIconThemeInstance = jest.requireMock('@plugin/class/operator-projec
   .OperatorProjectIconTheme.getInstance as jest.Mock;
 const mockWriteDeployTarget = jest.requireMock('@plugin/service/config-service')
   .ConfigService.writeBuildOpDeployTarget as jest.Mock;
+const mockShouldUseNewOnBoardTool = jest.requireMock('@plugin/service/config-service')
+  .ConfigService.shouldUseNewOnBoardTool as jest.Mock;
+const mockShouldUseNewSimulationTool = jest.requireMock('@plugin/service/config-service')
+  .ConfigService.shouldUseNewSimulationTool as jest.Mock;
 
 const mockFireDecorationUpdate = jest.fn();
 
@@ -1816,6 +1820,19 @@ describe('FolderContextMenuService', () => {
 
       expect(vscode.window.showWarningMessage)
         .toHaveBeenCalledWith('folderContext.standardOpsNoTuning');
+    });
+
+    it('simulationOperatorProject opens the data-collection dialog for standard custom when the A5 new tool is active', async () => {
+      mockShouldUseNewSimulationTool.mockImplementationOnce(() => true);
+
+      await FolderContextMenuService.simulationOperatorProject(vscode.Uri.file(operatorDir));
+
+      expect(mockShouldUseNewSimulationTool)
+        .toHaveBeenCalledWith('standard-custom');
+      expect(vscode.commands.executeCommand)
+        .toHaveBeenCalledWith(expect.stringContaining('.dataCollectionConfig'));
+      expect(vscode.window.showWarningMessage)
+        .not.toHaveBeenCalledWith('folderContext.standardOpsNoTuning');
     });
 
     it('simulationOperatorProject requires --bisheng_flags in the root build.sh', async () => {

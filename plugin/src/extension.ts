@@ -1077,10 +1077,10 @@ export async function activate(context: vscode.ExtensionContext) {
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
 
-      // A5 (ascend950) + <<<>>> operator project + npu-emulate (formerly
-      // npusim): open the unified data-collection dialog instead of the legacy
-      // quick-options panel / direct msprof flow. Other project types keep the
-      // msprof flow.
+      // A5 (ascend950) + <<<>>> / standard-custom operator project +
+      // npu-emulate (formerly npusim): open the unified data-collection dialog
+      // instead of the legacy quick-options panel / direct msprof flow. Other
+      // project types keep the msprof flow.
       const simulationProjectType = (await homeMethods.getProjectType()).projectType;
 
       if (ConfigService.shouldUseNewSimulationTool(simulationProjectType)) {
