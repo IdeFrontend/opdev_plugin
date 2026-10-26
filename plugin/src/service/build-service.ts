@@ -1050,8 +1050,9 @@ export class BuildService {
       return;
     }
 
-    // npu-compute / npu-emulate only run on ascend950 in <<<>>> operator
-    // projects; everything else must use the msprof flow.
+    // npu-compute / npu-emulate only run on ascend950 in <<<>>> or
+    // standard-custom operator projects; everything else must use the msprof
+    // flow.
     if (!(await this.guardNewProfilerToolSupportedForCurrentProject())) {
       return;
     }

@@ -12,10 +12,11 @@
  * getOnBoardTool / getSimulationTool and the shouldUseNewOnBoardTool /
  * shouldUseNewSimulationTool gates that decide whether the on-board / simulation
  * entry opens the new "数据采集配置" dialog. The new tools only run on A5
- * (ascend950) inside <<<>>> (kernel direct-call) operator projects
- * ('ascend-c' / 'cann' / 'torch-library'): an explicit workspace setting pins
- * each tool, otherwise A5 defaults to `npu-compute` / `npu-emulate` and every
- * other SOC — and every non-<<<>>> project type — resolves to the legacy msprof.
+ * (ascend950) inside <<<>>> (kernel direct-call) or standard-custom operator
+ * projects ('ascend-c' / 'cann' / 'torch-library' / 'standard-custom' /
+ * 'ascend'): an explicit workspace setting pins each tool, otherwise A5
+ * defaults to `npu-compute` / `npu-emulate` and every other SOC — and every
+ * other project type (pyasc / triton / unknown) — resolves to the legacy msprof.
  */
 
 import { ConfigService } from '@plugin/service/config-service';
@@ -63,24 +64,32 @@ describe('shared <<<>>> project / new-tool eligibility predicates', () => {
   });
 
   describe('isNewProfilerToolSupportedForProject', () => {
-    it('is true only for ascend950 SOC plus a <<<>>> project type', () => {
+    it('is true only for ascend950 SOC plus a <<<>>> or standard-custom project type', () => {
       expect(isNewProfilerToolSupportedForProject('ascend950', 'ascend-c'))
         .toBe(true);
       expect(isNewProfilerToolSupportedForProject(' Ascend950 ', 'cann'))
         .toBe(true);
+      expect(isNewProfilerToolSupportedForProject('ascend950', 'standard-custom'))
+        .toBe(true);
+      expect(isNewProfilerToolSupportedForProject('ascend950', 'ascend'))
+        .toBe(true);
     });
 
-    it('is false on non-950 SOC even for <<<>>> projects', () => {
+    it('is false on non-950 SOC even for supported projects', () => {
       expect(isNewProfilerToolSupportedForProject('ascend910b', 'ascend-c'))
         .toBe(false);
       expect(isNewProfilerToolSupportedForProject('', 'torch-library'))
         .toBe(false);
+      expect(isNewProfilerToolSupportedForProject('ascend910b', 'standard-custom'))
+        .toBe(false);
     });
 
-    it('is false on ascend950 for non-<<<>>> / unknown project types', () => {
-      expect(isNewProfilerToolSupportedForProject('ascend950', 'standard-custom'))
-        .toBe(false);
+    it('is false on ascend950 for unknown / unsupported project types', () => {
       expect(isNewProfilerToolSupportedForProject('ascend950', undefined))
+        .toBe(false);
+      expect(isNewProfilerToolSupportedForProject('ascend950', 'pyasc'))
+        .toBe(false);
+      expect(isNewProfilerToolSupportedForProject('ascend950', 'triton'))
         .toBe(false);
     });
   });
@@ -186,8 +195,10 @@ describe('ConfigService new-tool selectors', () => {
       'ascend-c',
       'cann',
       'torch-library',
+      'standard-custom',
+      'ascend',
       'ASCEND-C',
-    ])('is true on A5 (ascend950) with a <<<>>> project type (%s)', (projectType) => {
+    ])('is true on A5 (ascend950) with a <<<>>> or standard-custom project type (%s)', (projectType) => {
       resolveSocMock.mockReturnValue('ascend950');
 
       expect(ConfigService.shouldUseNewOnBoardTool(projectType))
@@ -198,11 +209,9 @@ describe('ConfigService new-tool selectors', () => {
       undefined,
       null,
       '',
-      'standard-custom',
-      'ascend',
       'pyasc',
       'triton',
-    ])('is false on A5 for a non-<<<>>> / unknown project type (%p)', (projectType) => {
+    ])('is false on A5 for an unknown / unsupported project type (%p)', (projectType) => {
       resolveSocMock.mockReturnValue('ascend950');
 
       expect(ConfigService.shouldUseNewOnBoardTool(projectType))
@@ -230,7 +239,9 @@ describe('ConfigService new-tool selectors', () => {
       'ascend-c',
       'cann',
       'torch-library',
-    ])('is true on A5 (ascend950) with a <<<>>> project type (%s)', (projectType) => {
+      'standard-custom',
+      'ascend',
+    ])('is true on A5 (ascend950) with a <<<>>> or standard-custom project type (%s)', (projectType) => {
       resolveSocMock.mockReturnValue('ascend950');
 
       expect(ConfigService.shouldUseNewSimulationTool(projectType))
@@ -241,11 +252,9 @@ describe('ConfigService new-tool selectors', () => {
       undefined,
       null,
       '',
-      'standard-custom',
-      'ascend',
       'pyasc',
       'triton',
-    ])('is false on A5 for a non-<<<>>> / unknown project type (%p)', (projectType) => {
+    ])('is false on A5 for an unknown / unsupported project type (%p)', (projectType) => {
       resolveSocMock.mockReturnValue('ascend950');
 
       expect(ConfigService.shouldUseNewSimulationTool(projectType))

@@ -944,9 +944,10 @@ export class ConfigService {
   /**
    * True when the simulation analysis should open the new-tool data-collection
    * dialog. Requires all of: A5 (ascend950) SOC, the `npu-emulate` tool
-   * selected, AND a <<<>>> (kernel direct-call) operator project
-   * ('ascend-c' / 'cann' / 'torch-library'). Otherwise the legacy msprof flow
-   * is used. An unknown/omitted project type resolves to false (safe fallback).
+   * selected, AND a <<<>>> (kernel direct-call) or standard-custom operator
+   * project ('ascend-c' / 'cann' / 'torch-library' / 'standard-custom' /
+   * 'ascend'). Otherwise the legacy msprof flow is used. An unknown/omitted
+   * project type resolves to false (safe fallback).
    */
   static shouldUseNewSimulationTool(projectType?: string | null): boolean {
     return isNewProfilerToolSupportedForProject(resolveEffectiveCannSoc(), projectType)

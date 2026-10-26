@@ -1109,6 +1109,19 @@ export class FolderContextMenuService {
       return;
     }
 
+    // A5 (ascend950) + npu-compute: standard custom operators are covered by
+    // the new-tool flow — open the unified data-collection dialog (parity with
+    // the sidebar on-board entry). The legacy standardOpsNoTuning /
+    // bisheng-flag gates below only apply to the msprof flow.
+    if (ConfigService.shouldUseNewOnBoardTool(operatorType)) {
+      await this.switchToProject(uri, async () => {
+        setPendingDataCollectionType('onboard');
+        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
+      });
+
+      return;
+    }
+
     // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
       vscode.window.showWarningMessage(t('folderContext.standardOpsNoTuning'));
@@ -1130,17 +1143,8 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // A5 (ascend950) + <<<>>> operator project + npu-compute: open the
-      // unified data-collection dialog (keep parity with the sidebar on-board
-      // entry); the non-<<<>>> types reaching this point keep the legacy panel.
-      if (ConfigService.shouldUseNewOnBoardTool(operatorType)) {
-        setPendingDataCollectionType('onboard');
-        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
-
-        return;
-      }
-
-      // Open on-board analysis config, same as dashboard logic
+      // Non-A5 / msprof flow: open the legacy on-board analysis config, same
+      // as dashboard logic.
       const onBoardCommand = COMMAND_ON_BOARD_OPTIONS;
 
       await vscode.commands.executeCommand(onBoardCommand);
@@ -1162,6 +1166,20 @@ export class FolderContextMenuService {
       return;
     }
 
+    // A5 (ascend950) + npu-emulate (formerly npusim): standard custom operators
+    // are covered by the new-tool flow — open the unified data-collection
+    // dialog (parity with the sidebar simulation entry). The legacy
+    // standardOpsNoTuning / bisheng-flag gates below only apply to the msprof
+    // flow.
+    if (ConfigService.shouldUseNewSimulationTool(operatorType)) {
+      await this.switchToProject(uri, async () => {
+        setPendingDataCollectionType('simulate');
+        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
+      });
+
+      return;
+    }
+
     // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
       vscode.window.showWarningMessage(t('folderContext.standardOpsNoTuning'));
@@ -1183,18 +1201,8 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // A5 (ascend950) + <<<>>> operator project + npu-emulate (formerly
-      // npusim): open the unified data-collection dialog (keep parity with the
-      // sidebar simulation entry); the non-<<<>>> types reaching this point
-      // keep the legacy panel.
-      if (ConfigService.shouldUseNewSimulationTool(operatorType)) {
-        setPendingDataCollectionType('simulate');
-        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
-
-        return;
-      }
-
-      // Open the simulation analysis configuration and keep it consistent with the Kanban logic
+      // Non-A5 / msprof flow: open the legacy simulation analysis config and
+      // keep it consistent with the Kanban logic.
       const simulationCommand = COMMAND_SIMULATOR_OPTIONS;
 
       await vscode.commands.executeCommand(simulationCommand);
