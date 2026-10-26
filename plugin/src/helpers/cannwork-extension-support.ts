@@ -11,7 +11,7 @@ import * as vscode from 'vscode';
 
 import { SettingsLoader } from '@plugin/service/settings-loader';
 
-/** Companion extension providing the `cannwork.invokeAgent` AI analysis entry. */
+/** Companion extension providing the `cannwork.setInputText` AI analysis entry. */
 export const CANNWORK_EXTENSION_ID = 'cann-pub.cannbot-toolkit';
 
 /** Oldest CANNWork version the profiling-report agent integration works against. */
