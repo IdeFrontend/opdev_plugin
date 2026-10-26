@@ -28,6 +28,7 @@ import type {
   OnBoardTool, SimulationTool,
 } from '@shared/data-collection-config';
 import {
+  isNewProfilerToolSupportedForProject,
   resolveSanitizerToolType,
   SanitizerToolType,
 } from '@shared/cann-env-constants';
@@ -887,7 +888,13 @@ export class ConfigService {
    * On-board profiling tool selector. On A5 (ascend950) the new `npu-compute`
    * prototype tool is the default; the workspace setting
    * `performanceTuning.onBoard.tool` may pin `npu-compute` or the legacy
-   * `msprof`. Non-A5 SOCs always resolve to `msprof` (the new tool is A5-only).
+   * `msprof`. Non-A5 SOCs always resolve to `msprof`.
+   *
+   * Note: this reflects the SOC + setting selection only. `npu-compute`
+   * additionally requires a <<<>>> (kernel direct-call) operator project —
+   * use {@link ConfigService.shouldUseNewOnBoardTool} (which takes the project
+   * type) for the effective routing decision; other project types fall back to
+   * the msprof flow.
    */
   static getOnBoardTool(): OnBoardTool {
     const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.onBoard.tool');
@@ -904,7 +911,13 @@ export class ConfigService {
    * `npusim` → `npu-emulate`; on A5 (ascend950) it is the default. The
    * workspace setting `performanceTuning.simulation.tool` may pin
    * `npu-emulate` or the legacy `msprof`. Non-A5 SOCs always resolve to
-   * `msprof` (the new tool is A5-only).
+   * `msprof`.
+   *
+   * Note: this reflects the SOC + setting selection only. `npu-emulate`
+   * additionally requires a <<<>>> (kernel direct-call) operator project —
+   * use {@link ConfigService.shouldUseNewSimulationTool} (which takes the
+   * project type) for the effective routing decision; other project types
+   * fall back to the msprof flow.
    */
   static getSimulationTool(): SimulationTool {
     const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
@@ -916,18 +929,27 @@ export class ConfigService {
     return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npu-emulate' : 'msprof';
   }
 
-  /** True when the on-board analysis should open the new-tool data-collection dialog (A5 + npu-compute). */
-  static shouldUseNewOnBoardTool(): boolean {
-    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
+  /**
+   * True when the on-board analysis should open the new-tool data-collection
+   * dialog. Requires all of: A5 (ascend950) SOC, the `npu-compute` tool
+   * selected, AND a <<<>>> (kernel direct-call) operator project
+   * ('ascend-c' / 'cann' / 'torch-library'). Otherwise the legacy msprof flow
+   * is used. An unknown/omitted project type resolves to false (safe fallback).
+   */
+  static shouldUseNewOnBoardTool(projectType?: string | null): boolean {
+    return isNewProfilerToolSupportedForProject(resolveEffectiveCannSoc(), projectType)
       && ConfigService.getOnBoardTool() === 'npu-compute';
   }
 
   /**
    * True when the simulation analysis should open the new-tool data-collection
-   * dialog (A5 + npu-emulate).
+   * dialog. Requires all of: A5 (ascend950) SOC, the `npu-emulate` tool
+   * selected, AND a <<<>>> (kernel direct-call) operator project
+   * ('ascend-c' / 'cann' / 'torch-library'). Otherwise the legacy msprof flow
+   * is used. An unknown/omitted project type resolves to false (safe fallback).
    */
-  static shouldUseNewSimulationTool(): boolean {
-    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
+  static shouldUseNewSimulationTool(projectType?: string | null): boolean {
+    return isNewProfilerToolSupportedForProject(resolveEffectiveCannSoc(), projectType)
       && ConfigService.getSimulationTool() === 'npu-emulate';
   }
 

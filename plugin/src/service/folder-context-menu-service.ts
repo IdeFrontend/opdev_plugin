@@ -1130,9 +1130,10 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // A5 + npu-compute: open the unified data-collection dialog (keep parity
-      // with the sidebar on-board entry); otherwise the legacy options panel.
-      if (ConfigService.shouldUseNewOnBoardTool()) {
+      // A5 (ascend950) + <<<>>> operator project + npu-compute: open the
+      // unified data-collection dialog (keep parity with the sidebar on-board
+      // entry); the non-<<<>>> types reaching this point keep the legacy panel.
+      if (ConfigService.shouldUseNewOnBoardTool(operatorType)) {
         setPendingDataCollectionType('onboard');
         await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
 
@@ -1182,9 +1183,11 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // A5 + npu-emulate (formerly npusim): open the unified data-collection dialog
-      // (keep parity with the sidebar simulation entry); otherwise the legacy options panel.
-      if (ConfigService.shouldUseNewSimulationTool()) {
+      // A5 (ascend950) + <<<>>> operator project + npu-emulate (formerly
+      // npusim): open the unified data-collection dialog (keep parity with the
+      // sidebar simulation entry); the non-<<<>>> types reaching this point
+      // keep the legacy panel.
+      if (ConfigService.shouldUseNewSimulationTool(operatorType)) {
         setPendingDataCollectionType('simulate');
         await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
 

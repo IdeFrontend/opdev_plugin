@@ -26,6 +26,16 @@ import type { OpRecord } from '@plugin/domain/models/op-record';
 describe('PyAscPlugin', () => {
   const plugin = new PyAscPlugin();
 
+  it('enables the one-click NPU debug entry via the python profile (#92)', () => {
+    expect(plugin.buildBehavior.supportsNpuDebug)
+      .toBe(true);
+    expect(plugin.buildBehavior.supportsNpuPythonDebug)
+      .toBe(true);
+    // pyasc has no CPU debug surface — the .py runs the same everywhere.
+    expect(plugin.buildBehavior.supportsCpuDebug)
+      .toBe(false);
+  });
+
   const op = {
     id: 1,
     project_id: 10,

@@ -68,8 +68,8 @@ const BASE_ROUTING_MATRIX: RoutingRow[] = [
     storedProjectTypes: ['pyasc'],
     template: '',
     expected: {
-      npu: DEBUG_LAUNCH_CONFIG.MSDEBUG,
-      cpu: DEBUG_LAUNCH_CONFIG.MSDEBUG_CPU,
+      npu: DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON,
+      cpu: DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON,
     },
   },
   {

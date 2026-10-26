@@ -70,6 +70,12 @@ export function isAscendA2A3CannSoc(socVersion: string | undefined): boolean {
   return normalized === CANN_SOC_ASCEND_910B || normalized === CANN_SOC_ASCEND_910_93;
 }
 
+/** True when the CANN SOC slug is Ascend 950 / Atlas A5 (`ascend950`). */
+export function isAscend950CannSoc(socVersion: string | null | undefined): boolean {
+  return (socVersion || '').trim()
+    .toLowerCase() === CANN_SOC_ASCEND_950;
+}
+
 /** Sanitizer 命令名（mssanitizer / npu-check）。 */
 export type SanitizerToolType = 'mssanitizer' | 'npu-check';
 
@@ -81,7 +87,7 @@ export type SanitizerToolType = 'mssanitizer' | 'npu-check';
  * - 'standard-custom' 标准自定义算子工程的结构探测值（无工程记录/设置时的兜底取值）
  * - 'ascend'          标准自定义算子工程的存储值（工程记录 / 工作区 projectType 设置）
  */
-const NPU_CHECK_PROJECT_TYPES: ReadonlySet<string> = new Set([
+const KERNEL_DIRECT_CALL_PROJECT_TYPES: ReadonlySet<string> = new Set([
   'ascend-c',
   'cann',
   'torch-library',
@@ -90,14 +96,46 @@ const NPU_CHECK_PROJECT_TYPES: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * <<<>>>（内核调用符直调）算子工程类型集合（严格语义，不含标准自定义算子）：
+ * A5 新 profiling 工具（npu-compute / npu-emulate）仅支持该类工程。
+ */
+const KERNEL_DIRECT_CALL_ONLY_PROJECT_TYPES: ReadonlySet<string> = new Set([
+  'ascend-c',
+  'cann',
+  'torch-library',
+]);
+
+/**
  * npu-check 是否支持该工程类型：仅在 <<<>>> 与标准自定义算子工程中可用，
  * 其他类型（pyasc、triton 等）不支持。
  */
-export function isNpuCheckProjectTypeSupported(projectType: string | null | undefined): boolean {
+export function isKernelDirectCallProjectType(projectType: string | null | undefined): boolean {
   const normalized = (projectType ?? '').trim()
     .toLowerCase();
 
-  return NPU_CHECK_PROJECT_TYPES.has(normalized);
+  return KERNEL_DIRECT_CALL_PROJECT_TYPES.has(normalized);
+}
+
+/**
+ * npu-check 是否支持该工程类型：仅在 <<<>>> 算子工程中可用。
+ * {@link isKernelDirectCallProjectType} 的 sanitizer 语义别名。
+ */
+export function isNpuCheckProjectTypeSupported(projectType: string | null | undefined): boolean {
+  return isKernelDirectCallProjectType(projectType);
+}
+
+/**
+ * A5 新 profiling 工具（上板 npu-compute / 仿真 npu-emulate）的适用条件：
+ * 仅 ascend950（A5）环境 **且** 为 <<<>>>（内核调用符直调）算子工程时可用；
+ * 其他 SOC 或 standard-custom / pyasc / triton 等工程类型一律回退 msprof 旧流程。
+ */
+export function isNewProfilerToolSupportedForProject(
+  socVersion: string | null | undefined,
+  projectType: string | null | undefined,
+): boolean {
+  return isAscend950CannSoc(socVersion)
+    && KERNEL_DIRECT_CALL_ONLY_PROJECT_TYPES.has((projectType ?? '').trim()
+      .toLowerCase());
 }
 
 /**

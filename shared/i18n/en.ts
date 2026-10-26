@@ -70,7 +70,9 @@ export default {
   'debug.autoAdaptNoBinary':
     'Could not auto-adapt msdebug target: no debug binary found under the operator build/ directory. Run NPU/CPU debug build first, then retry.',
   'debug.targetBinaryMissing':
-    'Cannot start debug: the launch target binary does not exist. The debug build may have failed or been stopped — run a successful NPU/CPU debug build first, then retry.',
+    'Cannot start debug: the launch target binary does not exist (checked path: {{target}}). The debug build may have failed or been stopped — run a successful NPU/CPU debug build first, then retry. If the path does not match the actual build artifact, check the target entry in .vscode/launch.json.',
+  'debug.remoteTargetConfigMissing':
+    'Cannot start debug: the remote-debug config is missing remoteConfig.remoteWorkspaceFolder. Fill it in .vscode/launch.json first, then retry.',
 
   // extension
   'extension.openWorkspaceFirst': 'Please open a workspace first',
@@ -271,6 +273,7 @@ export default {
   'build.compileFailedThrow': 'Compile operator failed: {{output}}',
   'build.executeFailedThrow': 'Execution failed: {{output}}',
   'build.simulationFailedThrow': 'Simulation analysis failed: {{output}}',
+  'build.newProfilerToolUnsupported': 'npu-compute / npu-emulate are only supported for <<<>>> (kernel direct-call) operator projects on ascend950 environments. Please use the msprof on-board/simulation flow for the current project.',
   'performanceTuning.simulation.tool.notA5ResetToMsprof': 'The current environment does not support the npu-emulate simulation tool; it has been automatically reset to msprof. npu-emulate is only available on A5 (ascend950) environments.',
   'performanceTuning.onBoard.tool.notA5ResetToMsprof': 'The current environment does not support the npu-compute on-board tool; it has been automatically reset to msprof. npu-compute is only available on A5 (ascend950) environments.',
 

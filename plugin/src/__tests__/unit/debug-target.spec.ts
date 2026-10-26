@@ -192,6 +192,7 @@ describe('debugTargetCandidates', () => {
     expect(debugTargetCandidates('add_custom'))
       .toEqual([
         'test_aclnn_add_custom',
+        'test_aclnn_add_custom_example',
         'test_geir_add_custom',
         'add_custom',
       ]);
@@ -201,6 +202,7 @@ describe('debugTargetCandidates', () => {
     expect(debugTargetCandidates('  matmul  '))
       .toEqual([
         'test_aclnn_matmul',
+        'test_aclnn_matmul_example',
         'test_geir_matmul',
         'matmul',
       ]);
@@ -223,9 +225,15 @@ describe('collectDebugTargetCandidates', () => {
       .toEqual([
         'demo_customop',
         'test_aclnn_customop',
+        'test_aclnn_customop_example',
         'test_geir_customop',
         'customop',
       ]);
+  });
+
+  it('matches the ops-nn example artifact name without an explicit target_file (#89)', () => {
+    expect(collectDebugTargetCandidates('mul', null))
+      .toContain('test_aclnn_mul_example');
   });
 
   it('does not duplicate a basename already in the default list', () => {
@@ -1131,18 +1139,26 @@ describe('msdebugConfiguredTargetExists', () => {
       .toBe(false);
   });
 
-  it('returns true when the remote-debug target exists on disk', () => {
+  it('never blocks remote-debug on local-disk target state (#89 split-NPU false negative)', () => {
+    // Split-NPU setup: the binary is built and synced on the remote host only.
+    // A locally-missing target must NOT refuse the launch.
     mkWorkspace([
       {
         name: 'remote-debug',
-        target: '${remoteWorkspaceFolder}/math/add_custom/build/test_aclnn_add_custom',
-        remoteConfig: { remoteWorkspaceFolder: '${remoteWorkspaceFolder}' },
+        target: '${remoteWorkspaceFolder}/build/test_aclnn_mul_example',
+        remoteConfig: { remoteWorkspaceFolder: '/remote/workspace' },
       },
     ]);
-    writeTargetBinary(path.join('math', 'add_custom', 'build', 'test_aclnn_add_custom'));
 
     expect(msdebugConfiguredTargetExists(root, 'remote-debug'))
-      .toBe(true);
+      .toBeUndefined();
+
+    // Even a target that happens to exist locally stays indeterminate — the
+    // remote adapter is the authority on the remote host's disk.
+    writeTargetBinary(path.join('build', 'test_aclnn_mul_example'));
+
+    expect(msdebugConfiguredTargetExists(root, 'remote-debug'))
+      .toBeUndefined();
   });
 
   it('returns undefined for a remote-debug config with a non-string target (do not block)', () => {

@@ -70,7 +70,9 @@ export default {
   'debug.autoAdaptNoBinary':
     '无法自动适配 msdebug target：在算子 build/ 目录下未找到可调试的二进制文件。请先执行 NPU/CPU 调试编译后再试。',
   'debug.targetBinaryMissing':
-    '无法启动调试：调试目标可执行文件不存在。调试编译可能失败或已被中断，请先成功执行 NPU/CPU 调试编译后再重试。',
+    '无法启动调试：调试目标可执行文件不存在（检查路径：{{target}}）。调试编译可能失败或已被中断，请先成功执行 NPU/CPU 调试编译后再重试；若路径与实际编译产物不一致，请检查 .vscode/launch.json 中的 target 配置。',
+  'debug.remoteTargetConfigMissing':
+    '无法启动调试：remote-debug 配置缺少 remoteConfig.remoteWorkspaceFolder，请先在 .vscode/launch.json 中补全该字段后重试。',
 
   // extension
   'extension.openWorkspaceFirst': '请先打开一个工作区',
@@ -271,6 +273,7 @@ export default {
   'build.compileFailedThrow': '编译算子失败: {{output}}',
   'build.executeFailedThrow': '执行失败: {{output}}',
   'build.simulationFailedThrow': '执行仿真分析失败: {{output}}',
+  'build.newProfilerToolUnsupported': 'npu-compute / npu-emulate 仅支持 ascend950 环境的 <<<>>>（内核调用符直调）算子工程，当前工程请使用 msprof 上板/仿真流程。',
   'performanceTuning.simulation.tool.notA5ResetToMsprof': '当前环境不支持 npu-emulate 仿真工具，已自动切换为 msprof。npu-emulate 仅在 A5（ascend950）环境下可用。',
   'performanceTuning.onBoard.tool.notA5ResetToMsprof': '当前环境不支持 npu-compute 上板工具，已自动切换为 msprof。npu-compute 仅在 A5（ascend950）环境下可用。',
 

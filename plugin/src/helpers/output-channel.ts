@@ -31,6 +31,21 @@ let sharedChannel: vscode.OutputChannel | undefined;
 
 const toolChannelsByLabel = new Map<string, vscode.OutputChannel>();
 
+const UTC8_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/**
+ * Render a timestamp as `YYYY-MM-DD HH:mm:ss.SSS` in UTC+8, matching the output
+ * format of the other plugins in the suite (issue #90: ISO 8601 was hard to
+ * correlate with sibling channels). Shifting the instant before reading the ISO
+ * fields keeps the result stable regardless of the host timezone.
+ */
+export function formatUtc8Timestamp(date: Date): string {
+  return new Date(date.getTime() + UTC8_OFFSET_MS)
+    .toISOString()
+    .replace('T', ' ')
+    .replace('Z', '');
+}
+
 export function getHuaweiOpDevtoolsOutputChannel(): vscode.OutputChannel {
   if (!sharedChannel) {
     sharedChannel = vscode.window.createOutputChannel(BRANDING.productName);
@@ -72,8 +87,7 @@ export function appendLog(
   payload?: unknown,
 ): void {
   const channel = getHuaweiOpDevtoolsOutputChannel();
-  const timestamp = new Date()
-    .toISOString();
+  const timestamp = formatUtc8Timestamp(new Date());
   const base = `[${scope}] ${timestamp} ${message}`;
 
   if (payload === undefined) {

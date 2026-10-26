@@ -7,13 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-import { CANN_SOC_ASCEND_950 } from './cann-env-constants';
+import { isAscend950CannSoc } from './cann-env-constants';
 
 /**
  * CANN SOC strings for which on-board `msprof op` uses the Ascend A5 / Atlas A5
  * aic-metrics matrix (no MemoryDetail; PCSampling available).
+ * Single comparison lives in {@link isAscend950CannSoc}.
  */
 export function isAscendA5ProfilerCannSoc(cannSoc: string | null | undefined): boolean {
-  return (cannSoc || '').trim()
-    .toLowerCase() === CANN_SOC_ASCEND_950;
+  return isAscend950CannSoc(cannSoc);
 }
