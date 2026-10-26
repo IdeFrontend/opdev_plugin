@@ -77,6 +77,8 @@ export type SanitizerOptions = {
   memory?: boolean;
   memCheck?: boolean;
   sync?: boolean;
+  raceCheck?: boolean;
+  initCheck?: boolean;
   race?: boolean;
   uninitialized?: boolean;
   memoryLeak?: boolean;

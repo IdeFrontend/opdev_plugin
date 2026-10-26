@@ -261,6 +261,8 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       tool: {
         npumemcheck: true,
         synccheck: true,
+        npuracecheck: true,
+        npuinitcheck: false,
         racecheck: false,
         initcheck: true,
       },
@@ -275,9 +277,11 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--tool memcheck');
     expect(cmd)
       .toContain('--tool synccheck');
-    // racecheck/initcheck are temporarily disabled for npu-check; soccheck/overcheck removed.
-    expect(cmd).not.toContain('--tool racecheck');
+    expect(cmd)
+      .toContain('--tool racecheck');
     expect(cmd).not.toContain('--tool initcheck');
+    // The mssanitizer racecheck/initcheck fields must not leak into an
+    // npu-check run; soccheck/overcheck are not npu-check tools.
     expect(cmd).not.toContain('--tool soccheck');
     expect(cmd).not.toContain('--tool overcheck');
     expect(cmd).not.toContain('--tool=');
@@ -314,8 +318,8 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       tool: {
         npumemcheck: true,
         synccheck: true,
-        racecheck: true,
-        initcheck: true,
+        npuracecheck: true,
+        npuinitcheck: true,
       },
     };
 
@@ -327,9 +331,11 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--tool memcheck');
     expect(cmd)
       .toContain('--tool synccheck');
-    // racecheck/initcheck are temporarily disabled for npu-check; soccheck/overcheck removed.
-    expect(cmd).not.toContain('--tool racecheck');
-    expect(cmd).not.toContain('--tool initcheck');
+    expect(cmd)
+      .toContain('--tool racecheck');
+    expect(cmd)
+      .toContain('--tool initcheck');
+    // soccheck/overcheck are not npu-check tools.
     expect(cmd).not.toContain('--tool soccheck');
     expect(cmd).not.toContain('--tool overcheck');
   });
@@ -341,8 +347,8 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       tool: {
         npumemcheck: true,
         synccheck: true,
-        racecheck: true,
-        initcheck: true,
+        npuracecheck: true,
+        npuinitcheck: true,
       },
     };
 

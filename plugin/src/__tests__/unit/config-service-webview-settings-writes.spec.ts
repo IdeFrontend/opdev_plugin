@@ -71,6 +71,8 @@ describe('webview/API settings writes (no DB)', () => {
       toolType: 'npu-check',
       memory: true,
       sync: false,
+      raceCheck: true,
+      initCheck: false,
       race: false,
       uninitialized: true,
       memoryLeak: true,
@@ -83,6 +85,10 @@ describe('webview/API settings writes (no DB)', () => {
     expect(parsed['op-devtools.sanitizer.memory'])
       .toBe(true);
     expect(parsed['op-devtools.sanitizer.sync'])
+      .toBe(false);
+    expect(parsed['op-devtools.sanitizer.raceCheck'])
+      .toBe(true);
+    expect(parsed['op-devtools.sanitizer.initCheck'])
       .toBe(false);
     expect(parsed['op-devtools.sanitizer.race'])
       .toBe(false);

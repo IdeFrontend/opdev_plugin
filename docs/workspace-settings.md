@@ -180,6 +180,10 @@ Each array element is one argument token, not a shell fragment. Empty, control-c
 |-------------|----------------|--------|
 | `sanitizer.showQuickOptions` | — | `true` (default): Actions **Sanitizer** opens quick-options webview; `false`: enqueue run immediately |
 | `sanitizer.memory` | `tool.memcheck` | |
+| `sanitizer.memCheck` | `tool.npumemcheck` | npu-check |
+| `sanitizer.sync` | `tool.synccheck` | npu-check |
+| `sanitizer.raceCheck` | `tool.npuracecheck` | npu-check |
+| `sanitizer.initCheck` | `tool.npuinitcheck` | npu-check |
 | `sanitizer.memoryLeak` | `memcheckOption['leak-check']` | Meaningful when memory check enabled |
 | `sanitizer.allocUnused` | `memcheckOption['check-unused-memory']` | |
 | `sanitizer.race` | `tool.racecheck` | |
