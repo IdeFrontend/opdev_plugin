@@ -14,7 +14,7 @@ import * as vscode from 'vscode';
 
 import { HtmlTransformer } from '@plugin/class/html-transformer';
 import {
-  CANN_ASSIST_INVOKE_AGENT,
+  CANN_ASSIST_SET_INPUT_TEXT,
   COMMAND_SHOW_PERFORMANCE_HINTS,
   PROFILING_REPORT_PANEL_TYPE,
   VIEW_PROFILING_REPORT,
@@ -430,8 +430,8 @@ export class ProfilingReportPanel {
   }
 
   /**
-   * Forward the cannbot request payload to the cannbot plugin by invoking its
-   * agent (resolves to a session id): payload 字段填入多行模板，首行为内置提示词（buildInPrompt）。
+   * Forward the cannbot request payload to the cannbot plugin by filling its chat
+   * input box: payload 字段填入多行模板，首行为内置提示词（buildInPrompt）。
    * 调测专用隐藏配置 `op-devtools.profilingReport.cannbotPromptOverride` 有值时，
    * 内置提示词会被替换后再转发。
    */
@@ -461,13 +461,13 @@ export class ProfilingReportPanel {
 isSim：${isSim}
 `;
 
-      await vscode.commands.executeCommand<{ sessionId: string }>(CANN_ASSIST_INVOKE_AGENT, inputText);
+      await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText, { autoSend: true });
       await vscode.window.showInformationMessage(t('profilingReport.cannbotSent'));
     }
     catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
 
-      if (detail.includes(CANN_ASSIST_INVOKE_AGENT) && detail.includes('not found')) {
+      if (detail.includes(CANN_ASSIST_SET_INPUT_TEXT) && detail.includes('not found')) {
         await vscode.window.showErrorMessage(t('profilingReport.cannbotNotInstalled'));
       }
       else {
