@@ -18,6 +18,7 @@ import { CONTEXT_PREFIX } from '@shared/flavor';
 import { maybeApplyCannCppIncludePaths } from '@plugin/domain/utils/cann-cpp-include-paths';
 import { maybePromptInstallCppExtension } from '@plugin/helpers/cpp-extension-support';
 import { computeAscendEnvResolution } from '@plugin/domain/utils/ascend-util';
+import { uninstallLegacyAscendToolkitExtension } from './legacy-extension-cleanup';
 import { applyNpuArchToTerminalEnv } from './terminal-npu-arch-env';
 import { AsyncSingleFlight } from './async-single-flight';
 import { requestSidebarContextsRefresh } from './sidebar-context-refresh';
@@ -64,6 +65,13 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   logDebug('postActivate:bootstrap:start');
 
   void refreshNpuHardwareAvailability(operateTreeProvider, logDebug);
+
+  // Uninstall the retired `hicann.ascend-c-toolkit` extension (publisher
+  // migration `hicann` → `cann-pub`) if the machine still carries it.
+  void uninstallLegacyAscendToolkitExtension(logDebug)
+    .catch((error) => {
+      logDebug('postActivate:legacyExtensionCleanup:error (fire-and-forget)', error);
+    });
 
   void maybePromptInstallCppExtension(context, logDebug)
     .catch((error) => {
