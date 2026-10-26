@@ -1573,6 +1573,33 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     void vscode.window.showInformationMessage(t('web.perf.pathCopied'));
   }
 
+  async openSanitizerReportFile(reportPath: string): Promise<void> {
+    if (!reportPath) {
+      return;
+    }
+
+    try {
+      const stat = await vscode.workspace.fs.stat(vscode.Uri.file(reportPath));
+
+      if (stat.type === vscode.FileType.Directory) {
+        void vscode.window.showErrorMessage(t('web.sanitizerPanel.openFileFailed', { path: reportPath }));
+
+        return;
+      }
+
+      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(reportPath));
+
+      await vscode.window.showTextDocument(document, {
+        viewColumn: vscode.ViewColumn.One,
+        preview: true,
+      });
+    }
+    catch (error) {
+      console.error('Failed to open sanitizer report file:', error);
+      void vscode.window.showErrorMessage(t('web.sanitizerPanel.openFileFailed', { path: reportPath }));
+    }
+  }
+
   async selectSanitizerReport(reportPath: string): Promise<void> {
     if (this.kind !== 'flow') {
       return;

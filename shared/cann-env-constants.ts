@@ -80,21 +80,34 @@ export function isAscend950CannSoc(socVersion: string | null | undefined): boole
 export type SanitizerToolType = 'mssanitizer' | 'npu-check';
 
 /**
- * <<<>>>（内核调用符直调）算子工程类型集合：
- * - 'ascend-c'    结构探测值（CMakeLists + .asc）
- * - 'cann'        <<<>>> 新建工程写入的存储值（helloworld / addn / torch_library 模板）
- * - 'torch-library' torch library 形态的规范探测值
+ * 支持 npu-check 的算子工程类型（<<<>>> 内核调用符直调 + 标准自定义算子工程）：
+ * - 'ascend-c'        结构探测值（CMakeLists + .asc）
+ * - 'cann'            <<<>>> 新建工程写入的存储值（helloworld / addn / torch_library 模板）
+ * - 'torch-library'   torch library 形态的规范探测值
+ * - 'standard-custom' 标准自定义算子工程的结构探测值（无工程记录/设置时的兜底取值）
+ * - 'ascend'          标准自定义算子工程的存储值（工程记录 / 工作区 projectType 设置）
  */
 const KERNEL_DIRECT_CALL_PROJECT_TYPES: ReadonlySet<string> = new Set([
+  'ascend-c',
+  'cann',
+  'torch-library',
+  'standard-custom',
+  'ascend',
+]);
+
+/**
+ * <<<>>>（内核调用符直调）算子工程类型集合（严格语义，不含标准自定义算子）：
+ * A5 新 profiling 工具（npu-compute / npu-emulate）仅支持该类工程。
+ */
+const KERNEL_DIRECT_CALL_ONLY_PROJECT_TYPES: ReadonlySet<string> = new Set([
   'ascend-c',
   'cann',
   'torch-library',
 ]);
 
 /**
- * 是否为 <<<>>>（内核调用符直调）算子工程：npu-check 以及 A5 新 profiling
- * 工具（npu-compute / npu-emulate）均只支持该类工程，其他类型
- * （standard-custom / 'ascend'、pyasc、triton 等）不支持。
+ * npu-check 是否支持该工程类型：仅在 <<<>>> 与标准自定义算子工程中可用，
+ * 其他类型（pyasc、triton 等）不支持。
  */
 export function isKernelDirectCallProjectType(projectType: string | null | undefined): boolean {
   const normalized = (projectType ?? '').trim()
@@ -120,7 +133,9 @@ export function isNewProfilerToolSupportedForProject(
   socVersion: string | null | undefined,
   projectType: string | null | undefined,
 ): boolean {
-  return isAscend950CannSoc(socVersion) && isKernelDirectCallProjectType(projectType);
+  return isAscend950CannSoc(socVersion)
+    && KERNEL_DIRECT_CALL_ONLY_PROJECT_TYPES.has((projectType ?? '').trim()
+      .toLowerCase());
 }
 
 /**
@@ -136,7 +151,7 @@ export function defaultSanitizerToolTypeForSoc(socVersion: string | undefined): 
 
 /**
  * 综合 SOC 与工程类型解析默认 sanitizer toolType：
- * A2/A3 SOC 或非 <<<>>> 算子工程 → mssanitizer；其余 → npu-check。
+ * A2/A3 SOC 或不支持的算子工程 → mssanitizer；其余 → npu-check。
  * 供 plugin ConfigService 和 webview app.vue 复用。
  */
 export function resolveSanitizerToolType(

@@ -36,7 +36,7 @@ import {
 const { themeConfig } = useTheme();
 const isExecuting = ref(false);
 const isTritonProject = ref(false);
-/** npu-check 仅支持 <<<>>>（Ascend C）算子工程；其他工程类型强制 mssanitizer。 */
+/** npu-check 仅支持 <<<>>>（Ascend C）与标准自定义算子工程；其他工程类型强制 mssanitizer。 */
 const isNpuCheckProjectSupported = ref(false);
 /** When true, workspace `sanitizer.showQuickOptions` is false (tree runs without opening this panel). */
 const doNotShowAgain = ref(false);
@@ -124,8 +124,9 @@ async function loadSanitizerForm() {
 
   isA2A3Environment.value = isAscendA2A3CannSoc(socVersion);
 
-  // A2/A3 SOC only ships mssanitizer; npu-check is <<<>>>-project-only —
-  // either way the persisted toolType is ignored and mssanitizer is forced.
+  // A2/A3 SOC only ships mssanitizer; npu-check supports <<<>>> and
+  // standard-custom projects only — either way the persisted toolType is
+  // ignored and mssanitizer is forced.
   if (!isNpuCheckAvailable.value) {
     form.value.toolType = 'mssanitizer';
   }

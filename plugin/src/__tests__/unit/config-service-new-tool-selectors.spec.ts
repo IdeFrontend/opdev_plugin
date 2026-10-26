@@ -43,11 +43,17 @@ describe('shared <<<>>> project / new-tool eligibility predicates', () => {
     });
 
     it.each([
+      'standard-custom',
+      'ascend',
+    ])('recognizes %p for npu-check (standard-custom npu-check support)', (projectType) => {
+      expect(isKernelDirectCallProjectType(projectType))
+        .toBe(true);
+    });
+
+    it.each([
       undefined,
       null,
       '',
-      'standard-custom',
-      'ascend',
       'pyasc',
       'triton',
     ])('rejects %p as a non-<<<>>> project', (projectType) => {
