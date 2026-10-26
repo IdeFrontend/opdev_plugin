@@ -13,6 +13,7 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { HtmlTransformer } from '@plugin/class/html-transformer';
+import { CANNWORK_EXTENSION_ID } from '@plugin/helpers/cannwork-extension-support';
 import {
   CANN_ASSIST_SET_INPUT_TEXT,
   COMMAND_SHOW_PERFORMANCE_HINTS,
@@ -460,6 +461,14 @@ export class ProfilingReportPanel {
 采集时间：${formatCollectedAt(effective.collected_at)}
 isSim：${isSim}
 `;
+
+      // A freshly installed / lazy CANNWork may not be activated yet; without
+      // this its commands would not be registered.
+      const cannwork = vscode.extensions.getExtension(CANNWORK_EXTENSION_ID);
+
+      if (cannwork && !cannwork.isActive) {
+        await cannwork.activate();
+      }
 
       await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText, { autoSend: true });
       await vscode.window.showInformationMessage(t('profilingReport.cannbotSent'));

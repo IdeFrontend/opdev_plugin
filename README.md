@@ -18,6 +18,7 @@
 - Visual Studio Code 1.80 或更高版本。
 - CANN / Ascend 工具链和运行环境。具体版本与镜像以团队或官方环境说明为准。
 - 远程开发建议安装 Remote SSH。环境中没有任何 C/C++ 语言扩展时，插件会提示安装 Microsoft C/C++ 扩展（可选择不再提示）；CANN 头文件路径由插件在运行时自动解析。
+- CANNWork 配套扩展（`cann-pub.cannbot-toolkit`）无需手动安装：插件激活后会在后台静默安装最新稳定版，不弹窗、不通知。可通过工作区设置 `op-devtools.companion.cannworkAutoInstall` 关闭（默认开启；关闭后不再自动安装或升级，已安装版本不受影响）。
 
 ## 快速开始
 

@@ -20,6 +20,8 @@
   "config.category.execution.title": "执行",
   "config.category.operatorSupport.title": "算子支持",
   "config.op-devtools.operatorSupport.triton.description": "启用 Triton 算子支持",
+  "config.category.companion.title": "配套扩展",
+  "config.op-devtools.companion.cannworkAutoInstall.description": "静默自动安装/升级配套扩展 CANNWork（cann-pub.cannbot-toolkit，性能报告 CANNWork 分析所需，安装市场最新稳定版，全程无提示）。关闭后不再自动安装或升级，已安装版本不受影响。",
   "config.op-devtools.debugMode.description": "启用调试功能（实验性功能）",
   "config.op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile.description": "要编译的算子名称",
   "config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description": "算子 .run 包路径或通配符（如 build_out/*.run），用于 Ascend 编译后部署；勿在此填写 --force（插件会在安装 .run 时自动添加）。Cann 运行示例时作为测试二进制路径。",

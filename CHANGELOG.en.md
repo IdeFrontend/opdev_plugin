@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.4 — Unreleased
+
+Release: silent auto-installation of the CANNWork companion extension.
+
+- **Silent auto-install of the CANNWork companion extension** — On activation the extension checks for the CANNWork companion (`cann-pub.cannbot-toolkit`): when it is missing or older than 2.0.0, the latest stable release is installed from the configured marketplace silently — no prompts, no notifications, no startup blocking. A failed install is logged only and retried on the next activation, while the profiling-report entry keeps its existing manual-install error as the fallback. Versions already at or above the threshold are left to VS Code's native auto-update. Before invoking `cannwork.setInputText`, CANNWork is explicitly activated, closing the window where an installed-but-inactive extension left the command unregistered. A new `op-devtools.companion.cannworkAutoInstall` setting (on by default) disables future installs and upgrades; already-installed versions are unaffected.
+
 ## 1.5.3 — 2026-08-31
 
 Release: on-board and simulation profiling now compile and deploy the built `.run` package in a single `--force`-aware command; adds an NPU_ARCH override setting and a configurable execution timeout; improves built-example selection, auto-opened reports, and settings.json robustness.

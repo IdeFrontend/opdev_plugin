@@ -14,6 +14,7 @@ const mockCreateWebviewPanel = jest.fn();
 const mockShowErrorMessage = jest.fn();
 const mockShowInformationMessage = jest.fn();
 const mockExecuteCommand = jest.fn();
+const mockGetExtension = jest.fn();
 
 jest.mock('i18next', () => ({ t: (key: string, opts?: Record<string, string>) => (opts ? `${key}:${JSON.stringify(opts)}` : key) }));
 
@@ -45,6 +46,7 @@ jest.mock('vscode', () => {
       showInformationMessage: mockShowInformationMessage,
     },
     commands: { executeCommand: mockExecuteCommand },
+    extensions: { getExtension: mockGetExtension },
   };
 }, { virtual: true });
 
@@ -100,6 +102,7 @@ describe('ProfilingReportPanel', () => {
     mockShowErrorMessage.mockResolvedValue(undefined);
     mockShowInformationMessage.mockResolvedValue(undefined);
     mockExecuteCommand.mockResolvedValue(undefined);
+    mockGetExtension.mockReturnValue(undefined);
     mockTransformDistHtml.mockResolvedValue('<html>profiling</html>');
     mockCreateWebviewPanel.mockImplementation((_type, _title, _column, options) => {
       const webview = createWebview();
@@ -255,9 +258,53 @@ describe('ProfilingReportPanel', () => {
         + '报告章节：compute\n'
         + '算子名称：Add\n'
         + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`
-        + '仿真分析：false\n',
+        + 'isSim：false\n',
         { autoSend: true },
       );
+    expect(mockShowInformationMessage)
+      .toHaveBeenCalledWith('profilingReport.cannbotSent');
+    expect(mockShowErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('activates an installed but inactive CANNWork before forwarding the cannbot request', async () => {
+    const mockActivate = jest.fn()
+      .mockResolvedValue(undefined);
+
+    mockGetExtension.mockReturnValue({
+      isActive: false,
+      activate: mockActivate,
+    });
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+    const payload = {
+      version: '1.0',
+      scope: 'summary',
+      report_name: 'sample.rep',
+      report_id: 'sample.rep',
+      report_path: filePath,
+      op_name: 'Add',
+      collected_at: '2026-08-13T09:41:00Z',
+      data: {},
+      prompt: 'prompt-text',
+    };
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload,
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockGetExtension)
+      .toHaveBeenCalledWith('cann-pub.cannbot-toolkit');
+    expect(mockActivate)
+      .toHaveBeenCalledTimes(1);
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith('cannwork.setInputText', expect.any(String), { autoSend: true });
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
     expect(mockShowErrorMessage).not.toHaveBeenCalled();
@@ -297,7 +344,7 @@ describe('ProfilingReportPanel', () => {
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
         'cannwork.setInputText',
-        expect.stringContaining('仿真分析：true\n'),
+        expect.stringContaining('isSim：true\n'),
         { autoSend: true },
       );
   });
@@ -338,7 +385,7 @@ describe('ProfilingReportPanel', () => {
         + '报告章节：summary\n'
         + '算子名称：Add\n'
         + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`
-        + '仿真分析：false\n',
+        + 'isSim：false\n',
         { autoSend: true },
       );
     expect(mockShowInformationMessage)
@@ -370,7 +417,7 @@ describe('ProfilingReportPanel', () => {
         + '报告章节：summary\n'
         + '算子名称：\n'
         + '采集时间：\n'
-        + '仿真分析：false\n',
+        + 'isSim：false\n',
         { autoSend: true },
       );
   });

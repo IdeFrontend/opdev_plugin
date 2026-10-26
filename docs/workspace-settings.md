@@ -250,6 +250,12 @@ A5 metric matrix details: [`ascend-a5-support.md`](./ascend-a5-support.md).
 |-------------|------|---------|--------|
 | `execution.commandTimeoutSeconds` | number | `1800` | Timeout for spawned operator commands; an exceeding run is terminated (the error message points at this key). |
 
+### Companion (`op-devtools.companion`)
+
+| Setting key | Type | Default | Effect |
+|-------------|------|---------|--------|
+| `companion.cannworkAutoInstall` | boolean | `true` | Silent background install of the CANNWork companion extension (`cann-pub.cannbot-toolkit`) on activation when missing or older than 2.0.0; `false` stops future installs/upgrades, already-installed versions are unaffected. |
+
 ---
 
 ## What is not in workspace settings
