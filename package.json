@@ -846,7 +846,7 @@
         {
           "id": "opdevtoolsHomeTree",
           "name": "%view.homeTree.name%",
-          "when": "opDevtools.showHomeTree"
+          "when": "opDevtools.showHomeTree || opDevtools.showOperateTree"
         },
         {
           "id": "opdevtoolsOperatorProjectsTree",

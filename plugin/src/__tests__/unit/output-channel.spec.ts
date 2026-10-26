@@ -99,13 +99,13 @@ describe('output-channel', () => {
   });
 
   describe('appendLog', () => {
-    it('writes scope, ISO timestamp and message without payload', () => {
+    it('writes scope, UTC+8 timestamp and message without payload', () => {
       outputChannel.appendLog('compile', 'build finished');
 
       const channel = outputChannel.getHuaweiOpDevtoolsOutputChannel();
 
       expect(channel.appendLine)
-        .toHaveBeenCalledWith(expect.stringMatching(/^\[compile\] \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z build finished$/));
+        .toHaveBeenCalledWith(expect.stringMatching(/^\[compile\] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} build finished$/));
     });
 
     it('appends JSON-serialized payload when provided', () => {
@@ -127,6 +127,20 @@ describe('output-channel', () => {
 
       expect(channel.appendLine)
         .toHaveBeenCalledWith(expect.stringMatching(/\[tool\] .* boom \[object Object\]$/));
+    });
+  });
+
+  describe('formatUtc8Timestamp', () => {
+    it('renders a UTC instant as the shifted UTC+8 wall clock', () => {
+      // 2026-10-19T00:30:00.500Z === 08:30:00.500 UTC+8
+      expect(outputChannel.formatUtc8Timestamp(new Date('2026-10-19T00:30:00.500Z')))
+        .toBe('2026-10-19 08:30:00.500');
+    });
+
+    it('rolls the calendar date forward across the UTC+8 day boundary', () => {
+      // 2026-10-19T16:30:00.000Z === 2026-10-20 00:30:00.000 UTC+8
+      expect(outputChannel.formatUtc8Timestamp(new Date('2026-10-19T16:30:00.000Z')))
+        .toBe('2026-10-20 00:30:00.000');
     });
   });
 });

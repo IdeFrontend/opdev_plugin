@@ -102,6 +102,7 @@ jest.mock('@plugin/domain', () => ({
 
 jest.mock('@plugin/domain/utils/debug-target', () => ({
   msdebugConfiguredTargetExists: jest.fn(() => true),
+  getConfiguredDebugTarget: jest.fn(() => undefined),
   updateMsdebugTarget: jest.fn(),
 }));
 
@@ -113,6 +114,8 @@ jest.mock('@plugin/domain/utils/debug-config-resolver', () => ({
 }));
 
 jest.mock('@plugin/domain/utils/debug-python-target', () => ({ updateMsdebugPythonTarget: jest.fn() }));
+
+jest.mock('@plugin/domain/utils/project-utils', () => ({ ensureLaunchJsonExists: jest.fn() }));
 
 jest.mock('@plugin/domain/utils/msdebug-ide-settings', () => ({ ensureMsdebugBreakpointFileAssociations: jest.fn() }));
 

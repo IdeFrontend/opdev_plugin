@@ -70,7 +70,9 @@ export default {
   'debug.autoAdaptNoBinary':
     '无法自动适配 msdebug target：在算子 build/ 目录下未找到可调试的二进制文件。请先执行 NPU/CPU 调试编译后再试。',
   'debug.targetBinaryMissing':
-    '无法启动调试：调试目标可执行文件不存在。调试编译可能失败或已被中断，请先成功执行 NPU/CPU 调试编译后再重试。',
+    '无法启动调试：调试目标可执行文件不存在（检查路径：{{target}}）。调试编译可能失败或已被中断，请先成功执行 NPU/CPU 调试编译后再重试；若路径与实际编译产物不一致，请检查 .vscode/launch.json 中的 target 配置。',
+  'debug.remoteTargetConfigMissing':
+    '无法启动调试：remote-debug 配置缺少 remoteConfig.remoteWorkspaceFolder，请先在 .vscode/launch.json 中补全该字段后重试。',
 
   // extension
   'extension.openWorkspaceFirst': '请先打开一个工作区',

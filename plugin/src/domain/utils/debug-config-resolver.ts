@@ -51,6 +51,12 @@ export function resolveDebugLaunchConfigName(
     return DEBUG_LAUNCH_CONFIG.MSDEBUG_TRITON_NPU;
   }
 
+  // pyasc runs the operator .py directly — always debug through the python
+  // profile, never a binary target (issue #92 one-click NPU debug).
+  if (pt === OperatorProjectType.PYASC) {
+    return DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON;
+  }
+
   // Torch-library is recognized in BOTH stored forms: the canonical detector
   // type ('torch-library', written by the settings-native openProject) and the
   // view-id value ('cann', written by createdProject and kept for imported

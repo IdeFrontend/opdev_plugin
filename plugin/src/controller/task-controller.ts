@@ -23,6 +23,7 @@ import {
 } from '@plugin/service/st-test-service';
 import { isStTestCancelledError } from '@plugin/domain/services/st-test-errors';
 import type { OperatorToolOutputLabel } from '@plugin/helpers/output-channel';
+import { appendLog } from '@plugin/helpers/output-channel';
 import { homeMethods } from './home-controller';
 import {
   StartBuildParams,
@@ -39,6 +40,7 @@ import { OperatorProjectType } from '@plugin/domain/services/operator-project-de
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
 import {
+  getConfiguredDebugTarget,
   msdebugConfiguredTargetExists,
   updateMsdebugTarget,
   type MsdebugTargetPatchResult,
@@ -49,6 +51,7 @@ import {
   resolveDebugLaunchConfigName,
 } from '@plugin/domain/utils/debug-config-resolver';
 import { updateMsdebugPythonTarget } from '@plugin/domain/utils/debug-python-target';
+import { ensureLaunchJsonExists } from '@plugin/domain/utils/project-utils';
 import { ensureMsdebugBreakpointFileAssociations } from '@plugin/domain/utils/msdebug-ide-settings';
 import { resolveTritonLaunchKernelPath } from '@plugin/domain/utils/triton-kernel-path';
 import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
@@ -214,8 +217,23 @@ async function patchLaunchJsonForDebugSession(
     // Never launch a debug session whose target binary is missing on disk: a debug build
     // that failed or was preempted (GC-24) would otherwise attach msdebug to a phantom
     // executable. Only block on a concrete, resolvable-but-absent target.
+    // remote-debug targets live on the remote NPU host and are never checked locally (#89).
     if (msdebugConfiguredTargetExists(workspaceRoot, debugConfigName) === false) {
-      vscode.window.showErrorMessage(t('debug.targetBinaryMissing'));
+      const configured = getConfiguredDebugTarget(workspaceRoot, debugConfigName);
+
+      // Attribution for the refusal — the exact target checked, so a stale or
+      // mis-pointed launch.json entry can be fixed instead of guessed at.
+      appendLog('npu debug', 'Refusing debug launch: configured target not found on disk', {
+        configName: debugConfigName,
+        target: configured?.target,
+        resolvedPath: configured?.resolvedPath,
+      });
+
+      const errorMessage = debugConfigName === 'remote-debug'
+        ? t('debug.remoteTargetConfigMissing')
+        : t('debug.targetBinaryMissing', { target: configured?.resolvedPath ?? debugConfigName });
+
+      vscode.window.showErrorMessage(errorMessage);
 
       return false;
     }
@@ -225,6 +243,15 @@ async function patchLaunchJsonForDebugSession(
 
   if (!pythonContext) {
     return true;
+  }
+
+  // Python profiles patch msdebug-python in launch.json — an imported workspace
+  // may not have one yet, in which case the patch would silently no-op.
+  try {
+    await ensureLaunchJsonExists(workspaceRoot);
+  }
+  catch (e) {
+    console.warn('ensureLaunchJsonExists failed (continuing):', e);
   }
 
   let launchKernelPath: string | undefined;
@@ -745,11 +772,15 @@ export const taskMethods = {
         const operatorNames = await homeMethods.getSelectedOperators();
         const compileOption = await getCompileOptionForSelectedOperators();
 
-        const built = await buildService.startBuild({
-          scriptField: 'npu_debug_script',
-          operatorNames: operatorNames || undefined,
-          compileOption,
-        }, 'npu debug');
+        // pyasc has no build step — the operator .py IS the debug target (#92).
+        // Pre-running it would execute the whole operator once outside the
+        // debugger, so skip straight to the debug session.
+        const built = projectType === OperatorProjectType.PYASC
+          || await buildService.startBuild({
+            scriptField: 'npu_debug_script',
+            operatorNames: operatorNames || undefined,
+            compileOption,
+          }, 'npu debug');
 
         if (!built) {
           // Debug build failed or was preempted — do not launch msdebug against a missing binary.

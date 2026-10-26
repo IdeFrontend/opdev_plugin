@@ -87,6 +87,14 @@ describe('resolveDebugLaunchConfigName', () => {
       .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG);
   });
 
+  it('maps pyasc to msdebug-python for NPU and remote NPU (one-click debug, #92)', () => {
+    expect(resolveDebugLaunchConfigName('pyasc', 'npu', defaultBehavior))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
+
+    expect(resolveDebugLaunchConfigName('pyasc', 'npu', defaultBehavior, undefined, true))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
+  });
+
   it('maps remote NPU debug to remote-debug', () => {
     expect(resolveDebugLaunchConfigName('cann', 'npu', defaultBehavior, undefined, true))
       .toBe(DEBUG_LAUNCH_CONFIG.REMOTE_MSDEBUG);

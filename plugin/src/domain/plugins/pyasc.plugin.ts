@@ -50,8 +50,8 @@ export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetec
     supportsSimulate: true,
     supportsOnBoard: true,
     supportsCpuDebug: false,
-    supportsNpuDebug: false,
-    supportsNpuPythonDebug: false,
+    supportsNpuDebug: true,
+    supportsNpuPythonDebug: true,
   };
 
   async detectProject(dirPath: string): Promise<ProjectDetectionResult> {

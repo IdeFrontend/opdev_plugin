@@ -31,7 +31,9 @@ export type MsdebugTargetPatchResult =
  *
  * These mirror the operator plugins' `getDefaultPaths().targetExampleFile`, the
  * only executables msdebug (NPU/CPU, C/C++) ever attaches to:
- *   - AscendC (`ascend.plugin`):       `build/test_aclnn_<op_name>`
+ *   - AscendC (`ascend.plugin`):       `build/test_aclnn_<op_name>` and the
+ *                                      ops-nn/ops-math example flavor
+ *                                      `build/test_aclnn_<op_name>_example`
  *   - standard-custom / cann
  *     (`abstract-operator-plugin`):    `build/<op_name>`
  * Python operators debug via `msdebug-python`, so no Python artifact belongs here.
@@ -45,6 +47,7 @@ export function debugTargetCandidates(operatorName?: string): string[] {
 
   return [
     `test_aclnn_${op}`,
+    `test_aclnn_${op}_example`,
     `test_geir_${op}`,
     op,
   ];
@@ -220,23 +223,25 @@ export function resolveTargetPath(target: string, workspaceRoot: string): string
     .replace('${workspaceFolderBasename}', path.basename(workspaceRoot));
 }
 
+/** The raw + locally-resolved form of the target configured in launch.json. */
+export type ConfiguredDebugTarget = {
+  configName: string;
+  /** The unexpanded `target` string from launch.json. */
+  target: string;
+  /** The local path `target` resolves to (placeholders substituted). */
+  resolvedPath: string;
+};
+
 /**
- * Whether the `msdebug` / `msdebug-cpu` launch config `configName` resolves to a target
- * binary that exists on disk. Returns:
- *   - `true`      the configured target exists (safe to attach);
- *   - `false`     the config declares a concrete target that is NOT on disk;
- *   - `undefined` indeterminate — no launch.json, no such config, or no `target` field —
- *                 so the caller must not block the launch on this signal alone.
- *
- * Used to refuse a debug launch that would otherwise attach msdebug to a phantom
- * executable when the debug build failed or was preempted. Checking the resolved
- * target on disk (rather than the auto-adapt `no_binary` result) avoids false positives
- * for a valid user-set target whose name is not among the auto-adapt candidates.
+ * Read the configured `target` of the `msdebug` / `msdebug-cpu` / `remote-debug`
+ * launch config `configName` from `<ide>/launch.json`, with placeholders resolved
+ * against `workspaceRoot`. Returns `undefined` when launch.json is absent,
+ * unparseable, or the config/target is missing.
  */
-export function msdebugConfiguredTargetExists(
+export function getConfiguredDebugTarget(
   workspaceRoot: string,
   configName: string,
-): boolean | undefined {
+): ConfiguredDebugTarget | undefined {
   const launchJsonPath = joinIdeConfigPath(workspaceRoot, 'launch.json');
 
   if (!fs.existsSync(launchJsonPath)) {
@@ -262,32 +267,85 @@ export function msdebugConfiguredTargetExists(
     return undefined;
   }
 
-  if (configName === 'remote-debug') {
-    const remoteConfig = config.remoteConfig as Record<string, unknown> | undefined;
-    const remoteWorkspaceFolder = remoteConfig && typeof remoteConfig.remoteWorkspaceFolder === 'string'
-      ? remoteConfig.remoteWorkspaceFolder
-      : undefined;
-
-    if (remoteWorkspaceFolder === undefined) {
-      return false;
-    }
-
-    const target = typeof config.target === 'string' ? config.target : undefined;
-
-    if (!target) {
-      return undefined;
-    }
-
-    return fs.existsSync(resolveTargetPath(target, workspaceRoot));
-  }
-
   const target = typeof config.target === 'string' ? config.target : undefined;
 
   if (!target) {
     return undefined;
   }
 
-  return fs.existsSync(resolveTargetPath(target, workspaceRoot));
+  return {
+    configName,
+    target,
+    resolvedPath: resolveTargetPath(target, workspaceRoot),
+  };
+}
+
+/**
+ * Whether the `msdebug` / `msdebug-cpu` launch config `configName` resolves to a target
+ * binary that exists on disk. Returns:
+ *   - `true`      the configured target exists (safe to attach);
+ *   - `false`     the config declares a concrete target that is NOT on disk, or the
+ *                 remote-debug config is missing its `remoteConfig.remoteWorkspaceFolder`;
+ *   - `undefined` indeterminate — no launch.json, no such config, no `target` field, or a
+ *                 remote-debug target whose existence lives on the remote NPU host —
+ *                 so the caller must not block the launch on this signal alone.
+ *
+ * Used to refuse a debug launch that would otherwise attach msdebug to a phantom
+ * executable when the debug build failed or was preempted. Checking the resolved
+ * target on disk (rather than the auto-adapt `no_binary` result) avoids false positives
+ * for a valid user-set target whose name is not among the auto-adapt candidates.
+ *
+ * `remote-debug` targets are never verified against the local disk (#89): in the
+ * split NPU setup the binary is built and synced on the remote host only, so a
+ * local `existsSync` is a guaranteed false negative. The started remote adapter
+ * is the authority on whether the target exists there.
+ */
+export function msdebugConfiguredTargetExists(
+  workspaceRoot: string,
+  configName: string,
+): boolean | undefined {
+  if (configName === 'remote-debug') {
+    const launchJsonPath = joinIdeConfigPath(workspaceRoot, 'launch.json');
+
+    if (!fs.existsSync(launchJsonPath)) {
+      return undefined;
+    }
+
+    let parsed: { configurations?: Array<Record<string, unknown>> };
+
+    try {
+      parsed = JSON.parse(fs.readFileSync(launchJsonPath, 'utf-8'));
+    }
+    catch {
+      return undefined;
+    }
+
+    const config = Array.isArray(parsed.configurations)
+      ? parsed.configurations.find((cfg) => cfg.name === configName)
+      : undefined;
+
+    if (!config) {
+      return undefined;
+    }
+
+    // A remote-debug config without a remote workspace folder cannot address the
+    // remote host at all — block so the user fixes the config first. With the
+    // folder present, the target's existence lives on the remote disk: return
+    // indeterminate and let the started remote adapter be the authority (#89).
+    const remoteConfig = config.remoteConfig as Record<string, unknown> | undefined;
+    const hasRemoteWorkspaceFolder = !!(remoteConfig
+      && typeof remoteConfig.remoteWorkspaceFolder === 'string');
+
+    return hasRemoteWorkspaceFolder ? undefined : false;
+  }
+
+  const configured = getConfiguredDebugTarget(workspaceRoot, configName);
+
+  if (!configured) {
+    return undefined;
+  }
+
+  return fs.existsSync(configured.resolvedPath);
 }
 
 /**
