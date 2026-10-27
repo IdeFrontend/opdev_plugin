@@ -42,7 +42,7 @@ describe('describeDataCollectionSet', () => {
     expect(describeDataCollectionSet('basic'))
       .toBe('PipeUtilization;L2Cache;Memory');
     expect(describeDataCollectionSet('full'))
-      .toBe('PipeUtilization;Pipeline;L2Cache;Memory;MemoryL0;MemoryUB;ArithmeticUtilization;ResourceConflictRatio');
+      .toBe('PipeUtilization;Pipeline;L2Cache;Memory;MemoryL0;MemoryUB;ArithmeticUtilization;ResourceConflictRatio;PmSampling');
   });
 
   it('returns the "暂不支持" placeholder for sets with no expansion', () => {
@@ -71,7 +71,7 @@ describe('matchSetForSections', () => {
       .toBe('basic');
   });
 
-  it('matches the full set from its 8-section expansion', () => {
+  it('matches the full set from its 9-section expansion', () => {
     expect(matchSetForSections([...DATA_COLLECTION_SET_SECTIONS.full]))
       .toBe('full');
   });
@@ -342,10 +342,10 @@ describe('mergeSavedDataCollectionConfig', () => {
       .toBe('/tmp/out.npu-rep');
     expect(merged.common.forceOverwrite)
       .toBe(true);
-    // commandLine is regenerated from sections (saved.set=full → 8 sections),
+    // commandLine is regenerated from sections (saved.set=full → 9 sections),
     // never restored verbatim.
     expect(merged.common.commandLine)
-      .toBe('--section PipeUtilization --section Pipeline --section L2Cache --section Memory --section MemoryL0 --section MemoryUB --section ArithmeticUtilization --section ResourceConflictRatio --force');
+      .toBe('--section PipeUtilization --section Pipeline --section L2Cache --section Memory --section MemoryL0 --section MemoryUB --section ArithmeticUtilization --section ResourceConflictRatio --section PmSampling --force');
     expect(merged.metrics.kind)
       .toBe('set');
     expect(merged.metrics.set)
@@ -448,9 +448,9 @@ describe('buildNpuComputeSectionFlags', () => {
       .toBe('--section Pipeline --section Memory');
   });
 
-  it('emits all 8 sections in canonical order when all are selected', () => {
+  it('emits all 9 sections in canonical order when all are selected', () => {
     expect(buildNpuComputeSectionFlags([...DATA_COLLECTION_SECTIONS]))
-      .toBe('--section PipeUtilization --section Pipeline --section L2Cache --section Memory --section MemoryL0 --section MemoryUB --section ArithmeticUtilization --section ResourceConflictRatio');
+      .toBe('--section PipeUtilization --section Pipeline --section L2Cache --section Memory --section MemoryL0 --section MemoryUB --section ArithmeticUtilization --section ResourceConflictRatio --section PmSampling');
   });
 
   it('ignores unknown section names', () => {

@@ -130,7 +130,7 @@ function definedDottedWrites(
 }
 
 /**
- * Read the selected npu-compute sections from the 8 per-section boolean
+ * Read the selected npu-compute sections from the 9 per-section boolean
  * settings (the single source of truth for on-board section selection).
  * Returns section names in {@link DATA_COLLECTION_SECTIONS} order, filtered to
  * those whose boolean is `true` or unset (the per-section default is `true`;
@@ -154,10 +154,10 @@ export async function getNpuComputeSections(): Promise<string[]> {
 }
 
 /**
- * Persist the npu-compute section selection to the 8 per-section boolean
- * settings. Each of the 8 booleans is written explicitly (true when selected,
+ * Persist the npu-compute section selection to the 9 per-section boolean
+ * settings. Each of the 9 booleans is written explicitly (true when selected,
  * false otherwise) so deselecting a section clears its setting. No SOC gating
- * — all 8 npu-compute sections are supported on-board.
+ * — all 9 npu-compute sections are supported on-board.
  */
 export async function saveNpuComputeSections(sections: readonly string[]): Promise<void> {
   const wanted = new Set(sections);
@@ -230,7 +230,7 @@ export const configMethods = {
    * default so reopening the dialog shows the same settings.
    *
    * On-board: migrates any legacy `saved.metrics.sections` array (the pre-boolean
-   * shape) into the 8 per-section boolean settings and strips it from the saved
+   * shape) into the 9 per-section boolean settings and strips it from the saved
    * object, then reads the booleans as the single source of truth. The migration
    * is idempotent — once `metrics.sections` is gone it never re-triggers.
    */
@@ -246,7 +246,7 @@ export const configMethods = {
     const settingKey = dataCollectionConfigSettingKey(collectionType);
     let saved = ConfigService.readOpDevtoolsSetting<unknown>(settingKey);
 
-    // Migrate legacy on-board shape: saved.metrics.sections array → 8 booleans.
+    // Migrate legacy on-board shape: saved.metrics.sections array → 9 booleans.
     if (collectionType === 'onboard' && saved && typeof saved === 'object') {
       const savedObj = saved as Record<string, unknown>;
       const metrics = savedObj.metrics as Record<string, unknown> | undefined;
@@ -257,7 +257,7 @@ export const configMethods = {
           .filter((s) => DATA_COLLECTION_SECTIONS.includes(s));
 
         try {
-          // Write the 8 booleans (single source of truth) from the legacy array.
+          // Write the 9 booleans (single source of truth) from the legacy array.
           await saveNpuComputeSections(legacySections);
           // Strip the legacy field so the migration never re-triggers, then persist.
           delete metrics.sections;
@@ -270,7 +270,7 @@ export const configMethods = {
       }
     }
 
-    // On-board: the 8 booleans are the source of truth; simulate has none.
+    // On-board: the 9 booleans are the source of truth; simulate has none.
     const sectionSelection = collectionType === 'onboard'
       ? await getNpuComputeSections()
       : undefined;
@@ -284,7 +284,7 @@ export const configMethods = {
    * itself stored (it is the setting key), and a failed write is swallowed — the
    * collection run itself must not be blocked by a settings-file write error.
    *
-   * On-board: the 8 per-section booleans are the single source of truth, so the
+   * On-board: the 9 per-section booleans are the single source of truth, so the
    * resolved sections are written to them, and only the non-section dialog state
    * (common.outputFile/forceOverwrite, metrics.kind/set UI linkage) is persisted
    * to the object key — `metrics.sections` and `common.commandLine` are derived,

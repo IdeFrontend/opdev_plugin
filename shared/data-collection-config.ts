@@ -83,6 +83,7 @@ export const DATA_COLLECTION_SECTIONS: readonly string[] = [
   'MemoryUB',
   'ArithmeticUtilization',
   'ResourceConflictRatio',
+  'PmSampling',
 ];
 
 /**
@@ -112,6 +113,7 @@ export const DATA_COLLECTION_SECTION_TO_CAMEL: Record<string, string> = {
   MemoryUB: 'memoryUB',
   ArithmeticUtilization: 'arithmeticUtilization',
   ResourceConflictRatio: 'resourceConflictRatio',
+  PmSampling: 'pmSampling',
 };
 
 /** Reverse of {@link DATA_COLLECTION_SECTION_TO_CAMEL} (camel suffix → section name). */
@@ -125,7 +127,7 @@ export const DATA_COLLECTION_CAMEL_TO_SECTION: Record<string, string> = Object.f
   ]));
 
 /**
- * Relative (dotted) workspace-setting keys for the 8 npu-compute section
+ * Relative (dotted) workspace-setting keys for the 9 npu-compute section
  * booleans (no flavor prefix; the controller prepends the setting namespace).
  * These are the single source of truth for on-board npu-compute section
  * selection — the dialog reads/writes them, and the command line is built from
@@ -133,7 +135,7 @@ export const DATA_COLLECTION_CAMEL_TO_SECTION: Record<string, string> = Object.f
  */
 export const NPU_COMPUTE_SECTION_DOTTED_KEYS: readonly string[] = DATA_COLLECTION_SECTIONS.map((section) => `performanceTuning.onBoard.npuCompute.${DATA_COLLECTION_SECTION_TO_CAMEL[section]}`);
 
-/** Per-section boolean selection (mirror of the 8 npu-compute setting keys). */
+/** Per-section boolean selection (mirror of the 9 npu-compute setting keys). */
 export interface NpuComputeSectionSelection {
   pipeUtilization?: boolean;
   pipeline?: boolean;
@@ -143,6 +145,7 @@ export interface NpuComputeSectionSelection {
   memoryUB?: boolean;
   arithmeticUtilization?: boolean;
   resourceConflictRatio?: boolean;
+  pmSampling?: boolean;
 }
 
 /**
@@ -197,6 +200,7 @@ export const DATA_COLLECTION_SET_SECTIONS: Record<string, readonly string[]> = {
     'MemoryUB',
     'ArithmeticUtilization',
     'ResourceConflictRatio',
+    'PmSampling',
   ],
   hccl: [],
   roofline: [],
@@ -225,6 +229,7 @@ export const DATA_COLLECTION_SECTION_LABELS: Record<string, string> = {
   MemoryUB: 'MemoryUB',
   ArithmeticUtilization: '算力利用率',
   ResourceConflictRatio: '资源冲突率',
+  PmSampling: 'PM采样',
 };
 
 /**
@@ -391,7 +396,7 @@ export function dataCollectionConfigSettingKey(collectionType: CollectionType): 
  * never from the saved blob.
  *
  * For on-board (`collectionType === 'onboard'`), the caller passes the sections
- * derived from the 8 per-section boolean settings (the single source of truth)
+ * derived from the 9 per-section boolean settings (the single source of truth)
  * via `sectionSelection`; these override any `saved.metrics.sections`. The
  * `common.commandLine` is never restored verbatim — it is regenerated from the
  * resolved sections so the preview always reflects the current booleans.
@@ -440,7 +445,7 @@ export function mergeSavedDataCollectionConfig(
     }
   }
 
-  // On-board: the 8 booleans are the single source of truth for sections.
+  // On-board: the 9 booleans are the single source of truth for sections.
   if (sectionSelection) {
     config.metrics.sections = [...sectionSelection];
     // kind=section so resolveSelectedSections uses these sections (not a preset

@@ -602,6 +602,12 @@
             "order": 338,
             "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio.description%"
+          },
+          "op-devtools.performanceTuning.onBoard.npuCompute.pmSampling": {
+            "type": "boolean",
+            "order": 339,
+            "default": true,
+            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.pmSampling.description%"
           }
         }
       },

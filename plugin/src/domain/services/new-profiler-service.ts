@@ -34,7 +34,7 @@ export interface NewProfilerCommandParams {
   /** Absolute per-run opprof directory (`<root>/<ideDir>/opprof/<runId>`) reports land in. */
   opprofRunDir: string;
   /**
-   * On-board only: the resolved npu-compute section names (the 8 per-section
+   * On-board only: the resolved npu-compute section names (the 9 per-section
    * booleans are the single source of truth). npu-compute's `--section` flags
    * are built from these; ignored by the simulation builder.
    */
@@ -53,7 +53,7 @@ function commandLineHasOption(commandLine: string, ...options: string[]): boolea
  * Build the `npu-compute` collection command.
  *
  * Shape (npu-compute doc §4/§5): `npu-compute [options] <target> [target args]`.
- * The `--section <id>` flags are derived from the 8 per-section booleans (the
+ * The `--section <id>` flags are derived from the 9 per-section booleans (the
  * single source of truth, passed as `params.sections`); the user no longer
  * hand-edits them via `commandLine`. We append `--export
  * <opprofRunDir>/result.npu-rep` (always — the section flags carry no output)
