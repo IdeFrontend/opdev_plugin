@@ -382,6 +382,12 @@ export class ProfilingReportPanel {
   private async initializeHtml(): Promise<void> {
     const distPath = path.join(this.context.extensionPath, 'out', 'web');
     const cspSource = this.panel.webview.cspSource;
+    const devServerUrl = process.env.MSTT_DEV_SERVER_URL?.replace(/\/$/, '');
+    // Hot Mode loads scripts/workers from the Vite origin; packaged builds use cspSource only.
+    // `blob:` is required because the webview wraps the Sudu worker in a Blob URL —
+    // `new Worker(vscode-webview://…)` is unreliable across VS Code webview hosts.
+    const scriptSource = devServerUrl ? `${cspSource} ${devServerUrl}` : cspSource;
+    const workerSource = `${scriptSource} blob:`;
 
     this.panel.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
@@ -389,14 +395,38 @@ export class ProfilingReportPanel {
       `panels/${VIEW_PROFILING_REPORT}`,
       {
         lang: normalizeContentLanguage(vscode.env.language),
-        scriptSource: cspSource,
+        scriptSource,
         styleSource: cspSource,
         fontSource: cspSource,
         imageSource: cspSource,
-        connectSource: cspSource,
+        connectSource: scriptSource,
+        workerSource,
       },
     );
     this.themeDisposable = registerWebviewThemeBridge(this.panel.webview);
+  }
+
+  /**
+   * Same-origin Sudu worker URL for Source-tab Ascend C highlighting.
+   * Packaged: `out/web/sudu/worker.js` via asWebviewUri. Hot Mode: Vite `/sudu/worker.js`.
+   */
+  private resolveSuduWorkerUrl(): string {
+    const devServerUrl = process.env.MSTT_DEV_SERVER_URL?.replace(/\/$/, '');
+
+    if (devServerUrl) {
+      return `${devServerUrl}/sudu/worker.js`;
+    }
+
+    const workerUri = vscode.Uri.joinPath(
+      this.context.extensionUri,
+      'out',
+      'web',
+      'sudu',
+      'worker.js',
+    );
+
+    return this.panel.webview.asWebviewUri(workerUri)
+      .toString();
   }
 
   private async loadFile(filePath: string): Promise<void> {
@@ -428,6 +458,7 @@ export class ProfilingReportPanel {
         fileName: path.basename(filePath),
         filePath,
         collectedAt,
+        suduWorkerUrl: this.resolveSuduWorkerUrl(),
       });
     }
     catch (error) {
