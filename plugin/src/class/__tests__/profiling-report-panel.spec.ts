@@ -202,8 +202,24 @@ describe('ProfilingReportPanel', () => {
         fileName: 'sample.rep',
         filePath,
         collectedAt: expect.any(String),
+        suduWorkerUrl: `webview://${path.join(root, 'out', 'web', 'sudu', 'worker.js')}`,
       });
     expect(JSON.stringify(panel.webview.postMessage.mock.calls)).not.toContain('base64');
+  });
+
+  it('injects worker-src (with blob:) into the profiling-report CSP for the Sudu worker', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    expect(mockTransformDistHtml)
+      .toHaveBeenCalledWith(
+        expect.any(String),
+        expect.anything(),
+        expect.stringContaining('profiling-report'),
+        expect.objectContaining({
+          workerSource: 'vscode-webview://test blob:',
+          scriptSource: 'vscode-webview://test',
+        }),
+      );
   });
 
   it('includes the report absolute path and mtime as collectedAt in the load message', async () => {
