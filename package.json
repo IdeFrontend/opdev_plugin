@@ -705,11 +705,11 @@
           "op-devtools.performanceTuning.simulation.tool": {
             "type": "string",
             "enum": [
-              "npu-emulate",
+              "npusim",
               "msprof"
             ],
             "enumDescriptions": [
-              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.npuEmulate%",
+              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.npusim%",
               "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.msprof%"
             ],
             "order": 299,
@@ -719,8 +719,8 @@
         }
       },
       {
-        "id": "op-devtools.performanceTuning.simulation.npuEmulate",
-        "title": "%config.category.performanceTuning.simulation.npuEmulate.title%",
+        "id": "op-devtools.performanceTuning.simulation.npusim",
+        "title": "%config.category.performanceTuning.simulation.npusim.title%",
         "type": "object",
         "properties": {
           "op-devtools.performanceTuning.dataCollection.simulate": {

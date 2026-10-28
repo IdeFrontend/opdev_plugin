@@ -15,23 +15,23 @@
  * On A5 (`ascend950`) the on-board / simulation analysis can be switched to the
  * replacement prototype tools:
  *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
- *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
+ *   - simulation → `npusim` (see NPUSim_使用文档.md)
  *
- * `npu-emulate` is enabled on A5 (default simulation tool); its `collect`
- * subcommand currently takes no metric/section options (see
+ * `npusim` is enabled on A5 (default simulation tool); its `record`
+ * subcommand takes no metric/section options (see
  * ConfigService.getSimulationTool).
  */
 
 /** On-board profiling tool: the new `npu-compute` prototype or the legacy `msprof`. */
 export type OnBoardTool = 'npu-compute' | 'msprof';
 
-/** Simulation tool: the new `npu-emulate` prototype (renamed from `npusim`) or the legacy `msprof`. */
-export type SimulationTool = 'npu-emulate' | 'msprof';
+/** Simulation tool: the new `npusim` prototype or the legacy `msprof`. */
+export type SimulationTool = 'npusim' | 'msprof';
 
 /** Which collection the dialog is configuring; also preselects the top switch. */
 export type CollectionType = 'onboard' | 'simulate';
 
-/** Common (npu-compute/npu-emulate shared) collection options — the dialog's "Common" panel. */
+/** Common (npu-compute/npusim shared) collection options — the dialog's "Common" panel. */
 export interface DataCollectionCommon {
   /** `--export` / `-o` output file path; empty → tool default under opprof. */
   outputFile: string;
@@ -311,7 +311,7 @@ export function resolveSelectedSections(config: DataCollectionConfig): string[] 
  * Build a sensible default `commandLine` text from the structured metrics/common
  * selections. Only npu-compute (on-board) consumes metric flags, and it accepts
  * one repeated `--section <id>` per section (no `--set`, no comma/space lists —
- * npu-compute使用文档.md §7). Simulation (npu-emulate) takes no section/set flags, so
+ * npu-compute使用文档.md §7). Simulation (npusim) takes no section/set flags, so
  * metrics contribute nothing to its command line.
  */
 export function buildDefaultCommandLine(config: DataCollectionConfig): string {
@@ -380,7 +380,7 @@ export function buildDefaultDataCollectionConfig(collectionType: CollectionType)
 /**
  * Relative (dotted) workspace-setting key the dialog config for a collection type
  * is persisted under, so reopening the dialog restores the last confirmed config.
- * Kept per collection type because on-board (npu-compute) and simulation (npu-emulate)
+ * Kept per collection type because on-board (npu-compute) and simulation (npusim)
  * carry different option sets — one shared blob would leak the other tool's args.
  */
 export function dataCollectionConfigSettingKey(collectionType: CollectionType): string {
@@ -441,7 +441,7 @@ export function mergeSavedDataCollectionConfig(
       }
       // metrics.sections is intentionally NOT restored from saved — on-board uses
       // the caller-provided sectionSelection (source of truth); simulate keeps the
-      // fresh default (npu-emulate collect takes no section flags).
+      // fresh default (npusim record takes no section flags).
     }
   }
 

@@ -245,7 +245,7 @@ describe('buildDefaultCommandLine', () => {
       .toBe('--section Memory --force');
   });
 
-  it('emits no metric flags for simulate (npu-emulate takes no --section/--set)', () => {
+  it('emits no metric flags for simulate (npusim takes no --section/--set)', () => {
     const config = buildDefaultDataCollectionConfig('simulate');
 
     config.metrics = {
@@ -283,7 +283,7 @@ describe('buildDefaultDataCollectionConfig', () => {
       .toBe('--section PipeUtilization --section L2Cache --section Memory');
   });
 
-  it('seeds an empty commandLine for simulate (npu-emulate takes no metric flags)', () => {
+  it('seeds an empty commandLine for simulate (npusim takes no metric flags)', () => {
     expect(buildDefaultDataCollectionConfig('simulate').common.commandLine)
       .toBe('');
   });

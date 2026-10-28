@@ -273,8 +273,8 @@ export default {
   'build.compileFailedThrow': 'Compile operator failed: {{output}}',
   'build.executeFailedThrow': 'Execution failed: {{output}}',
   'build.simulationFailedThrow': 'Simulation analysis failed: {{output}}',
-  'build.newProfilerToolUnsupported': 'npu-compute / npu-emulate are only supported for <<<>>> (kernel direct-call) operator projects on ascend950 environments. Please use the msprof on-board/simulation flow for the current project.',
-  'performanceTuning.simulation.tool.notA5ResetToMsprof': 'The current environment does not support the npu-emulate simulation tool; it has been automatically reset to msprof. npu-emulate is only available on A5 (ascend950) environments.',
+  'build.newProfilerToolUnsupported': 'npu-compute / npusim are only supported for <<<>>> (kernel direct-call) operator projects on ascend950 environments. Please use the msprof on-board/simulation flow for the current project.',
+  'performanceTuning.simulation.tool.notA5ResetToMsprof': 'The current environment does not support the npusim simulation tool; it has been automatically reset to msprof. npusim is only available on A5 (ascend950) environments.',
   'performanceTuning.onBoard.tool.notA5ResetToMsprof': 'The current environment does not support the npu-compute on-board tool; it has been automatically reset to msprof. npu-compute is only available on A5 (ascend950) environments.',
 
   // project (additional)
@@ -646,7 +646,7 @@ export default {
   'web.options.onboard.resourceConflict': 'Resource conflict ratio',
   'web.options.onboard.startNow': 'Start now',
 
-  // web data-collection-config (A5 new-tool npu-compute / npu-emulate dialog)
+  // web data-collection-config (A5 new-tool npu-compute / npusim dialog)
   'web.dataCollection.title': 'Data Collection Config',
   'web.dataCollection.collectionType': 'Collection type',
   'web.dataCollection.simulate': 'Simulate',

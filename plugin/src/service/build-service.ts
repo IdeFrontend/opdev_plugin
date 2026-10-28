@@ -59,7 +59,7 @@ import { isNewProfilerToolSupportedForProject } from '@shared/cann-env-constants
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import {
   buildNpuComputeCommand,
-  buildNpuEmulateCommand,
+  buildNpusimCommand,
 } from '@plugin/domain/services/new-profiler-service';
 import type { DataCollectionConfig } from '@shared/data-collection-config';
 import {
@@ -125,37 +125,61 @@ export async function isRootStandardCustom(): Promise<boolean> {
 }
 
 /**
- * Locate the `.npu-rep` report produced by `npu-emulate collect`.
+ * Locate the `.npu-rep` report produced by `npusim record -g`.
  *
- * npu-emulate creates a nested layout under the output directory:
- * `<opprofRunDir>/npusim_<ts>_<pid>/report/*.npu-rep`.
- * The report file sits directly inside the `report/` folder, so we scan
- * the first `npusim_*` run dir's `report/` directory for `.npu-rep` files.
- * Returns the absolute path of the first `.npu-rep` file found, or `undefined`.
+ * Layouts seen in the wild:
+ *   - deterministic: `<opprofRunDir>/result.npu-rep` (checked first by the
+ *     caller, see {@link BuildService.startNewToolCollection});
+ *   - flat: `<opprofRunDir>/npusim_<ts>_<pid>/report/*.npu-rep`;
+ *   - nested: `<opprofRunDir>/npusim_<ts>_<pid>/report/result/<...>/*.npu-rep`
+ *     — the tool may nest the report deeper under `report/`.
+ * This helper recursively walks the `npusim_*` run dirs (depth-first, files
+ * before sub-dirs, name-sorted at each level) and returns the first `.npu-rep`
+ * file found, or `undefined`.
  */
-function findNpuEmulateReport(opprofRunDir: string): string | undefined {
+function findNpusimReport(opprofRunDir: string): string | undefined {
+  const collectRepFiles = (dir: string): string[] => {
+    let entries: fs.Dirent[];
+
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    }
+    catch (_) {
+      // Unreadable dir (permissions / race): skip it.
+      return [];
+    }
+
+    const repFiles = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.npu-rep'))
+      .map((entry) => path.join(dir, entry.name))
+      .sort();
+    const subDirs = entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+
+    return [
+      ...repFiles,
+      ...subDirs.flatMap((name) => collectRepFiles(path.join(dir, name))),
+    ];
+  };
+
   try {
     const runDirs = fs.readdirSync(opprofRunDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && entry.name.startsWith('npusim'))
-      .map((entry) => path.join(opprofRunDir, entry.name));
+      .map((entry) => path.join(opprofRunDir, entry.name))
+      .sort();
 
     for (const runDir of runDirs) {
-      const reportDir = path.join(runDir, 'report');
-
-      if (!fs.existsSync(reportDir)) {
-        continue;
-      }
-
-      const repFile = fs.readdirSync(reportDir)
-        .find((name) => name.endsWith('.npu-rep'));
+      const repFile = collectRepFiles(runDir)[0];
 
       if (repFile) {
-        return path.join(reportDir, repFile);
+        return repFile;
       }
     }
   }
   catch (error) {
-    console.warn('[findNpuEmulateReport] Failed to locate .npu-rep:', error);
+    console.warn('[findNpusimReport] Failed to locate .npu-rep:', error);
   }
 
   return undefined;
@@ -293,7 +317,7 @@ export class BuildService {
   }
 
   /**
-   * New-tool (npu-compute / npu-emulate) eligibility guard for the execution
+   * New-tool (npu-compute / npusim) eligibility guard for the execution
    * path. The sidebar / context-menu entries already route non-eligible
    * projects to the msprof flow; this blocks direct API invocation
    * (e.g. a stale data-collection panel) so the new tools can only ever run on
@@ -325,17 +349,17 @@ export class BuildService {
    * `executeOperatorCommand`; this option string adds the `--soc=` CLI flag
    * required by the example build after `--simulator`.
    *
-   * On A5 (ascend950) when the new `npu-emulate` simulation tool is selected,
-   * the `--simulator` flag is omitted — npu-emulate does not use the CANN
+   * On A5 (ascend950) when the new `npusim` simulation tool is selected,
+   * the `--simulator` flag is omitted — npusim does not use the CANN
    * simulator build path. For the legacy `msprof` flow (or non-A5 SOCs) the
    * `--simulator` flag is kept as before.
    */
   private buildSimulateExampleCompileOption(): string {
     const resolved = resolveAscendEnv({ isSimulator: true });
-    const isA5WithNpuEmulate = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
-      && ConfigService.getSimulationTool() === 'npu-emulate';
+    const isA5WithNpusim = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
+      && ConfigService.getSimulationTool() === 'npusim';
 
-    return isA5WithNpuEmulate
+    return isA5WithNpusim
       ? `--soc=${resolved.socVersion}`
       : `--simulator --soc=${resolved.socVersion}`;
   }
@@ -1034,7 +1058,7 @@ export class BuildService {
   }
 
   /**
-   * A5 new-tool collection (npu-compute for on-board, npu-emulate for simulation).
+   * A5 new-tool collection (npu-compute for on-board, npusim for simulation).
    *
    * Compiles with the legacy build sequence (build_op + the standard-custom
    * example build), then hands the compiled target to the selected prototype
@@ -1050,7 +1074,7 @@ export class BuildService {
       return;
     }
 
-    // npu-compute / npu-emulate only run on ascend950 in <<<>>> or
+    // npu-compute / npusim only run on ascend950 in <<<>>> or
     // standard-custom operator projects; everything else must use the msprof
     // flow.
     if (!(await this.guardNewProfilerToolSupportedForCurrentProject())) {
@@ -1091,7 +1115,7 @@ export class BuildService {
     }
 
     // Per-run opprof directory the report link scans: <root>/<ideDir>/opprof/<runId>.
-    const runId = `${isSimulate ? 'npu-emulate' : 'npu-compute'}_${Date.now()}`;
+    const runId = `${isSimulate ? 'npusim' : 'npu-compute'}_${Date.now()}`;
     const opprofRunDir = joinIdeConfigPath(projectPath, 'opprof', runId);
 
     try {
@@ -1114,7 +1138,7 @@ export class BuildService {
       );
 
       const toolCmd = isSimulate
-        ? buildNpuEmulateCommand({
+        ? buildNpusimCommand({
           config: params.config,
           targetFile,
           opprofRunDir,
@@ -1153,14 +1177,16 @@ export class BuildService {
       vscode.window.showInformationMessage(t(isSimulate ? 'build.simulationSuccess' : 'build.onBoardSuccess'));
 
       // New-tool reports open through the profiling-report viewer (.npu-rep).
-      // npu-compute writes a deterministic file at <opprofRunDir>/result.npu-rep;
-      // npu-emulate lays out <opprofRunDir>/npusim_<ts>_<pid>/report/*.npu-rep.
-      const reportPath = isSimulate
-        ? findNpuEmulateReport(opprofRunDir)
-        : path.join(opprofRunDir, NEW_TOOL_REPORT_FILENAME);
+      // Both tools write a deterministic file at <opprofRunDir>/result.npu-rep;
+      // npusim nests it under its own <opprofRunDir>/npusim_<ts>_<pid>/ dir
+      // (e.g. report/result/<op>/*.npu-rep) — the fallback scans recursively.
+      const reportPath = path.join(opprofRunDir, NEW_TOOL_REPORT_FILENAME);
+      const resolvedReportPath = fs.existsSync(reportPath)
+        ? reportPath
+        : findNpusimReport(opprofRunDir);
 
-      if (reportPath && fs.existsSync(reportPath)) {
-        await vscode.commands.executeCommand(COMMAND_OPEN_PROFILING_REPORT, reportPath);
+      if (resolvedReportPath && fs.existsSync(resolvedReportPath)) {
+        await vscode.commands.executeCommand(COMMAND_OPEN_PROFILING_REPORT, resolvedReportPath);
       }
 
       // Refresh the tree without auto-opening again (the report is already shown).

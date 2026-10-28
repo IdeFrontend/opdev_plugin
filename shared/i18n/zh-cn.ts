@@ -273,8 +273,8 @@ export default {
   'build.compileFailedThrow': '编译算子失败: {{output}}',
   'build.executeFailedThrow': '执行失败: {{output}}',
   'build.simulationFailedThrow': '执行仿真分析失败: {{output}}',
-  'build.newProfilerToolUnsupported': 'npu-compute / npu-emulate 仅支持 ascend950 环境的 <<<>>>（内核调用符直调）算子工程，当前工程请使用 msprof 上板/仿真流程。',
-  'performanceTuning.simulation.tool.notA5ResetToMsprof': '当前环境不支持 npu-emulate 仿真工具，已自动切换为 msprof。npu-emulate 仅在 A5（ascend950）环境下可用。',
+  'build.newProfilerToolUnsupported': 'npu-compute / npusim 仅支持 ascend950 环境的 <<<>>>（内核调用符直调）算子工程，当前工程请使用 msprof 上板/仿真流程。',
+  'performanceTuning.simulation.tool.notA5ResetToMsprof': '当前环境不支持 npusim 仿真工具，已自动切换为 msprof。npusim 仅在 A5（ascend950）环境下可用。',
   'performanceTuning.onBoard.tool.notA5ResetToMsprof': '当前环境不支持 npu-compute 上板工具，已自动切换为 msprof。npu-compute 仅在 A5（ascend950）环境下可用。',
 
   // project (additional)
@@ -645,7 +645,7 @@ export default {
   'web.options.onboard.resourceConflict': '资源冲突占比',
   'web.options.onboard.startNow': '立即开始',
 
-  // web data-collection-config (A5 新工具 npu-compute / npu-emulate 弹窗)
+  // web data-collection-config (A5 新工具 npu-compute / npusim 弹窗)
   'web.dataCollection.title': '数据采集配置',
   'web.dataCollection.collectionType': 'Collection type',
   'web.dataCollection.simulate': '仿真',

@@ -964,7 +964,7 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
 /**
  * Remove the `--simulator` flag (and its optional following value/placeholder,
  * e.g. `{simulator_type}`) from a script string. Used when the simulation tool
- * is `npu-emulate` (A5), which does not use the CANN simulator build path.
+ * is `npusim` (A5), which does not use the CANN simulator build path.
  */
 export function stripSimulatorFlag(script: string): string {
   return script

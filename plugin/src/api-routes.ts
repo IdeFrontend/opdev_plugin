@@ -31,7 +31,7 @@ const opsMethods = {
   startSimulate: dispatchSimulator,
   startOnBoard: dispatchOnBoard,
 
-  // A5 new-tool (npu-compute / npu-emulate) data-collection dialog.
+  // A5 new-tool (npu-compute / npusim) data-collection dialog.
   getDataCollectionConfig: configMethods.getDataCollectionConfig,
   saveDataCollectionConfig: configMethods.saveDataCollectionConfig,
   startNewToolCollection: dispatchNewToolCollection,

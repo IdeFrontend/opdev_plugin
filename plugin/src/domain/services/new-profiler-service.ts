@@ -10,8 +10,8 @@
 /**
  * Command generation for the A5 replacement prototype profiler tools driven by
  * the "数据采集配置" dialog:
- *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
- *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
+ *   - on-board  → `npu-compute` (see npu-compute使用文档.md)
+ *   - simulation → `npusim`     (see NPUSim_使用文档.md)
  *
  * The builders only *augment* the tool invocation with the pieces the report
  * link relies on — a stable output file location under the per-run opprof
@@ -24,6 +24,9 @@ import {
   buildNpuComputeSectionFlags,
 } from '@shared/data-collection-config';
 import type { DataCollectionConfig } from '@shared/data-collection-config';
+
+/** SoC `-s` value NPUSim accepts for the A5 class (see NPUSim doc §5). */
+export const NPUSIM_SOC_VERSION = 'Ascend950' as const;
 
 /** Inputs shared by both new-tool command builders. */
 export interface NewProfilerCommandParams {
@@ -87,28 +90,44 @@ export function buildNpuComputeCommand(params: NewProfilerCommandParams): string
 }
 
 /**
- * Build the `npu-emulate collect` command.
+ * Build the `npusim record` command (auto-generates the report with `-g`).
  *
- * Shape: `npu-emulate collect --output <dir> <target>`. `collect` runs the
- * compiled target on the SoC simulator and emits the report under the given
- * output directory. npu-emulate creates its own sub-directory structure
- * (`<dir>/npusim_<ts>_<pid>/{record,report}/*.npu-rep`), so `--output`
- * must point at the per-run opprof directory only — not a full file path.
+ * Shape (NPUSim doc §5): `npusim record <user_app> -s Ascend950 -o <output> -g`.
+ * The user's `commandLine` text is passed through as extra record options; we
+ * append `-s`, `-o <opprofRunDir>` and `-g` only when not already present so the
+ * report link finds the artifacts under the shared opprof run directory.
  */
-export function buildNpuEmulateCommand(params: NewProfilerCommandParams): string {
+export function buildNpusimCommand(params: NewProfilerCommandParams): string {
   const {
-    targetFile, opprofRunDir,
+    config, targetFile, opprofRunDir,
   } = params;
+  const userArgs = (config.common.commandLine || '').trim();
 
   const parts = [
-    'npu-emulate',
-    'collect',
-    `--output ${opprofRunDir}`,
+    'npusim',
+    'record',
   ];
 
-  // The compiled target is the final positional (the app to simulate).
+  // user_app is the first positional after `record` (doc §5).
   if (targetFile) {
     parts.push(targetFile);
+  }
+
+  if (userArgs) {
+    parts.push(userArgs);
+  }
+
+  if (!commandLineHasOption(userArgs, '-s', '--soc-version')) {
+    parts.push(`-s ${NPUSIM_SOC_VERSION}`);
+  }
+
+  if (!commandLineHasOption(userArgs, '-o', '--output')) {
+    parts.push(`-o ${opprofRunDir}`);
+  }
+
+  // Auto-generate the report right after the simulation (doc §5 `-g`).
+  if (!commandLineHasOption(userArgs, '-g', '--gen-report')) {
+    parts.push('-g');
   }
 
   return parts.join(' ');

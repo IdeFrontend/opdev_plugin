@@ -79,7 +79,7 @@ const syncOnBoardOperatorMetricChildren = async (): Promise<void> => {
 };
 
 /**
- * When a non-A5 environment selects npu-emulate / npu-compute, reset to msprof
+ * When a non-A5 environment selects npusim / npu-compute, reset to msprof
  * and warn the user. The new tools are A5-only; the runtime guards already
  * fall back to msprof, but silently ignoring a user's deliberate choice is
  * confusing — an explicit reset + message is clearer.
@@ -97,7 +97,7 @@ async function guardNewToolSelectionForNonA5(e: vscode.ConfigurationChangeEvent)
   if (e.affectsConfiguration(simToolKey)) {
     const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
 
-    if (configured === 'npu-emulate') {
+    if (configured === 'npusim') {
       await ConfigService.writeOpDevtoolsDottedSettings({ 'performanceTuning.simulation.tool': 'msprof' });
       vscode.window.showWarningMessage(t('performanceTuning.simulation.tool.notA5ResetToMsprof'));
     }
@@ -116,11 +116,11 @@ async function guardNewToolSelectionForNonA5(e: vscode.ConfigurationChangeEvent)
 /**
  * Keep the `--simulator` flag in `simulationCompileCommand` consistent with the
  * selected simulation tool:
- *  - `npu-emulate` (A5): the CANN simulator build path is unused, so remove
+ *  - `npusim` (A5): the CANN simulator build path is unused, so remove
  *    `--simulator` if present.
  *  - `msprof`: the legacy flow requires `--simulator`, so add it if missing.
  *
- * Runs after {@link guardNewToolSelectionForNonA5} so a non-A5 `npu-emulate`
+ * Runs after {@link guardNewToolSelectionForNonA5} so a non-A5 `npusim`
  * selection has already been reset to `msprof` before the flag is synced.
  */
 async function syncSimulatorFlagWithSimulationTool(): Promise<void> {
@@ -133,7 +133,7 @@ async function syncSimulatorFlagWithSimulationTool(): Promise<void> {
 
   let nextScript: string;
 
-  if (tool === 'npu-emulate') {
+  if (tool === 'npusim') {
     nextScript = stripSimulatorFlag(script);
   }
   else if (tool === 'msprof') {
@@ -236,15 +236,15 @@ export function createMainConfigHandler(deps: MainConfigWatchDeps) {
       }
     }
 
-    // Guard: reset npu-emulate / npu-compute to msprof on non-A5 environments.
+    // Guard: reset npusim / npu-compute to msprof on non-A5 environments.
     await guardNewToolSelectionForNonA5(e)
       .catch((error) => {
         console.warn('[watchMainConfig] guardNewToolSelectionForNonA5 failed:', error);
       });
 
     // Keep the `--simulator` flag in the simulation compile command in sync
-    // with the selected simulation tool (npu-emulate drops it, msprof adds it).
-    // Runs after the non-A5 guard so a reset npu-emulate → msprof is reflected.
+    // with the selected simulation tool (npusim drops it, msprof adds it).
+    // Runs after the non-A5 guard so a reset npusim → msprof is reflected.
     if (simulationToolAffected) {
       await syncSimulatorFlagWithSimulationTool()
         .catch((error) => {

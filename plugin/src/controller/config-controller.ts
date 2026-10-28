@@ -223,7 +223,7 @@ export const configMethods = {
    * (`COMMAND_DATA_COLLECTION_CONFIG`) stashed a collection type via
    * {@link setPendingDataCollectionType}, honor it so the dialog preselects the
    * side the user clicked (on-board / simulation); otherwise default to whichever
-   * new tool is active on A5 (`npu-emulate` → simulate, else `npu-compute` → onboard).
+   * new tool is active on A5 (`npusim` → simulate, else `npu-compute` → onboard).
    *
    * The last config the user confirmed for that side (persisted by
    * {@link configMethods.saveDataCollectionConfig}) is merged over the fresh
@@ -288,7 +288,7 @@ export const configMethods = {
    * resolved sections are written to them, and only the non-section dialog state
    * (common.outputFile/forceOverwrite, metrics.kind/set UI linkage) is persisted
    * to the object key — `metrics.sections` and `common.commandLine` are derived,
-   * never stored. Simulate keeps the legacy whole-object write (npu-emulate gated).
+   * never stored. Simulate keeps the legacy whole-object write (npusim gated).
    */
   async saveDataCollectionConfig(config: DataCollectionConfig): Promise<void> {
     try {

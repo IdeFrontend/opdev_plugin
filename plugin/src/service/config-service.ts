@@ -635,7 +635,7 @@ export class ConfigService {
       const paths = plugin.getDefaultPaths(op);
       const isA5Profiler = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc());
 
-      // A5 environments default to the npu-emulate simulation tool, which does
+      // A5 environments default to the npusim simulation tool, which does
       // not use the CANN `--simulator` build path. Strip the flag from the
       // seeded simulation compile command for A5; non-A5 keeps it (msprof flow).
       if (isA5Profiler) {
@@ -907,13 +907,12 @@ export class ConfigService {
   }
 
   /**
-   * Simulation tool selector. The new simulation tool was renamed
-   * `npusim` → `npu-emulate`; on A5 (ascend950) it is the default. The
-   * workspace setting `performanceTuning.simulation.tool` may pin
-   * `npu-emulate` or the legacy `msprof`. Non-A5 SOCs always resolve to
-   * `msprof`.
+   * Simulation tool selector. The new simulation tool is `npusim`; on A5
+   * (ascend950) it is the default. The workspace setting
+   * `performanceTuning.simulation.tool` may pin `npusim` or the legacy
+   * `msprof`. Non-A5 SOCs always resolve to `msprof`.
    *
-   * Note: this reflects the SOC + setting selection only. `npu-emulate`
+   * Note: this reflects the SOC + setting selection only. `npusim`
    * additionally requires a <<<>>> (kernel direct-call) operator project —
    * use {@link ConfigService.shouldUseNewSimulationTool} (which takes the
    * project type) for the effective routing decision; other project types
@@ -922,11 +921,11 @@ export class ConfigService {
   static getSimulationTool(): SimulationTool {
     const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
 
-    if (configured === 'npu-emulate' || configured === 'msprof') {
+    if (configured === 'npusim' || configured === 'msprof') {
       return configured;
     }
 
-    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npu-emulate' : 'msprof';
+    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npusim' : 'msprof';
   }
 
   /**
@@ -943,7 +942,7 @@ export class ConfigService {
 
   /**
    * True when the simulation analysis should open the new-tool data-collection
-   * dialog. Requires all of: A5 (ascend950) SOC, the `npu-emulate` tool
+   * dialog. Requires all of: A5 (ascend950) SOC, the `npusim` tool
    * selected, AND a <<<>>> (kernel direct-call) or standard-custom operator
    * project ('ascend-c' / 'cann' / 'torch-library' / 'standard-custom' /
    * 'ascend'). Otherwise the legacy msprof flow is used. An unknown/omitted
@@ -951,7 +950,7 @@ export class ConfigService {
    */
   static shouldUseNewSimulationTool(projectType?: string | null): boolean {
     return isNewProfilerToolSupportedForProject(resolveEffectiveCannSoc(), projectType)
-      && ConfigService.getSimulationTool() === 'npu-emulate';
+      && ConfigService.getSimulationTool() === 'npusim';
   }
 
   /**

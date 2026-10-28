@@ -1166,7 +1166,7 @@ export class FolderContextMenuService {
       return;
     }
 
-    // A5 (ascend950) + npu-emulate (formerly npusim): standard custom operators
+    // A5 (ascend950) + npusim: standard custom operators
     // are covered by the new-tool flow — open the unified data-collection
     // dialog (parity with the sidebar simulation entry). The legacy
     // standardOpsNoTuning / bisheng-flag gates below only apply to the msprof
