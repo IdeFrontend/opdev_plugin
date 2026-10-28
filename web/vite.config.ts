@@ -21,10 +21,58 @@ import { debugEntry } from './vite-plugins/debug-entry';
  * Static files that must appear in the packaged VSIX under `out/web/` with stable paths:
  * - package.json icons / font (branding, fonts)
  * - native tree SVGs loaded by the extension host (`OperateTreeProvider.getAssetIcon`) under `tree-icons/svg/`
+ * - Sudu Source-tab worker (`sudu/worker.js`) — hosts pass asWebviewUri / dev-server URL as suduWorkerUrl
  */
 function copyPackagedStaticAssets(): Plugin {
+  const suduWorkerSrc = path.resolve(
+    __dirname,
+    '../profiling-report/node_modules/@sudu-ide/code-review/src/worker.js',
+  );
+
+  const copySuduWorker = (destDir: string) => {
+    if (!fs.existsSync(suduWorkerSrc)) {
+      console.warn('[vite] Missing @sudu-ide/code-review worker — run npm ci in profiling-report (Source tab syntax highlight needs sudu/worker.js)');
+
+      return;
+    }
+
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.copyFileSync(suduWorkerSrc, path.join(destDir, 'worker.js'));
+  };
+
   return {
     name: 'copy-packaged-static-assets',
+    configureServer(server) {
+      // Hot Mode: serve the same stable path the host posts as suduWorkerUrl.
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split('?')[0] !== '/sudu/worker.js') {
+          next();
+
+          return;
+        }
+
+        if (!fs.existsSync(suduWorkerSrc)) {
+          res.statusCode = 404;
+          res.end('sudu worker not found');
+
+          return;
+        }
+
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+        const stream = fs.createReadStream(suduWorkerSrc);
+
+        stream.on('error', (err) => {
+          console.error('[vite] Failed to stream sudu/worker.js', err);
+
+          if (!res.headersSent) {
+            res.statusCode = 500;
+          }
+
+          res.end();
+        });
+        stream.pipe(res);
+      });
+    },
     closeBundle() {
       const outWeb = path.resolve(__dirname, '../out/web');
       const flavorBranding = path.resolve(__dirname, '.flavor/branding');
@@ -57,6 +105,8 @@ function copyPackagedStaticAssets(): Plugin {
       else {
         console.warn('[vite] Missing src/assets/svg/animated — native tree animated icons will not be packaged');
       }
+
+      copySuduWorker(path.join(outWeb, 'sudu'));
     },
   };
 }
