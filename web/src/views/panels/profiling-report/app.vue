@@ -22,10 +22,65 @@ const source = shallowRef<Uint8Array | null>(null);
 const fileName = ref('');
 const filePath = ref('');
 const collectedAt = ref('');
+/**
+ * Sudu worker URL passed to `<ProfilingReport>`. Host sends an asWebviewUri /
+ * Vite URL; we re-wrap it as a same-origin `blob:` URL so `new Worker(...)`
+ * succeeds under the webview CSP (direct vscode-webview:// workers often fail).
+ */
+const suduWorkerUrl = ref<string | undefined>(undefined);
+/** Last blob: URL we minted — revoked when replaced or on unmount. */
+let suduWorkerBlobUrl: string | undefined;
+/** Bumps on each load/materialize so stale async work cannot revoke a newer blob. */
+let suduWorkerGeneration = 0;
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 const reportRef = ref<ProfilingReportHandle | null>(null);
 const performanceHintsPublished = ref(false);
+
+function revokeSuduWorkerBlob(): void {
+  if (suduWorkerBlobUrl) {
+    URL.revokeObjectURL(suduWorkerBlobUrl);
+    suduWorkerBlobUrl = undefined;
+  }
+}
+
+/**
+ * Fetch the host-served worker script and expose it as a blob: URL for Sudu.
+ * Falls back to the host URL if fetch fails (playground / permissive hosts).
+ * Returns `undefined` when a newer load superseded this call.
+ */
+async function materializeSuduWorkerUrl(
+  hostUrl: string,
+  generation: number,
+): Promise<string | undefined> {
+  try {
+    const response = await fetch(hostUrl);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const code = await response.text();
+
+    if (generation !== suduWorkerGeneration) {
+      return undefined;
+    }
+
+    const blob = new Blob([code], { type: 'text/javascript' });
+
+    revokeSuduWorkerBlob();
+    suduWorkerBlobUrl = URL.createObjectURL(blob);
+
+    return suduWorkerBlobUrl;
+  }
+  catch {
+    if (generation !== suduWorkerGeneration) {
+      return undefined;
+    }
+
+    return hostUrl;
+  }
+}
 
 /**
  * The host mirrors the report's selected operator into the Problems view, so
@@ -69,6 +124,9 @@ const handleMessage = (e: MessageEvent) => {
   }
 
   if (message?.command === 'loadProfilingReportFailed' && typeof message.error === 'string') {
+    suduWorkerGeneration += 1;
+    revokeSuduWorkerBlob();
+    suduWorkerUrl.value = undefined;
     source.value = null;
     error.value = message.error;
     isLoading.value = false;
@@ -78,9 +136,14 @@ const handleMessage = (e: MessageEvent) => {
 
   if (message?.command === 'loadProfilingReport' && typeof message.uri === 'string') {
     void (async () => {
+      const generation = ++suduWorkerGeneration;
+
       try {
         isLoading.value = true;
         error.value = null;
+        // Hide the previous report until the worker URL is ready so
+        // <ProfilingReport> never mounts with the library default `/sudu/worker.js`.
+        source.value = null;
 
         const response = await fetch(message.uri);
 
@@ -90,14 +153,37 @@ const handleMessage = (e: MessageEvent) => {
 
         const buffer = await response.arrayBuffer();
 
-        source.value = new Uint8Array(buffer);
+        if (generation !== suduWorkerGeneration) {
+          return;
+        }
+
+        const hostWorkerUrl = typeof message.suduWorkerUrl === 'string' && message.suduWorkerUrl
+          ? message.suduWorkerUrl
+          : undefined;
+        const resolvedWorkerUrl = hostWorkerUrl
+          ? await materializeSuduWorkerUrl(hostWorkerUrl, generation)
+          : undefined;
+
+        if (generation !== suduWorkerGeneration) {
+          return;
+        }
+
+        // Assign worker URL before source so the first mount sees the blob URL.
+        suduWorkerUrl.value = resolvedWorkerUrl;
         fileName.value = message.fileName ?? '';
         filePath.value = typeof message.filePath === 'string' ? message.filePath : '';
         collectedAt.value = typeof message.collectedAt === 'string' ? message.collectedAt : '';
+        source.value = new Uint8Array(buffer);
         isLoading.value = false;
       }
       catch {
+        if (generation !== suduWorkerGeneration) {
+          return;
+        }
+
         source.value = null;
+        suduWorkerUrl.value = undefined;
+        revokeSuduWorkerBlob();
         error.value = t('profilingReport.fetchFailed');
         isLoading.value = false;
       }
@@ -128,6 +214,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('message', handleMessage);
+  revokeSuduWorkerBlob();
 });
 
 const onReady = () => {
@@ -167,6 +254,7 @@ const onCannbotRequest = (payload: unknown) => {
       :title="fileName"
       :report-meta="reportMeta"
       :environment="environment"
+      :sudu-worker-url="suduWorkerUrl"
       @ready="onReady"
       @error="onError"
       @cannbot-request="onCannbotRequest"
