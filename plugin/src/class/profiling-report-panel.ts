@@ -24,6 +24,7 @@ import {
   handleThemeRequest,
   registerWebviewThemeBridge,
 } from '@plugin/core/view/webview-theme';
+import { resolveProfilingSourceFile } from '@plugin/helpers/resolve-profiling-source-file';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 
 function normalizeContentLanguage(language: string): 'en' | 'zh-cn' {
@@ -170,6 +171,14 @@ export class ProfilingReportPanel {
         if (this.filePath) {
           void vscode.commands.executeCommand(COMMAND_SHOW_PERFORMANCE_HINTS, this.filePath);
         }
+      }
+
+      if (command === 'resolveSourceFile') {
+        void this.handleResolveSourceFile(message as {
+          requestId?: unknown;
+          fileName?: unknown;
+          basename?: unknown;
+        });
       }
     });
     this.viewStateDisposable = this.panel.onDidChangeViewState(() => {
@@ -493,6 +502,53 @@ isSim：${isSim}
     await this.panel.webview.postMessage({
       command: 'loadProfilingReportFailed',
       error,
+    });
+  }
+
+  /**
+   * Host side of profiling-report `resolveSourceFile` ([issue #175](https://github.com/IdeFrontend/profiling-report/issues/175)):
+   * fill missing Ascend C embeds via `workspace.fs` under workspace folders + the report directory.
+   * Misses stay silent (placeholder only); tried paths are logged for support.
+   */
+  private async handleResolveSourceFile(message: {
+    requestId?: unknown;
+    fileName?: unknown;
+    basename?: unknown;
+  }): Promise<void> {
+    const requestId = typeof message.requestId === 'string' ? message.requestId : '';
+
+    if (!requestId || this.disposed) {
+      return;
+    }
+
+    let text: string | null = null;
+
+    try {
+      if (!this.filePath) {
+        text = null;
+      }
+      else {
+        text = await resolveProfilingSourceFile(
+          {
+            fileName: typeof message.fileName === 'string' ? message.fileName : '',
+            basename: typeof message.basename === 'string' ? message.basename : '',
+          },
+          { reportPath: this.filePath },
+        );
+      }
+    }
+    catch {
+      text = null;
+    }
+
+    if (this.disposed) {
+      return;
+    }
+
+    await this.panel.webview.postMessage({
+      command: 'resolveSourceFileResult',
+      requestId,
+      text,
     });
   }
 }

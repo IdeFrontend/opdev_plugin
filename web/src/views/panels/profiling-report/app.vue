@@ -3,7 +3,11 @@ import {
   computed, onMounted, onUnmounted, ref, shallowRef, watch,
 } from 'vue';
 import i18next, { t } from 'i18next';
-import { ProfilingReport } from '@huawei/profiling-report';
+import {
+  ProfilingReport,
+  type ResolveSourceFile,
+  type ResolveSourceFileRequest,
+} from '@huawei/profiling-report';
 
 import { vscode } from '@web/utils/vscode';
 import { useProfilingReportTheme } from './composables/useProfilingReportTheme';
@@ -26,6 +30,10 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 const reportRef = ref<ProfilingReportHandle | null>(null);
 const performanceHintsPublished = ref(false);
+
+/** In-flight host FS resolves keyed by requestId (see `resolveSourceFile`). */
+const pendingSourceResolves = new Map<string, (text: string | null) => void>();
+let sourceResolveSeq = 0;
 
 /**
  * The host mirrors the report's selected operator into the Problems view, so
@@ -68,6 +76,17 @@ const handleMessage = (e: MessageEvent) => {
     return;
   }
 
+  if (message?.command === 'resolveSourceFileResult' && typeof message.requestId === 'string') {
+    const settle = pendingSourceResolves.get(message.requestId);
+
+    if (settle) {
+      pendingSourceResolves.delete(message.requestId);
+      settle(typeof message.text === 'string' ? message.text : null);
+    }
+
+    return;
+  }
+
   if (message?.command === 'loadProfilingReportFailed' && typeof message.error === 'string') {
     source.value = null;
     error.value = message.error;
@@ -106,6 +125,31 @@ const handleMessage = (e: MessageEvent) => {
 };
 
 /**
+ * Optional library hook: ask the extension host to read Ascend C when the pack
+ * has correlation embeds but no `.asc` text (profiling-report #175).
+ */
+const resolveSourceFile: ResolveSourceFile = (request: ResolveSourceFileRequest) => {
+  const requestId = `resolve-source-${++sourceResolveSeq}`;
+
+  return new Promise<string | null>((resolve) => {
+    pendingSourceResolves.set(requestId, resolve);
+
+    try {
+      vscode.postMessage({
+        command: 'resolveSourceFile',
+        requestId,
+        fileName: request.fileName,
+        basename: request.basename,
+      });
+    }
+    catch {
+      pendingSourceResolves.delete(requestId);
+      resolve(null);
+    }
+  });
+};
+
+/**
  * Host environment the library sees: hints published in Problems → vscode routing,
  * otherwise the internal dock.
  */
@@ -128,6 +172,12 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('message', handleMessage);
+
+  for (const settle of pendingSourceResolves.values()) {
+    settle(null);
+  }
+
+  pendingSourceResolves.clear();
 });
 
 const onReady = () => {
@@ -167,6 +217,7 @@ const onCannbotRequest = (payload: unknown) => {
       :title="fileName"
       :report-meta="reportMeta"
       :environment="environment"
+      :resolve-source-file="resolveSourceFile"
       @ready="onReady"
       @error="onError"
       @cannbot-request="onCannbotRequest"
