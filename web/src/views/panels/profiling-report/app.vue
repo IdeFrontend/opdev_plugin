@@ -3,7 +3,11 @@ import {
   computed, onMounted, onUnmounted, ref, shallowRef, watch,
 } from 'vue';
 import i18next, { t } from 'i18next';
-import { ProfilingReport } from '@huawei/profiling-report';
+import {
+  ProfilingReport,
+  type ResolveSourceFile,
+  type ResolveSourceFileRequest,
+} from '@huawei/profiling-report';
 
 import { vscode } from '@web/utils/vscode';
 import { useProfilingReportTheme } from './composables/useProfilingReportTheme';
@@ -36,6 +40,19 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 const reportRef = ref<ProfilingReportHandle | null>(null);
 const performanceHintsPublished = ref(false);
+
+/** In-flight host FS resolves keyed by requestId (see `resolveSourceFile`). */
+const pendingSourceResolves = new Map<string, (text: string | null)=> void>();
+let sourceResolveSeq = 0;
+
+/** Settle + drop pending host FS reads (reload / dispose) so promises cannot leak. */
+function rejectPendingSourceResolves(): void {
+  for (const settle of pendingSourceResolves.values()) {
+    settle(null);
+  }
+
+  pendingSourceResolves.clear();
+}
 
 function revokeSuduWorkerBlob(): void {
   if (suduWorkerBlobUrl) {
@@ -123,10 +140,22 @@ const handleMessage = (e: MessageEvent) => {
     return;
   }
 
+  if (message?.command === 'resolveSourceFileResult' && typeof message.requestId === 'string') {
+    const settle = pendingSourceResolves.get(message.requestId);
+
+    if (settle) {
+      pendingSourceResolves.delete(message.requestId);
+      settle(typeof message.text === 'string' ? message.text : null);
+    }
+
+    return;
+  }
+
   if (message?.command === 'loadProfilingReportFailed' && typeof message.error === 'string') {
     suduWorkerGeneration += 1;
     revokeSuduWorkerBlob();
     suduWorkerUrl.value = undefined;
+    rejectPendingSourceResolves();
     source.value = null;
     error.value = message.error;
     isLoading.value = false;
@@ -141,6 +170,8 @@ const handleMessage = (e: MessageEvent) => {
       try {
         isLoading.value = true;
         error.value = null;
+        // Drop in-flight resolves for the previous report before unmounting it.
+        rejectPendingSourceResolves();
         // Hide the previous report until the worker URL is ready so
         // <ProfilingReport> never mounts with the library default `/sudu/worker.js`.
         source.value = null;
@@ -192,6 +223,31 @@ const handleMessage = (e: MessageEvent) => {
 };
 
 /**
+ * Optional library hook: ask the extension host to read Ascend C when the pack
+ * has correlation embeds but no `.asc` text (profiling-report #175).
+ */
+const resolveSourceFile: ResolveSourceFile = (request: ResolveSourceFileRequest) => {
+  const requestId = `resolve-source-${++sourceResolveSeq}`;
+
+  return new Promise<string | null>((resolve) => {
+    pendingSourceResolves.set(requestId, resolve);
+
+    try {
+      vscode.postMessage({
+        command: 'resolveSourceFile',
+        requestId,
+        fileName: request.fileName,
+        basename: request.basename,
+      });
+    }
+    catch {
+      pendingSourceResolves.delete(requestId);
+      resolve(null);
+    }
+  });
+};
+
+/**
  * Host environment the library sees: hints published in Problems → vscode routing,
  * otherwise the internal dock.
  */
@@ -215,6 +271,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('message', handleMessage);
   revokeSuduWorkerBlob();
+  rejectPendingSourceResolves();
 });
 
 const onReady = () => {
@@ -255,6 +312,7 @@ const onCannbotRequest = (payload: unknown) => {
       :report-meta="reportMeta"
       :environment="environment"
       :sudu-worker-url="suduWorkerUrl"
+      :resolve-source-file="resolveSourceFile"
       @ready="onReady"
       @error="onError"
       @cannbot-request="onCannbotRequest"
