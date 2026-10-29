@@ -27,12 +27,20 @@ jest.mock('@plugin/core/view/webview-theme', () => ({
 
 jest.mock('@plugin/service/settings-loader', () => ({ SettingsLoader: { getCannbotPromptOverride: jest.fn() } }));
 
+const mockResolveProfilingSourceFile = jest.fn(async () => null as string | null);
+
+jest.mock('@plugin/helpers/resolve-profiling-source-file', () => ({ resolveProfilingSourceFile: (...args: unknown[]) => mockResolveProfilingSourceFile(...args) }));
+
 jest.mock('vscode', () => {
   const pathModule = jest.requireActual<typeof import('path')>('path');
 
   return {
     env: { language: 'en' },
     ViewColumn: { Active: 1 },
+    FileType: {
+      File: 1,
+      Directory: 2,
+    },
     Uri: {
       file: (fsPath: string) => ({
         fsPath,
@@ -40,6 +48,15 @@ jest.mock('vscode', () => {
       }),
       joinPath: (base: { fsPath: string }, ...segments: string[]) => ({ fsPath: pathModule.join(base.fsPath, ...segments) }),
     },
+    RelativePattern: jest.fn(function RelativePattern(
+      this: { base: unknown;
+        pattern: string },
+      base: unknown,
+      pattern: string,
+    ) {
+      this.base = base;
+      this.pattern = pattern;
+    }),
     window: {
       createWebviewPanel: mockCreateWebviewPanel,
       showErrorMessage: mockShowErrorMessage,
@@ -47,6 +64,14 @@ jest.mock('vscode', () => {
     },
     commands: { executeCommand: mockExecuteCommand },
     extensions: { getExtension: mockGetExtension },
+    workspace: {
+      workspaceFolders: undefined,
+      fs: {
+        stat: jest.fn(),
+        readFile: jest.fn(),
+      },
+      findFiles: jest.fn(async () => []),
+    },
   };
 }, { virtual: true });
 
@@ -202,8 +227,24 @@ describe('ProfilingReportPanel', () => {
         fileName: 'sample.rep',
         filePath,
         collectedAt: expect.any(String),
+        suduWorkerUrl: `webview://${path.join(root, 'out', 'web', 'sudu', 'worker.js')}`,
       });
     expect(JSON.stringify(panel.webview.postMessage.mock.calls)).not.toContain('base64');
+  });
+
+  it('injects worker-src (with blob:) into the profiling-report CSP for the Sudu worker', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    expect(mockTransformDistHtml)
+      .toHaveBeenCalledWith(
+        expect.any(String),
+        expect.anything(),
+        expect.stringContaining('profiling-report'),
+        expect.objectContaining({
+          workerSource: 'vscode-webview://test blob:',
+          scriptSource: 'vscode-webview://test',
+        }),
+      );
   });
 
   it('includes the report absolute path and mtime as collectedAt in the load message', async () => {
@@ -688,5 +729,69 @@ describe('ProfilingReportPanel', () => {
         command: 'performanceHintsPublishedChanged',
         published: true,
       });
+  });
+
+  it('resolves missing Ascend C source via the host FS helper and replies to the webview', async () => {
+    mockResolveProfilingSourceFile.mockResolvedValueOnce('kernel void gather_2d() {}');
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    panel.webview.postMessage.mockClear();
+
+    emitMessage(panel, {
+      command: 'resolveSourceFile',
+      requestId: 'req-1',
+      fileName: '/build/gather_2d.asc',
+      basename: 'gather_2d.asc',
+    });
+    await flushAsyncActions();
+
+    expect(mockResolveProfilingSourceFile)
+      .toHaveBeenCalledWith(
+        {
+          fileName: '/build/gather_2d.asc',
+          basename: 'gather_2d.asc',
+        },
+        { reportPath: filePath },
+      );
+    expect(panel.webview.postMessage)
+      .toHaveBeenCalledWith({
+        command: 'resolveSourceFileResult',
+        requestId: 'req-1',
+        text: 'kernel void gather_2d() {}',
+      });
+    expect(mockShowErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('replies with null when the source resolve misses, without toasting', async () => {
+    mockResolveProfilingSourceFile.mockResolvedValueOnce(null);
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    panel.webview.postMessage.mockClear();
+
+    emitMessage(panel, {
+      command: 'resolveSourceFile',
+      requestId: 'req-miss',
+      fileName: '/build/missing.asc',
+      basename: 'missing.asc',
+    });
+    await flushAsyncActions();
+
+    expect(panel.webview.postMessage)
+      .toHaveBeenCalledWith({
+        command: 'resolveSourceFileResult',
+        requestId: 'req-miss',
+        text: null,
+      });
+    expect(mockShowErrorMessage).not.toHaveBeenCalled();
   });
 });
