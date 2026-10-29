@@ -24,6 +24,7 @@ import {
   handleThemeRequest,
   registerWebviewThemeBridge,
 } from '@plugin/core/view/webview-theme';
+import { resolveProfilingSourceFile } from '@plugin/helpers/resolve-profiling-source-file';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 
 function normalizeContentLanguage(language: string): 'en' | 'zh-cn' {
@@ -170,6 +171,14 @@ export class ProfilingReportPanel {
         if (this.filePath) {
           void vscode.commands.executeCommand(COMMAND_SHOW_PERFORMANCE_HINTS, this.filePath);
         }
+      }
+
+      if (command === 'resolveSourceFile') {
+        void this.handleResolveSourceFile(message as {
+          requestId?: unknown;
+          fileName?: unknown;
+          basename?: unknown;
+        });
       }
     });
     this.viewStateDisposable = this.panel.onDidChangeViewState(() => {
@@ -373,6 +382,12 @@ export class ProfilingReportPanel {
   private async initializeHtml(): Promise<void> {
     const distPath = path.join(this.context.extensionPath, 'out', 'web');
     const cspSource = this.panel.webview.cspSource;
+    const devServerUrl = process.env.MSTT_DEV_SERVER_URL?.replace(/\/$/, '');
+    // Hot Mode loads scripts/workers from the Vite origin; packaged builds use cspSource only.
+    // `blob:` is required because the webview wraps the Sudu worker in a Blob URL —
+    // `new Worker(vscode-webview://…)` is unreliable across VS Code webview hosts.
+    const scriptSource = devServerUrl ? `${cspSource} ${devServerUrl}` : cspSource;
+    const workerSource = `${scriptSource} blob:`;
 
     this.panel.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
@@ -380,14 +395,38 @@ export class ProfilingReportPanel {
       `panels/${VIEW_PROFILING_REPORT}`,
       {
         lang: normalizeContentLanguage(vscode.env.language),
-        scriptSource: cspSource,
+        scriptSource,
         styleSource: cspSource,
         fontSource: cspSource,
         imageSource: cspSource,
-        connectSource: cspSource,
+        connectSource: scriptSource,
+        workerSource,
       },
     );
     this.themeDisposable = registerWebviewThemeBridge(this.panel.webview);
+  }
+
+  /**
+   * Same-origin Sudu worker URL for Source-tab Ascend C highlighting.
+   * Packaged: `out/web/sudu/worker.js` via asWebviewUri. Hot Mode: Vite `/sudu/worker.js`.
+   */
+  private resolveSuduWorkerUrl(): string {
+    const devServerUrl = process.env.MSTT_DEV_SERVER_URL?.replace(/\/$/, '');
+
+    if (devServerUrl) {
+      return `${devServerUrl}/sudu/worker.js`;
+    }
+
+    const workerUri = vscode.Uri.joinPath(
+      this.context.extensionUri,
+      'out',
+      'web',
+      'sudu',
+      'worker.js',
+    );
+
+    return this.panel.webview.asWebviewUri(workerUri)
+      .toString();
   }
 
   private async loadFile(filePath: string): Promise<void> {
@@ -419,6 +458,7 @@ export class ProfilingReportPanel {
         fileName: path.basename(filePath),
         filePath,
         collectedAt,
+        suduWorkerUrl: this.resolveSuduWorkerUrl(),
       });
     }
     catch (error) {
@@ -493,6 +533,55 @@ isSim：${isSim}
     await this.panel.webview.postMessage({
       command: 'loadProfilingReportFailed',
       error,
+    });
+  }
+
+  /**
+   * Host side of profiling-report `resolveSourceFile` ([issue #175](https://github.com/IdeFrontend/profiling-report/issues/175)):
+   * fill missing Ascend C embeds via `workspace.fs` under workspace folders + the report directory.
+   * Misses stay silent (placeholder only); tried paths are logged for support.
+   */
+  private async handleResolveSourceFile(message: {
+    requestId?: unknown;
+    fileName?: unknown;
+    basename?: unknown;
+  }): Promise<void> {
+    const requestId = typeof message.requestId === 'string' ? message.requestId : '';
+    // Snapshot before await — a concurrent open must not widen/narrow the allowlist mid-resolve.
+    const reportPath = this.filePath;
+
+    if (!requestId || this.disposed) {
+      return;
+    }
+
+    let text: string | null = null;
+
+    try {
+      if (!reportPath) {
+        text = null;
+      }
+      else {
+        text = await resolveProfilingSourceFile(
+          {
+            fileName: typeof message.fileName === 'string' ? message.fileName : '',
+            basename: typeof message.basename === 'string' ? message.basename : '',
+          },
+          { reportPath },
+        );
+      }
+    }
+    catch {
+      text = null;
+    }
+
+    if (this.disposed) {
+      return;
+    }
+
+    await this.panel.webview.postMessage({
+      command: 'resolveSourceFileResult',
+      requestId,
+      text,
     });
   }
 }
