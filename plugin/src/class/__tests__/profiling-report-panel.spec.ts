@@ -126,7 +126,7 @@ describe('ProfilingReportPanel', () => {
     panels = [];
     mockShowErrorMessage.mockResolvedValue(undefined);
     mockShowInformationMessage.mockResolvedValue(undefined);
-    mockExecuteCommand.mockResolvedValue(undefined);
+    mockExecuteCommand.mockResolvedValue({ sessionId: 'session-1' });
     mockGetExtension.mockReturnValue(undefined);
     mockTransformDistHtml.mockResolvedValue('<html>profiling</html>');
     mockCreateWebviewPanel.mockImplementation((_type, _title, _column, options) => {
@@ -292,7 +292,7 @@ describe('ProfilingReportPanel', () => {
       .toHaveBeenCalledTimes(1);
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cannwork.setInputText',
+        'cannwork.invokeAgent',
         '调用技能 tool-perf-analysis 分析下方报告，按其流程与固定框架输出。\n'
         + `报告路径：${filePath}\n`
         + '报告名称：sample.rep\n'
@@ -300,7 +300,6 @@ describe('ProfilingReportPanel', () => {
         + '算子名称：Add\n'
         + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`
         + 'isSim：false\n',
-        { autoSend: true },
       );
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
@@ -345,7 +344,7 @@ describe('ProfilingReportPanel', () => {
     expect(mockActivate)
       .toHaveBeenCalledTimes(1);
     expect(mockExecuteCommand)
-      .toHaveBeenCalledWith('cannwork.setInputText', expect.any(String), { autoSend: true });
+      .toHaveBeenCalledWith('cannwork.invokeAgent', expect.any(String));
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
     expect(mockShowErrorMessage).not.toHaveBeenCalled();
@@ -384,9 +383,8 @@ describe('ProfilingReportPanel', () => {
 
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cannwork.setInputText',
+        'cannwork.invokeAgent',
         expect.stringContaining('isSim：true\n'),
-        { autoSend: true },
       );
   });
 
@@ -419,7 +417,7 @@ describe('ProfilingReportPanel', () => {
 
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cannwork.setInputText',
+        'cannwork.invokeAgent',
         'override-prompt\n'
         + `报告路径：${filePath}\n`
         + '报告名称：sample.rep\n'
@@ -427,7 +425,6 @@ describe('ProfilingReportPanel', () => {
         + '算子名称：Add\n'
         + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`
         + 'isSim：false\n',
-        { autoSend: true },
       );
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
@@ -451,7 +448,7 @@ describe('ProfilingReportPanel', () => {
 
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cannwork.setInputText',
+        'cannwork.invokeAgent',
         'override-prompt\n'
         + '报告路径：\n'
         + '报告名称：\n'
@@ -459,12 +456,11 @@ describe('ProfilingReportPanel', () => {
         + '算子名称：\n'
         + '采集时间：\n'
         + 'isSim：false\n',
-        { autoSend: true },
       );
   });
 
   it('shows an install prompt when the cann-assist command is not found (plugin missing)', async () => {
-    mockExecuteCommand.mockRejectedValueOnce(new Error("command 'cannwork.setInputText' not found"));
+    mockExecuteCommand.mockRejectedValueOnce(new Error("command 'cannwork.invokeAgent' not found"));
 
     await ProfilingReportPanel.createOrShow(context, filePath);
 
@@ -481,9 +477,8 @@ describe('ProfilingReportPanel', () => {
 
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cannwork.setInputText',
+        'cannwork.invokeAgent',
         expect.any(String),
-        { autoSend: true },
       );
     expect(mockShowErrorMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotNotInstalled');
