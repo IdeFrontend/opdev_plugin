@@ -14,11 +14,14 @@
  * (`profiling-report/src/domain/types.ts`).
  */
 
-/** One joined performance-hint row; CSV order within each origin is preserved. */
+/**
+ * One performance-hint row. Emulate: joined Hint* CSV order within each origin.
+ * Compute: `Summary.jsonl` `PerformanceHints` strings as `origin: 'kernel'`.
+ */
 export interface PerformanceHintItem {
-  /** `HintMessages.HintMsgText` (RFC-4180 quoted fields decoded by `parseCsv`). */
+  /** Emulate: `HintMessages.HintMsgText`. Compute: producer hint string. */
   message: string;
-  /** `HintTypes.HintTypeName` via `HintTypeId`; omitted when unresolved. */
+  /** `HintTypes.HintTypeName` via `HintTypeId`; omitted when unresolved / compute. */
   typeName?: string;
   /** `SourceLineHints.SourceLineId` — raw id string. */
   sourceLineId?: string;

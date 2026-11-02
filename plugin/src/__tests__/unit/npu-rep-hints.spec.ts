@@ -867,6 +867,175 @@ describe('npu-rep performance hints', () => {
     });
   });
 
+  describe('compute Summary.jsonl PerformanceHints (#177)', () => {
+    function summaryJsonl(lines: unknown[]): Uint8Array {
+      return utf8(`${lines.map((line) => JSON.stringify(line))
+        .join('\n')}\n`);
+    }
+
+    it('parses a synthetic Summary.jsonl leaf: trim, skip blanks, case-insensitive name', () => {
+      const packed = packNpuRep160([
+        {
+          name: 'Summary.jsonl',
+          type: TYPE160_JSON,
+          data: summaryJsonl([
+            {
+              category: 'OpInfoSummary',
+              'Op Name': 'add',
+            },
+            {
+              category: 'PerformanceHints',
+              hints: [
+                'bank conflict on UB',
+                '  ',
+                'scalar pipe busy',
+                '',
+                42,
+              ],
+            },
+            {
+              category: 'PipeUtilization',
+              aic_cube_ratio: 0.5,
+            },
+          ]),
+        },
+      ]);
+
+      expect(parsePerformanceHints(packed).hints)
+        .toEqual([
+          {
+            message: 'bank conflict on UB',
+            origin: 'kernel',
+          },
+          {
+            message: 'scalar pipe busy',
+            origin: 'kernel',
+          },
+        ]);
+
+      const lower = packNpuRep160([
+        {
+          name: 'summary.jsonl',
+          type: TYPE160_JSON,
+          data: summaryJsonl([
+            {
+              category: 'PerformanceHints',
+              hints: ['from lower-case name'],
+            },
+          ]),
+        },
+      ]);
+
+      expect(parsePerformanceHints(lower).hints)
+        .toEqual([
+          {
+            message: 'from lower-case name',
+            origin: 'kernel',
+          },
+        ]);
+    });
+
+    it('skips malformed / empty PerformanceHints lines and recovers a later valid record', () => {
+      const packed = packNpuRep160([
+        {
+          name: 'Summary.jsonl',
+          type: TYPE160_JSON,
+          data: summaryJsonl([
+            {
+              category: 'PerformanceHints',
+              hints: null,
+            },
+            {
+              category: 'PerformanceHints',
+              hints: [
+                '  ',
+                '',
+              ],
+            },
+            {
+              category: 'PerformanceHints',
+              hints: [],
+            },
+            {
+              category: 'PerformanceHints',
+              hints: ['recovered hint'],
+            },
+          ]),
+        },
+      ]);
+
+      expect(parsePerformanceHints(packed).hints)
+        .toEqual([
+          {
+            message: 'recovered hint',
+            origin: 'kernel',
+          },
+        ]);
+    });
+
+    it('omits empty / whitespace-only hints arrays when no later record exists (DATA-30)', () => {
+      const packed = packNpuRep160([
+        {
+          name: 'Summary.jsonl',
+          type: TYPE160_JSON,
+          data: summaryJsonl([
+            {
+              category: 'OpInfoSummary',
+              'Op Name': 'add',
+            },
+            {
+              category: 'PerformanceHints',
+              hints: [
+                '  ',
+                '',
+              ],
+            },
+            {
+              category: 'PerformanceHints',
+              hints: [],
+            },
+          ]),
+        },
+      ]);
+
+      expect(parsePerformanceHints(packed))
+        .toEqual(EMPTY_RESULT);
+    });
+
+    it('prefers emulate Hint* CSV join when both CSV and Summary.jsonl are present', () => {
+      const packed = packNpuRep160([
+        {
+          name: 'HintMessages.csv',
+          type: TYPE160_CSV,
+          data: utf8('HintMsgId,HintMsgText\n1,CSV wins\n'),
+        },
+        {
+          name: 'KernelHints.csv',
+          type: TYPE160_CSV,
+          data: utf8(SINGLE_MESSAGE_KERNEL_HINTS_CSV),
+        },
+        {
+          name: 'Summary.jsonl',
+          type: TYPE160_JSON,
+          data: summaryJsonl([
+            {
+              category: 'PerformanceHints',
+              hints: ['JSONL must not win'],
+            },
+          ]),
+        },
+      ]);
+
+      expect(parsePerformanceHints(packed).hints)
+        .toEqual([
+          {
+            message: 'CSV wins',
+            origin: 'kernel',
+          },
+        ]);
+    });
+  });
+
   describe('parsePerformanceHints container guard', () => {
     it('throws when the input is not an npu-rep container', () => {
       expect(() => parsePerformanceHints(new Uint8Array([
