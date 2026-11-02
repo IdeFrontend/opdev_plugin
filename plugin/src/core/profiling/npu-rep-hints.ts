@@ -10,9 +10,12 @@
 /**
  * Performance hints from an `npu-rep` container (pure TS — no `fs` / `vscode`).
  *
- * Ports the hint join from the profiling-report library
- * (`src/adapters/adaptEmulate.ts` → `idNameMap` / `performanceHintsFromPayloads`)
- * and adds leaf selection for multi-operator packs: an outer pack embeds one
+ * Ports the hint join from the profiling-report library:
+ * - emulate: `adaptEmulate` → `idNameMap` / `performanceHintsFromPayloads` (Hint* CSVs)
+ * - compute: `adaptRep` → `performanceHintsFromSummaryJsonl` (`Summary.jsonl`
+ *   `category: PerformanceHints`, #177)
+ *
+ * Plus leaf selection for multi-operator packs: an outer pack embeds one
  * nested `.npu.rep` archive per operator, and the caller picks one by
  * `operatorId` (defaulting to the first archive, like the library's default
  * selected operator).
@@ -71,6 +74,11 @@ const DEBUG_INFO_NAMES = [
 const SOURCE_FILES_NAMES = [
   'SourceFiles.csv',
   'sourcefiles.csv',
+];
+const SUMMARY_JSONL_NAMES = [
+  'summary.jsonl',
+  'Summary.jsonl',
+  'SUMMARY.jsonl',
 ];
 
 /** Guard against a pathological pack nesting archives without end. */
@@ -227,6 +235,84 @@ function performanceHintsFromPayloads(payloads: Record<string, Uint8Array>): Per
   pushRows(payloadByName(payloads, KERNEL_HINTS_NAMES), 'kernel');
 
   return hints;
+}
+
+/**
+ * Compute `Summary.jsonl` `PerformanceHints` → Problems rows (#177 parity with
+ * profiling-report `adaptRep`). Each non-empty string becomes
+ * `{ message, origin: 'kernel' }` (no pc / sourceLineId). First line that
+ * yields ≥1 usable string wins; non-array / all-empty `hints` skips that line
+ * so a later valid record can still load. No usable lines → `[]`. Does not
+ * re-run H01–H12.
+ */
+function performanceHintsFromSummaryJsonl(payload?: Uint8Array): PerformanceHintItem[] {
+  if (!payload) {
+    return [];
+  }
+
+  for (const line of decodeUtf8(payload)
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)) {
+    let obj: Record<string, unknown>;
+
+    try {
+      obj = JSON.parse(line) as Record<string, unknown>;
+    }
+    catch {
+      continue;
+    }
+
+    if (obj.category !== 'PerformanceHints') {
+      continue;
+    }
+
+    // Non-array / zero usable strings: skip and keep scanning.
+    if (!Array.isArray(obj.hints)) {
+      continue;
+    }
+
+    const hints: PerformanceHintItem[] = [];
+
+    for (const raw of obj.hints) {
+      if (typeof raw !== 'string') {
+        continue;
+      }
+
+      const message = raw.trim();
+
+      if (!message) {
+        continue;
+      }
+
+      hints.push({
+        message,
+        origin: 'kernel',
+      });
+    }
+
+    if (hints.length === 0) {
+      continue;
+    }
+
+    return hints;
+  }
+
+  return [];
+}
+
+/**
+ * Prefer emulate Hint* CSV join when present; otherwise read compute
+ * `Summary.jsonl` `PerformanceHints` (DATA-30 omit when both empty).
+ */
+function performanceHintsForLeaf(payloads: Record<string, Uint8Array>): PerformanceHintItem[] {
+  const fromCsv = performanceHintsFromPayloads(payloads);
+
+  if (fromCsv.length > 0) {
+    return fromCsv;
+  }
+
+  return performanceHintsFromSummaryJsonl(payloadByName(payloads, SUMMARY_JSONL_NAMES));
 }
 
 /**
@@ -415,9 +501,11 @@ function resolveLeafPayloads(
  * archives (`operatorId` picks one; unknown ids yield an empty result, no
  * `operatorId` picks the first archive in file order).
  *
- * Throws when `bytes` is not an `npu-rep` container at all, and when
- * `operatorId` resolves to two archives sharing a stem; a container without
- * hint tables yields `{ hints: [], sourceLines: new Map() }`.
+ * Emulate leaves join Hint* CSVs; compute leaves read `Summary.jsonl`
+ * `PerformanceHints` when no CSV rows resolve. Throws when `bytes` is not an
+ * `npu-rep` container at all, and when `operatorId` resolves to two archives
+ * sharing a stem; a container without hints yields
+ * `{ hints: [], sourceLines: new Map() }`.
  */
 export function parsePerformanceHints(
   bytes: Uint8Array,
@@ -434,7 +522,7 @@ export function parsePerformanceHints(
     return emptyHintParseResult();
   }
 
-  const hints = performanceHintsFromPayloads(payloads);
+  const hints = performanceHintsForLeaf(payloads);
 
   return {
     hints,
