@@ -157,6 +157,22 @@ function onSetRowClick(set: string) {
   applySet(set);
 }
 
+// vue-tsc 3.3.13 mis-types `.has()` on ReadonlySet inside template object-literal
+// props (TS2551 suggests `.value`), so both row-selection props live here in script.
+const setRowSelection = computed(() => ({
+  type: 'radio' as const,
+  selectedRowKeys: [selectedSetKey.value],
+  onChange: (keys: Array<string | number>) => applySet(String(keys[0])),
+  getCheckboxProps: (row: { key: string }) => ({ disabled: DATA_COLLECTION_UNSUPPORTED_SETS.has(row.key) }),
+}));
+
+const sectionRowSelection = computed(() => ({
+  type: 'checkbox' as const,
+  selectedRowKeys: selectedSectionKeys.value,
+  onChange: (keys: Array<string | number>) => setSections(keys.map(String)),
+  getCheckboxProps: (row: { key: string }) => ({ disabled: DATA_COLLECTION_UNSUPPORTED_SECTIONS.has(row.key) }),
+}));
+
 // Force Overwrite toggles feed the commandLine (`--force`).
 watch(() => config.common.forceOverwrite, () => {
   if (!syncingMetrics && !seeding) {
@@ -430,12 +446,7 @@ onMounted(async () => {
               size="small"
               :row-key="(row) => row.key"
               :custom-row="(row) => ({ onClick: () => onSetRowClick(row.key) })"
-              :row-selection="{
-                type: 'radio',
-                selectedRowKeys: [selectedSetKey],
-                onChange: (keys) => applySet(String(keys[0])),
-                getCheckboxProps: (row) => ({ disabled: DATA_COLLECTION_UNSUPPORTED_SETS.has(row.key) }),
-              }"
+              :row-selection="setRowSelection"
             />
 
             <!-- Section mode: multi-select -->
@@ -447,12 +458,7 @@ onMounted(async () => {
               :pagination="false"
               size="small"
               :row-key="(row) => row.key"
-              :row-selection="{
-                type: 'checkbox',
-                selectedRowKeys: selectedSectionKeys,
-                onChange: (keys) => setSections(keys.map(String)),
-                getCheckboxProps: (row) => ({ disabled: DATA_COLLECTION_UNSUPPORTED_SECTIONS.has(row.key) }),
-              }"
+              :row-selection="sectionRowSelection"
             />
           </a-collapse-panel>
         </a-collapse>
