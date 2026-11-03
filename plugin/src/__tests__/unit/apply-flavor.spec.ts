@@ -345,6 +345,32 @@ describe('apply-flavor', () => {
       .toBe('tsx scripts/apply-flavor.ts ascend-c-toolkit');
   });
 
+  it('defaults to ascend-c-toolkit when no flavor argument is given', () => {
+    const previousFlavorEnv = process.env.FLAVOR;
+
+    delete process.env.FLAVOR;
+
+    try {
+      const flavor = applyFlavor();
+      const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+
+      expect(flavor.id)
+        .toBe('ascend-c-toolkit');
+      expect(manifest.name)
+        .toBe('asc-toolkit');
+      expect(manifest.publisher)
+        .toBe('cann-pub');
+    }
+    finally {
+      if (previousFlavorEnv === undefined) {
+        delete process.env.FLAVOR;
+      }
+      else {
+        process.env.FLAVOR = previousFlavorEnv;
+      }
+    }
+  });
+
   it('ascend-c-toolkit flavor applies branding to README and CHANGELOG', () => {
     applyFlavor('ascend-c-toolkit');
 

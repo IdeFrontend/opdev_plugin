@@ -12,7 +12,7 @@
   "config.category.performanceTuning.onBoard.npuCompute.title": "    npu-compute",
   "config.category.performanceTuning.onBoard.msprof.title": "    msprof (On-board)",
   "config.category.performanceTuning.simulation.title": "  Simulation Analysis",
-  "config.category.performanceTuning.simulation.npusim.title": "    npusim",
+  "config.category.performanceTuning.simulation.npusim.title": "    npusim",
   "config.category.performanceTuning.simulation.msprof.title": "    msprof (Simulation)",
   "config.category.sanitizerNpuCheck.title": "  npu-check",
   "config.category.sanitizerMsSanitizer.title": "  mssanitizer",

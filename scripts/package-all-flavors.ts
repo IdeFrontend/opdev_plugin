@@ -56,7 +56,7 @@ function main(): void {
     }
   }
   finally {
-    console.log('\n[package-all-flavors] Restoring Huawei flavor artifacts…');
+    console.log('\n[package-all-flavors] Restoring committed flavor artifacts…');
     restoreCommittedFlavorArtifacts();
   }
 }

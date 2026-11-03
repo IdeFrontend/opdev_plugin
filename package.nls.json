@@ -14,7 +14,7 @@
   "config.category.performanceTuning.onBoard.npuCompute.title": "    npu-compute",
   "config.category.performanceTuning.onBoard.msprof.title": "    msprof（上板）",
   "config.category.performanceTuning.simulation.title": "  仿真分析",
-  "config.category.performanceTuning.simulation.npusim.title": "    npusim",
+  "config.category.performanceTuning.simulation.npusim.title": "    npusim",
   "config.category.performanceTuning.simulation.msprof.title": "    msprof（仿真）",
   "config.category.environment.title": "环境",
   "config.category.execution.title": "执行",
