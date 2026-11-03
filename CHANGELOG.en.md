@@ -32,7 +32,7 @@ Release: remote NPU execution for CPU-host operator development, including artif
 - **Remote-aware operation availability** — The Actions tree and relevant option panels recognize either local NPU hardware or a configured remote tool, guiding CPU-host users to configure `remote_tool.sh` instead of blocking supported flows too early.
 - **Standard-custom capability detection and package deployment ([#66](https://gitcode.com/opdevtools/plugin_release/issues/66))** — Detect standard-custom capabilities through the public `build.sh --help` interface. Before deploying a `.run` package, detect whether its installer supports `--force` and pass the option only when supported.
 
-Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
+Notable changes to **Ascend C Toolkits** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
 ## 1.4.0 — 2026-07-24
 

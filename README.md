@@ -1,6 +1,6 @@
-# Huawei OP DevTools
+# Ascend C Toolkits
 
-**Huawei OP DevTools（华为算子一站式开发工具）** 是面向 Ascend 算子开发的 Visual Studio Code 扩展，支持在编辑器内完成算子工程创建、编译部署、运行验证、CPU/NPU 调试、异常检测、性能调优和结果可视化。
+**Ascend C Toolkits（Ascend C Toolkits）** 是面向 Ascend 算子开发的 Visual Studio Code 扩展，支持在编辑器内完成算子工程创建、编译部署、运行验证、CPU/NPU 调试、异常检测、性能调优和结果可视化。
 
 **使用指导：** <https://gitcode.com/opdevtools/plugin_release>
 
@@ -22,7 +22,7 @@
 
 ## 快速开始
 
-1. 在 VS Code 扩展视图中安装 **Huawei OP DevTools**。
+1. 在 VS Code 扩展视图中安装 **Ascend C Toolkits**。
 2. 打开算子仓库或用于创建工程的工作区。
 3. 在 **算子一站式开发平台操作面板** 中选择 **新建算子工程** 或 **打开算子工程**。
 4. 新建工程时选择模板、工程目录、工程名称和打开方式。选择 **在本窗口打开** 时会复用当前窗口。
