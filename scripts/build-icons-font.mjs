@@ -1,4 +1,6 @@
-import { mkdtemp, readdir, rm, mkdir, copyFile, access, readFile, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp, readdir, rm, mkdir, copyFile, access, readFile, writeFile,
+} from 'node:fs/promises';
 import { constants as fsConstants } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -16,6 +18,7 @@ const FONT_CSS_FILE = `${FONT_NAME}.css`;
 
 function buildPreviewHtml(icons) {
   const serializedIcons = JSON.stringify(icons);
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -128,8 +131,10 @@ function run(command, options = {}) {
     child.on('close', (code) => {
       if (code === 0) {
         resolve();
+
         return;
       }
+
       reject(new Error(`${command} failed with exit code ${code ?? 'unknown'}`));
     });
   });
@@ -137,19 +142,25 @@ function run(command, options = {}) {
 
 async function collectSvgFiles(dir, all = []) {
   const entries = await readdir(dir, { withFileTypes: true });
+
   for (const entry of entries) {
     const absPath = path.join(dir, entry.name);
+
     if (entry.isDirectory()) {
       if (absPath === SVG_EXCLUDE_DIR) {
         continue;
       }
+
       await collectSvgFiles(absPath, all);
       continue;
     }
-    if (entry.isFile() && entry.name.toLowerCase().endsWith('.svg')) {
+
+    if (entry.isFile() && entry.name.toLowerCase()
+      .endsWith('.svg')) {
       all.push(absPath);
     }
   }
+
   return all;
 }
 
@@ -159,58 +170,82 @@ function toGlyphName(filePath) {
 
 async function main() {
   const svgFiles = await collectSvgFiles(SVG_SOURCE_DIR);
+
   if (svgFiles.length === 0) {
     throw new Error(`No SVG files found in ${SVG_SOURCE_DIR}`);
   }
 
   const glyphNames = new Set();
+
   for (const file of svgFiles) {
     const name = toGlyphName(file);
+
     if (glyphNames.has(name)) {
       throw new Error(`Duplicate icon name "${name}" detected. File names must be unique.`);
     }
+
     glyphNames.add(name);
   }
 
   const tempRoot = await mkdtemp(path.join(tmpdir(), 'mstt-icons-'));
   const tempSourceDir = path.join(tempRoot, 'svg');
+
   await mkdir(tempSourceDir, { recursive: true });
 
   for (const src of svgFiles) {
     const fileName = `${toGlyphName(src)}.svg`;
+
     await copyFile(src, path.join(tempSourceDir, fileName));
   }
 
-  await rm(FONT_OUTPUT_DIR, { recursive: true, force: true });
+  await rm(FONT_OUTPUT_DIR, {
+    recursive: true,
+    force: true,
+  });
   await mkdir(FONT_OUTPUT_DIR, { recursive: true });
 
   const escapedSrc = `"${tempSourceDir.replaceAll('"', '\\"')}"`;
   const escapedOut = `"${FONT_OUTPUT_DIR.replaceAll('"', '\\"')}"`;
+
   await run(`pnpm exec svgtofont -s ${escapedSrc} -o ${escapedOut} -f ${FONT_NAME}`);
 
   const cssPath = path.join(FONT_OUTPUT_DIR, FONT_CSS_FILE);
   const cssContent = await readFile(cssPath, 'utf8');
   const iconMatches = [...cssContent.matchAll(/\.opdevtools-icons-([a-z0-9-]+)::before\s*\{\s*content:\s*"\\([a-f0-9]+)";\s*\}/gi)];
-  const icons = iconMatches.map((match) => ({ name: match[1], code: match[2] }));
+  const icons = iconMatches.map((match) => ({
+    name: match[1],
+    code: match[2],
+  }));
+
   await writeFile(path.join(FONT_OUTPUT_DIR, FONT_PREVIEW_FILE), buildPreviewHtml(icons), 'utf8');
 
   const generatedFiles = await readdir(FONT_OUTPUT_DIR, { withFileTypes: true });
+
   for (const entry of generatedFiles) {
     const target = path.join(FONT_OUTPUT_DIR, entry.name);
+
     if (entry.isDirectory()) {
-      await rm(target, { recursive: true, force: true });
+      await rm(target, {
+        recursive: true,
+        force: true,
+      });
       continue;
     }
+
     if (entry.name !== FONT_WOFF_FILE && entry.name !== FONT_PREVIEW_FILE) {
       await rm(target, { force: true });
     }
   }
 
   await access(path.join(FONT_OUTPUT_DIR, FONT_WOFF_FILE), fsConstants.F_OK);
-  await rm(tempRoot, { recursive: true, force: true });
+  await rm(tempRoot, {
+    recursive: true,
+    force: true,
+  });
 }
 
-main().catch(async (error) => {
-  console.error('[build-icons-font] Failed:', error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+main()
+  .catch(async (error) => {
+    console.error('[build-icons-font] Failed:', error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });

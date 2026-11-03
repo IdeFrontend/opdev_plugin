@@ -7,7 +7,9 @@
  * Usage (repo root): node scripts/verify-template-entrypoints.cjs
  */
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CommonJS script
 const fs = require('fs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CommonJS script
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
@@ -28,6 +30,7 @@ function pascalFromSnake(opName) {
 
 function replaceMstt(content, opName) {
   const cap = pascalFromSnake(opName);
+
   return content
     .split('__MSTT_OP_NAME_PASCAL__')
     .join(cap)
@@ -40,6 +43,7 @@ function replaceMstt(content, opName) {
 function walk(dir, fn) {
   for (const name of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, name.name);
+
     if (name.isDirectory()) {
       walk(full, fn);
     }
