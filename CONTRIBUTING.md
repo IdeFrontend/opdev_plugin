@@ -1,4 +1,4 @@
-# Contributing to Huawei OP DevTools
+# Contributing to Ascend C Toolkits
 
 This document is for **developers** who build or debug the extension from source. End-user documentation is linked from [README.md](./README.md) and [README.en.md](./README.en.md).
 
@@ -25,7 +25,7 @@ pnpm run install:web
 
 ## Extension flavors (committed Huawei manifest)
 
-Multiple VSIX brands are built from this repo. **Huawei OP DevTools** is the default development flavor.
+Multiple VSIX brands are built from this repo. **Ascend C Toolkits** is the default development flavor.
 
 | Path | Role |
 |------|------|
