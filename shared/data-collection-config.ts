@@ -15,23 +15,23 @@
  * On A5 (`ascend950`) the on-board / simulation analysis can be switched to the
  * replacement prototype tools:
  *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
- *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
+ *   - simulation → `npusim` (see NPUSim_使用文档.md)
  *
- * `npu-emulate` is enabled on A5 (default simulation tool); its `collect`
- * subcommand currently takes no metric/section options (see
+ * `npusim` is enabled on A5 (default simulation tool); its `record`
+ * subcommand takes no metric/section options (see
  * ConfigService.getSimulationTool).
  */
 
 /** On-board profiling tool: the new `npu-compute` prototype or the legacy `msprof`. */
 export type OnBoardTool = 'npu-compute' | 'msprof';
 
-/** Simulation tool: the new `npu-emulate` prototype (renamed from `npusim`) or the legacy `msprof`. */
-export type SimulationTool = 'npu-emulate' | 'msprof';
+/** Simulation tool: the new `npusim` prototype or the legacy `msprof`. */
+export type SimulationTool = 'npusim' | 'msprof';
 
 /** Which collection the dialog is configuring; also preselects the top switch. */
 export type CollectionType = 'onboard' | 'simulate';
 
-/** Common (npu-compute/npu-emulate shared) collection options — the dialog's "Common" panel. */
+/** Common (npu-compute/npusim shared) collection options — the dialog's "Common" panel. */
 export interface DataCollectionCommon {
   /** `--export` / `-o` output file path; empty → tool default under opprof. */
   outputFile: string;
@@ -83,6 +83,7 @@ export const DATA_COLLECTION_SECTIONS: readonly string[] = [
   'MemoryUB',
   'ArithmeticUtilization',
   'ResourceConflictRatio',
+  'PmSampling',
 ];
 
 /**
@@ -112,6 +113,7 @@ export const DATA_COLLECTION_SECTION_TO_CAMEL: Record<string, string> = {
   MemoryUB: 'memoryUB',
   ArithmeticUtilization: 'arithmeticUtilization',
   ResourceConflictRatio: 'resourceConflictRatio',
+  PmSampling: 'pmSampling',
 };
 
 /** Reverse of {@link DATA_COLLECTION_SECTION_TO_CAMEL} (camel suffix → section name). */
@@ -125,7 +127,7 @@ export const DATA_COLLECTION_CAMEL_TO_SECTION: Record<string, string> = Object.f
   ]));
 
 /**
- * Relative (dotted) workspace-setting keys for the 8 npu-compute section
+ * Relative (dotted) workspace-setting keys for the 9 npu-compute section
  * booleans (no flavor prefix; the controller prepends the setting namespace).
  * These are the single source of truth for on-board npu-compute section
  * selection — the dialog reads/writes them, and the command line is built from
@@ -133,7 +135,7 @@ export const DATA_COLLECTION_CAMEL_TO_SECTION: Record<string, string> = Object.f
  */
 export const NPU_COMPUTE_SECTION_DOTTED_KEYS: readonly string[] = DATA_COLLECTION_SECTIONS.map((section) => `performanceTuning.onBoard.npuCompute.${DATA_COLLECTION_SECTION_TO_CAMEL[section]}`);
 
-/** Per-section boolean selection (mirror of the 8 npu-compute setting keys). */
+/** Per-section boolean selection (mirror of the 9 npu-compute setting keys). */
 export interface NpuComputeSectionSelection {
   pipeUtilization?: boolean;
   pipeline?: boolean;
@@ -143,6 +145,7 @@ export interface NpuComputeSectionSelection {
   memoryUB?: boolean;
   arithmeticUtilization?: boolean;
   resourceConflictRatio?: boolean;
+  pmSampling?: boolean;
 }
 
 /**
@@ -197,6 +200,7 @@ export const DATA_COLLECTION_SET_SECTIONS: Record<string, readonly string[]> = {
     'MemoryUB',
     'ArithmeticUtilization',
     'ResourceConflictRatio',
+    'PmSampling',
   ],
   hccl: [],
   roofline: [],
@@ -225,6 +229,7 @@ export const DATA_COLLECTION_SECTION_LABELS: Record<string, string> = {
   MemoryUB: 'MemoryUB',
   ArithmeticUtilization: '算力利用率',
   ResourceConflictRatio: '资源冲突率',
+  PmSampling: 'PM采样',
 };
 
 /**
@@ -306,7 +311,7 @@ export function resolveSelectedSections(config: DataCollectionConfig): string[] 
  * Build a sensible default `commandLine` text from the structured metrics/common
  * selections. Only npu-compute (on-board) consumes metric flags, and it accepts
  * one repeated `--section <id>` per section (no `--set`, no comma/space lists —
- * npu-compute使用文档.md §7). Simulation (npu-emulate) takes no section/set flags, so
+ * npu-compute使用文档.md §7). Simulation (npusim) takes no section/set flags, so
  * metrics contribute nothing to its command line.
  */
 export function buildDefaultCommandLine(config: DataCollectionConfig): string {
@@ -375,7 +380,7 @@ export function buildDefaultDataCollectionConfig(collectionType: CollectionType)
 /**
  * Relative (dotted) workspace-setting key the dialog config for a collection type
  * is persisted under, so reopening the dialog restores the last confirmed config.
- * Kept per collection type because on-board (npu-compute) and simulation (npu-emulate)
+ * Kept per collection type because on-board (npu-compute) and simulation (npusim)
  * carry different option sets — one shared blob would leak the other tool's args.
  */
 export function dataCollectionConfigSettingKey(collectionType: CollectionType): string {
@@ -391,7 +396,7 @@ export function dataCollectionConfigSettingKey(collectionType: CollectionType): 
  * never from the saved blob.
  *
  * For on-board (`collectionType === 'onboard'`), the caller passes the sections
- * derived from the 8 per-section boolean settings (the single source of truth)
+ * derived from the 9 per-section boolean settings (the single source of truth)
  * via `sectionSelection`; these override any `saved.metrics.sections`. The
  * `common.commandLine` is never restored verbatim — it is regenerated from the
  * resolved sections so the preview always reflects the current booleans.
@@ -436,11 +441,11 @@ export function mergeSavedDataCollectionConfig(
       }
       // metrics.sections is intentionally NOT restored from saved — on-board uses
       // the caller-provided sectionSelection (source of truth); simulate keeps the
-      // fresh default (npu-emulate collect takes no section flags).
+      // fresh default (npusim record takes no section flags).
     }
   }
 
-  // On-board: the 8 booleans are the single source of truth for sections.
+  // On-board: the 9 booleans are the single source of truth for sections.
   if (sectionSelection) {
     config.metrics.sections = [...sectionSelection];
     // kind=section so resolveSelectedSections uses these sections (not a preset

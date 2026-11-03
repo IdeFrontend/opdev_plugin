@@ -491,7 +491,9 @@ export class ProfilingReportPanel {
         // 配置读取失败不影响正常转发（视为未配置）
       }
 
-      const isSim = !!this.filePath && this.filePath.includes('npu-emulate');
+      // Simulation run dirs are named npusim_<ts> (new npusim flow) or
+      // npu-emulate_<ts> (older reports) under opprof.
+      const isSim = !!this.filePath && /npusim|npu-emulate/.test(this.filePath);
 
       const inputText = `${buildInPrompt}
 报告路径：${toText(effective.report_path)}

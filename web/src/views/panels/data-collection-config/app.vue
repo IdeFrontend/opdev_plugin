@@ -164,7 +164,7 @@ watch(() => config.common.forceOverwrite, () => {
   }
 });
 
-// npu-compute (onboard) takes `--section` flags; npu-emulate (simulate) takes none.
+// npu-compute (onboard) takes `--section` flags; npusim (simulate) takes none.
 // Re-seed the commandLine when the collection type flips so metric flags match.
 watch(() => config.collectionType, () => {
   if (!syncingMetrics && !seeding) {
@@ -299,7 +299,7 @@ onMounted(async () => {
       </div>
 
       <div class="dc-content">
-        <!-- Collection type: 上板 (npu-compute) / 仿真 (npu-emulate) -->
+        <!-- Collection type: 上板 (npu-compute) / 仿真 (npusim) -->
         <div class="dc-collection-type">
           <span class="dc-label">{{ t('web.dataCollection.collectionType') }}</span>
           <a-radio-group
@@ -396,8 +396,8 @@ onMounted(async () => {
             </div>
           </a-collapse-panel>
 
-          <!-- Metrics panel: npu-compute (onboard) only — npu-emulate collect
-               currently takes no metric/section options. -->
+          <!-- Metrics panel: npu-compute (onboard) only — npusim record
+               takes no metric/section options. -->
           <a-collapse-panel
             v-if="config.collectionType === 'onboard'"
             key="metrics"

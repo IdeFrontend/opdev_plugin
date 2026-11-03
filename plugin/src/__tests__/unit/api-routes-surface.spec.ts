@@ -35,7 +35,7 @@ const { apis } = require('@plugin/api-routes') as typeof import('@plugin/api-rou
 
 /**
  * The complete RPC surface after the dump-tensor native-tree port, plus the A5
- * new-tool (npu-compute / npu-emulate) data-collection endpoints:
+ * new-tool (npu-compute / npusim) data-collection endpoints:
  * 36 endpoints total (webview 7 + common 10 + ops 19). The dump-tensor webview
  * RPCs (webview/getDumpTensorData, webview/openFile, ops/importDumpTensorBinFile)
  * and the whole performance group are gone.
@@ -77,7 +77,7 @@ const EXPECTED_SURFACE = [
   'ops/getSelectedOperators',
   'ops/loadStTestOptions',
   'ops/runStTestOptions',
-  // A5 new-tool (npu-compute / npu-emulate) data-collection dialog.
+  // A5 new-tool (npu-compute / npusim) data-collection dialog.
   'ops/getDataCollectionConfig',
   'ops/saveDataCollectionConfig',
   'ops/startNewToolCollection',

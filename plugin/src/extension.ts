@@ -1078,7 +1078,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const compileOption = await getCompileOptionForSelectedOperators();
 
       // A5 (ascend950) + <<<>>> / standard-custom operator project +
-      // npu-emulate (formerly npusim): open the unified data-collection dialog
+      // npusim: open the unified data-collection dialog
       // instead of the legacy quick-options panel / direct msprof flow. Other
       // project types keep the msprof flow.
       const simulationProjectType = (await homeMethods.getProjectType()).projectType;
@@ -2278,7 +2278,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // A5 new-tool (npu-compute / npu-emulate) unified "数据采集配置" dialog. The entry
+  // A5 new-tool (npu-compute / npusim) unified "数据采集配置" dialog. The entry
   // command stashes the collection type (on-board / simulation) via
   // setPendingDataCollectionType before invoking this, so the panel preselects it.
   // Constructed after the sanitizer provider so the pre-existing WebviewProvider

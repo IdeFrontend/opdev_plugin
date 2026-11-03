@@ -80,7 +80,7 @@ export function isAscend950CannSoc(socVersion: string | null | undefined): boole
 export type SanitizerToolType = 'mssanitizer' | 'npu-check';
 
 /**
- * npu-check 与 A5 新 profiling 工具（npu-compute / npu-emulate）支持的算子工程类型
+ * npu-check 与 A5 新 profiling 工具（npu-compute / npusim）支持的算子工程类型
  * （<<<>>> 内核调用符直调 + 标准自定义算子工程）：
  * - 'ascend-c'        结构探测值（CMakeLists + .asc）
  * - 'cann'            <<<>>> 新建工程写入的存储值（helloworld / addn / torch_library 模板）
@@ -116,7 +116,7 @@ export function isNpuCheckProjectTypeSupported(projectType: string | null | unde
 }
 
 /**
- * A5 新 profiling 工具（上板 npu-compute / 仿真 npu-emulate）的适用条件：
+ * A5 新 profiling 工具（上板 npu-compute / 仿真 npusim）的适用条件：
  * ascend950（A5）环境 **且** 为 <<<>>>（内核调用符直调）或标准自定义算子工程时可用；
  * 其他 SOC 或 pyasc / triton 等工程类型一律回退 msprof 旧流程。
  */

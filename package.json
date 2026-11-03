@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.5.4-beta8",
+  "version": "1.5.6",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -602,6 +602,12 @@
             "order": 338,
             "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio.description%"
+          },
+          "op-devtools.performanceTuning.onBoard.npuCompute.pmSampling": {
+            "type": "boolean",
+            "order": 339,
+            "default": true,
+            "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.pmSampling.description%"
           }
         }
       },
@@ -699,11 +705,11 @@
           "op-devtools.performanceTuning.simulation.tool": {
             "type": "string",
             "enum": [
-              "npu-emulate",
+              "npusim",
               "msprof"
             ],
             "enumDescriptions": [
-              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.npuEmulate%",
+              "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.npusim%",
               "%config.op-devtools.performanceTuning.simulation.tool.enumDescription.msprof%"
             ],
             "order": 299,
@@ -713,8 +719,8 @@
         }
       },
       {
-        "id": "op-devtools.performanceTuning.simulation.npuEmulate",
-        "title": "%config.category.performanceTuning.simulation.npuEmulate.title%",
+        "id": "op-devtools.performanceTuning.simulation.npusim",
+        "title": "%config.category.performanceTuning.simulation.npusim.title%",
         "type": "object",
         "properties": {
           "op-devtools.performanceTuning.dataCollection.simulate": {

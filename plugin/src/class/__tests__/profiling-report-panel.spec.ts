@@ -350,7 +350,46 @@ describe('ProfilingReportPanel', () => {
     expect(mockShowErrorMessage).not.toHaveBeenCalled();
   });
 
-  it('marks isSim true when the report path contains an npu-emulate run directory', async () => {
+  it('marks isSim true when the report path contains an npusim run directory', async () => {
+    const simDir = path.join(root, 'opprof', `npusim_${Date.now()}`);
+    const simFilePath = path.join(simDir, 'result.npu-rep');
+
+    fs.mkdirSync(simDir, { recursive: true });
+    fs.writeFileSync(simFilePath, 'rep-bytes');
+
+    await ProfilingReportPanel.createOrShow(context, simFilePath);
+
+    const panel = panels[0]!;
+    const payload = {
+      version: '1.0',
+      scope: 'compute',
+      report_name: 'result.npu-rep',
+      report_id: 'result.npu-rep',
+      report_path: simFilePath,
+      op_name: 'Add',
+      collected_at: '2026-08-13T09:41:00Z',
+      data: { pipeOccupancy: [] },
+      prompt: 'prompt-text',
+    };
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload,
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(
+        'cannwork.setInputText',
+        expect.stringContaining('isSim：true\n'),
+        { autoSend: true },
+      );
+  });
+
+  it('marks isSim true for legacy npu-emulate run directories too', async () => {
     const simDir = path.join(root, 'opprof', `npu-emulate_${Date.now()}`);
     const simFilePath = path.join(simDir, 'result.npu-rep');
 

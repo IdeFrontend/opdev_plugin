@@ -15,7 +15,7 @@
  * (ascend950) inside <<<>>> (kernel direct-call) or standard-custom operator
  * projects ('ascend-c' / 'cann' / 'torch-library' / 'standard-custom' /
  * 'ascend'): an explicit workspace setting pins each tool, otherwise A5
- * defaults to `npu-compute` / `npu-emulate` and every other SOC — and every
+ * defaults to `npu-compute` / `npusim` and every other SOC — and every
  * other project type (pyasc / triton / unknown) — resolves to the legacy msprof.
  */
 
@@ -151,11 +151,11 @@ describe('ConfigService new-tool selectors', () => {
   });
 
   describe('getSimulationTool', () => {
-    it('defaults to npu-emulate on A5 (ascend950) with no explicit setting', () => {
+    it('defaults to npusim on A5 (ascend950) with no explicit setting', () => {
       resolveSocMock.mockReturnValue('ascend950');
 
       expect(ConfigService.getSimulationTool())
-        .toBe('npu-emulate');
+        .toBe('npusim');
     });
 
     it('defaults to msprof on non-A5 SOC', () => {
@@ -173,12 +173,12 @@ describe('ConfigService new-tool selectors', () => {
         .toBe('msprof');
     });
 
-    it('honors an explicit npu-emulate setting regardless of SOC', () => {
+    it('honors an explicit npusim setting regardless of SOC', () => {
       resolveSocMock.mockReturnValue('ascend910b');
-      readSettingSpy.mockReturnValue('npu-emulate');
+      readSettingSpy.mockReturnValue('npusim');
 
       expect(ConfigService.getSimulationTool())
-        .toBe('npu-emulate');
+        .toBe('npusim');
     });
 
     it('ignores an unrecognized setting value and falls back to SOC default', () => {
@@ -186,7 +186,7 @@ describe('ConfigService new-tool selectors', () => {
       readSettingSpy.mockReturnValue('garbage');
 
       expect(ConfigService.getSimulationTool())
-        .toBe('npu-emulate');
+        .toBe('npusim');
     });
   });
 
@@ -276,9 +276,9 @@ describe('ConfigService new-tool selectors', () => {
         .toBe(false);
     });
 
-    it('is false on non-A5 SOC even with an explicit npu-emulate setting', () => {
+    it('is false on non-A5 SOC even with an explicit npusim setting', () => {
       resolveSocMock.mockReturnValue('ascend910b');
-      readSettingSpy.mockReturnValue('npu-emulate');
+      readSettingSpy.mockReturnValue('npusim');
 
       expect(ConfigService.shouldUseNewSimulationTool('ascend-c'))
         .toBe(false);

@@ -388,7 +388,7 @@ describe('configMethods settings-native options endpoints', () => {
       .toBe(7);
   });
 
-  it('saveNpuComputeSections writes all 8 booleans (true/false), getNpuComputeSections reads them back', async () => {
+  it('saveNpuComputeSections writes all 9 booleans (true/false), getNpuComputeSections reads them back', async () => {
     await configMethods.saveNpuComputeSections([
       'Pipeline',
       'Memory',
@@ -404,6 +404,8 @@ describe('configMethods settings-native options endpoints', () => {
       .toBe(false);
     expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio'])
       .toBe(false);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.pmSampling'])
+      .toBe(false);
 
     expect(await configMethods.getNpuComputeSections())
       .toEqual([
@@ -412,7 +414,7 @@ describe('configMethods settings-native options endpoints', () => {
       ]);
   });
 
-  it('getNpuComputeSections returns all 8 sections when nothing is set (default true)', async () => {
+  it('getNpuComputeSections returns all 9 sections when nothing is set (default true)', async () => {
     expect(await configMethods.getNpuComputeSections())
       .toEqual([
         'PipeUtilization',
@@ -423,10 +425,11 @@ describe('configMethods settings-native options endpoints', () => {
         'MemoryUB',
         'ArithmeticUtilization',
         'ResourceConflictRatio',
+        'PmSampling',
       ]);
   });
 
-  it('saveNpuComputeSections([]) clears all 8 booleans', async () => {
+  it('saveNpuComputeSections([]) clears all 9 booleans', async () => {
     await ConfigService.writeOpDevtoolsDottedSettings({
       'performanceTuning.onBoard.npuCompute.pipeline': true,
       'performanceTuning.onBoard.npuCompute.memory': true,
