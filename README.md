@@ -1,4 +1,4 @@
-﻿# asc-vscode
+# asc-vscode
 
 本仓库是 **Ascend C Toolkits** 插件的源码仓库。Ascend C Toolkits是一款面向Ascend C算子开发的一站式VS Code插件，覆盖算子工程创建、代码开发、编译部署、运行调试、异常检测和性能分析的全流程，支持CANNLab云上开发环境和本地开发环境两种使用方式。
 
@@ -54,14 +54,14 @@ flowchart LR
 
 ### 环境准备
 
-支持以下两种环境，任选其一即可，详细步骤请参见《[使用操作文档](docs/user-guide.md)》：
+支持以下两种环境，任选其一即可，详细步骤请参见《[使用操作文档](https://gitcode.com/cann/asc-vscode/blob/ascend-c-toolkit/docs/user_guide.md)》：
 
 - 云上环境（推荐）：在[CANNLab](https://gitcode.com/org/cann/cannlab/environment)创建并启动连接云上环境，即可直接使用插件。
 - 本地环境：准备一台已安装CANN的Linux环境（物理机或容器均可），可通过VS Code的Remote - SSH插件从Windows本机连接远端环境，或使用CANNLab提供的VS Code本地连接方式直接接入。
 
 ### 开发流程
 
-算子开发整体分为以下五步，详细操作请参阅《[使用操作文档](docs/user-guide.md)》：
+算子开发整体分为以下五步，详细操作请参阅《[使用操作文档](https://gitcode.com/cann/asc-vscode/blob/ascend-c-toolkit/docs/user_guide.md)》：
 
 1. 创建算子工程。
 2. 开发算子：编写算子代码，完成编译和运行。
@@ -99,4 +99,4 @@ git tag -a v1.0.1 -m "Fixed memory leak issue"
 - [npu-check用户手册](https://gitcode.com/cann/asc-tools/blob/experimental/npu_tools/npu_check/npu_check.md)
 - [npu-compute使用文档](https://gitcode.com/cann/asc-tools/blob/experimental/docs/06_npu_compute.md)
 - [msopprof使用文档](https://gitcode.com/Ascend/msopprof/blob/master/docs/zh/user_guide/msopprof_user_guide.md)
-- [性能分析报告功能说明](./profiling-report.md)
+- [性能分析报告功能说明](https://gitcode.com/cann/asc-vscode/blob/ascend-c-toolkit/profiling-report.md)

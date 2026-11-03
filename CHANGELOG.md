@@ -2,17 +2,16 @@
 
 ## 1.5.6 — 未发布
 
-本版本将 A5 仿真采集工具切换为 npusim，新性能工具（npu-compute/npusim）适用范围收窄至 ascend950 的内核调用符直调与标准自定义算子工程，npu-check 新增 initcheck/racecheck 检测选项并支持标准自定义算子，新增 CANNWork 配套扩展静默自动安装，并包含性能提示、报告体验与多项修复。
+本版本将 Ascend950PR&950DT系列产品 仿真采集工具切换为 npusim，新性能工具（npu-compute/npusim）适用范围收窄至 ascend950 的内核调用符直调与标准自定义算子工程，npu-check 新增 initcheck/racecheck 检测选项并支持标准自定义算子，新增 CANNWork 配套扩展静默自动安装，并包含性能提示、报告体验与多项修复。
 
-- **仿真采集工具切换为 npusim** — A5（ascend950）环境仿真采集默认改用 `npusim`：经 `npusim record <目标文件> -s Ascend950 -o <报告目录> -g` 采集并自动产出 `.npu-rep` 报告；`ascendCToolkit.performanceTuning.simulation.tool` 枚举更新为 `npusim` / `msprof`，A5 默认 `npusim`，用户可切回 `msprof`；数据采集配置弹窗、报告定位与打开流程同步适配。
-- **A5 新性能工具适用范围收窄** — `npu-compute` / `npusim` 仅在 ascend950 环境的内核调用符直调（<<<>>>）算子工程与标准自定义算子工程中启用，其余工程类型自动回退 `msprof` 流程；标准自定义算子工程纳入 A5 新工具支持范围。
+- **仿真采集工具切换为 npusim** — Ascend950PR&950DT系列产品（ascend950）环境仿真采集默认改用 `npusim`：Ascend950PR&950DT系列产品 默认 `npusim`，用户可切回 `msprof`；数据采集配置弹窗、报告定位与打开流程同步适配。
+- **Ascend950PR&950DT系列产品 新性能工具适用范围拓宽** — `npu-compute` / `npusim` 标准自定义算子工程纳入 Ascend950PR&950DT系列产品 新工具支持范围。
 - **npu-compute 上板分析新增 PmSampling 检测项** — 数据采集配置弹窗与对应工作区设置同步新增 PmSampling。
 - **npu-check 新增 initcheck / racecheck 检测选项** — 异常检测在 npu-check 工具下支持初始化检测与竞争检测。
-- **标准自定义算子支持 npu-check** — 标准自定义算子工程的异常检测可使用 npu-check 工具。
 - **异常检测结果支持直接打开日志文件（[#93](https://gitcode.com/opdevtools/plugin_release/issues/93)）** — 检测完成后可直接从结果打开对应日志文件。
-- **性能提示发布 compute Summary.jsonl** — 上板分析 compute Summary.jsonl 中的 PerformanceHints 发布为问题面板原生诊断。
-- **CANNWork 配套扩展静默自动安装** — 插件激活后自动检测配套扩展 CANNWork（`cann-pub.cannbot-toolkit`）：未安装或已装版本低于 2.0.0 时，从当前配置的扩展市场静默安装最新稳定版，全程无弹窗、无通知、不阻塞启动；安装失败仅记入日志，下次激活自动重试，性能调优报告入口保留原有的手动安装报错作为兜底。已安装且达标的版本交由 VS Code 原生自动更新维护。调用 `cannwork.invokeAgent` 前会显式激活 CANNWork，消除「已安装未激活」导致命令找不到的时间窗。新增 `op-devtools.companion.cannworkAutoInstall` 设置（默认开启），关闭后不再自动安装或升级，已安装版本不受影响。
-- **其它修复与改进** — mssanitizer 新版本不再追加 `-gline-tables-only` 参数；性能报告支持经宿主文件系统解析缺失的 Ascend C 源码并修复 Source 标签页高亮（Sudu worker）；插件安装时自动卸载旧版 `hicann.ascend-c-toolkit` 扩展并更新内置 profiling-report；远程脚本探测机制增加重试（[#96](https://gitcode.com/opdevtools/plugin_release/issues/96)）；修复 [#89-#92](https://gitcode.com/opdevtools/plugin_release/issues/89)。
+- **CANNWork 配套扩展静默自动安装** — 支持插件激活后自动检测配套扩展 CANNWork（`cann-pub.cannbot-toolkit`）：未安装或已装版本低于 2.0.0 时，从当前配置的扩展市场静默安装最新稳定版。已安装且达标的版本交由 VS Code 原生自动更新维护。调用 `cannwork.invokeAgent` 前会显式激活 CANNWork，消除「已安装未激活」导致命令找不到的时间窗。
+- **其它修复与改进** — mssanitizer 新版本不再追加 `-gline-tables-only` 参数；性能报告支持经宿主文件系统解析缺失的 Ascend C 源码并修复 Source 标签页高亮（Sudu worker）；插件安装时自动卸载旧版 `hicann.ascend-c-toolkit` 扩展；修复 [#89-#92],远程脚本探测机制增加重试（[#96](https://gitcode.com/opdevtools/plugin_release/issues/96)）。
+
 ## 1.5.5 — 2026-10-22
 
 本版本面向 Ascend950PR&950DT系列产品 引入新一代异常检测工具 npu-check 与仿真采集工具 npu-emulate，性能调优设置与数据采集配置按「分析类型 → 工具」层级重构，DumpTensor 结果与性能提示迁移为原生视图，并包含 CANNWork 智能分析联动及多项体验改进与修复。
