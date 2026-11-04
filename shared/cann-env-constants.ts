@@ -46,7 +46,7 @@ export const DEFAULT_NPU_ARCH = NPU_ARCH_DAV_2201;
 
 /**
  * Simulator directory for 910B / A2 class (`tools/simulator/<name>/lib`).
- * Also the value for `msprof op simulator --soc-version` on A2 (see docs/ascend-env-spec.md §8.1).
+ * Also the value for `msprof op simulator --soc-version` on A2 (see design-docs/ascend-env-spec.md §8.1).
  */
 export const SIMULATOR_ASCEND_910B3 = 'Ascend910B3' as const;
 

@@ -23,7 +23,7 @@ import { CANN_SOC_ASCEND_950 } from './cann-env-constants';
  *
  * Add a lowercase, trimmed CANN SOC slug to a set below only once the metric is
  * verified on that platform's real simulator via manual `msprof op simulator` CLI
- * (see docs/simulator-options-spec.md §8). Slugs are added per-SOC independently.
+ * (see design-docs/simulator-options-spec.md §8). Slugs are added per-SOC independently.
  *
  * A5 (`ascend950`): `ResourceConflictRatio` and `PMSampling` confirmed §8.1 (2026-06-26).
  * Never add `ascend910_93` for `ResourceConflictRatio` (GC-22 rejection).

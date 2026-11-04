@@ -105,6 +105,8 @@ export type FeatureCatalogEntry = {
   description: string;
   /** Manifest filter applied when gate mode is false */
   manifestFilter?: ManifestFilterRecipe;
+  /** Manifest fragments re-injected when gate mode is true but missing from the baseline */
+  manifestRestore?: ManifestRestoreRecipe;
   /** README/CHANGELOG filter applied when gate mode is false */
   docFilter?: DocFilterRecipe;
 };
@@ -117,6 +119,15 @@ export type ManifestFilterRecipe = {
   menuCommandSubstrings?: string[];
   viewContainerIds?: string[];
   activationEventSubstrings?: string[];
+};
+
+/**
+ * Manifest fragments (authored in BASE ids) removed by the manifest filter.
+ * They are re-injected when the gate is on but the baseline lacks them — e.g.
+ * when converting an ascend-form tree (gate filtered them out) back to huawei.
+ */
+export type ManifestRestoreRecipe = {
+  configurationCategories?: Array<Record<string, unknown>>;
 };
 
 /** Known feature keys and how they map to manifest sections */
@@ -151,12 +162,56 @@ export const FEATURE_CATALOG: Record<string, FeatureCatalogEntry> = {
         'triton',
       ],
     },
+    manifestRestore: {
+      configurationCategories: [
+        {
+          id: 'op-devtools.operatorSupport',
+          title: '%config.category.operatorSupport.title%',
+          type: 'object',
+          properties: {
+            'op-devtools.operatorSupport.triton': {
+              type: 'boolean',
+              default: false,
+              order: 500,
+              description: '%config.op-devtools.operatorSupport.triton.description%',
+            },
+          },
+        },
+      ],
+    },
   },
 };
 
 export const KNOWN_FLAVOR_IDS = [
   'huawei',
   'ascend-c-toolkit',
+] as const;
+
+/**
+ * Context keys the plugin sets and when-clauses match as `${contextPrefix}.<key>`.
+ * Kept exhaustive so ID reversal can tell context usages apart from settings ids
+ * even when a flavor reuses the same string for both prefixes (ascend-c-toolkit).
+ */
+export const CONTEXT_KEYS = [
+  'allOperatorsSelected',
+  'dumpTensorComparing',
+  'dumpTensorMarkedOnly',
+  'hasDevtoolConfig',
+  'multiOperatorProjectMarked',
+  'operatorActionQueueStopAllVisible',
+  'operatorProjectMarked',
+  'operatorProjectType',
+  'operatorProjectsSearchActive',
+  'performanceMarkedOnly',
+  'sanitizerAiFixAvailable',
+  'sanitizerDuplicatesHidden',
+  'sanitizerMarkedOnly',
+  'sanitizerResultsGroupBy',
+  'showHomeTree',
+  'showOperateTree',
+  'showOperatorProjects',
+  'showOperatorSearch',
+  'showStTestHistory',
 ] as const;
 
 export type KnownFlavorId = (typeof KNOWN_FLAVOR_IDS)[number];

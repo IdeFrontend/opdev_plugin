@@ -11,14 +11,20 @@
  */
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
+import {
+  dirname, join,
+} from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const prDir = join(root, 'profiling-report');
 
 function run(cmd, args, cwd = root) {
-  const result = spawnSync(cmd, args, { cwd, stdio: 'inherit', shell: false });
+  const result = spawnSync(cmd, args, {
+    cwd,
+    stdio: 'inherit',
+    shell: false,
+  });
 
   if (result.error) {
     console.error(`[prepare-integration] ${cmd} failed to start:`, result.error.message);
@@ -35,7 +41,13 @@ const withTypes = process.argv.includes('--types');
 
 if (!existsSync(join(prDir, 'src', 'index.ts'))) {
   console.log('[prepare-integration] initializing profiling-report submodule');
-  run('git', ['submodule', 'update', '--init', '--recursive', 'profiling-report']);
+  run('git', [
+    'submodule',
+    'update',
+    '--init',
+    '--recursive',
+    'profiling-report',
+  ]);
 }
 
 if (withTypes) {
@@ -46,11 +58,18 @@ if (withTypes) {
     }
 
     console.log('[prepare-integration] building profiling-report (npm run build)');
-    run('npm', ['run', 'build'], prDir);
+    run('npm', [
+      'run',
+      'build',
+    ], prDir);
   }
 
   if (!existsSync(join(root, 'out', 'shared', 'index.d.ts'))) {
     console.log('[prepare-integration] building shared declarations (tsc --build shared)');
-    run('npx', ['tsc', '--build', 'shared']);
+    run('npx', [
+      'tsc',
+      '--build',
+      'shared',
+    ]);
   }
 }

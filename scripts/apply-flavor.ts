@@ -8,6 +8,7 @@ import {
   buildCoInstallIds,
   buildFlavorDefaults,
   buildFlavorGates,
+  CONTEXT_KEYS,
   FEATURE_CATALOG,
   KNOWN_FLAVOR_IDS,
   validateFlavorDefinition,
@@ -18,6 +19,21 @@ import {
 const REPO_ROOT = path.resolve(__dirname, '..');
 
 const HUAWEI_FLAVOR_ID = 'huawei';
+
+/** Flavor applied when neither a CLI argument nor FLAVOR is given. */
+const DEFAULT_FLAVOR_ID = 'ascend-c-toolkit';
+
+/** Committed flavor-generated files carry this header; emit it so regeneration stays byte-stable. */
+const GENERATED_FILE_HEADER = `/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+`;
 
 const RESTORE_PATHS = [
   'package.json',
@@ -80,7 +96,7 @@ function writeTextIfChanged(filePath: string, content: string): boolean {
 }
 
 function resolveFlavorId(explicit?: string): string {
-  return explicit ?? process.env.FLAVOR ?? 'huawei';
+  return explicit ?? process.env.FLAVOR ?? DEFAULT_FLAVOR_ID;
 }
 
 function loadGitHeadFile(relativePath: string): string | null {
@@ -98,6 +114,23 @@ function loadGitHeadFile(relativePath: string): string | null {
   catch {
     return null;
   }
+}
+
+/** Category ids that apply-flavor can re-inject via FEATURE_CATALOG manifestRestore fragments. */
+function collectRestorableConfigurationCategoryIds(): Set<string> {
+  const ids = new Set<string>();
+
+  for (const entry of Object.values(FEATURE_CATALOG)) {
+    for (const category of entry.manifestRestore?.configurationCategories ?? []) {
+      const id = (category as { id?: string }).id;
+
+      if (id) {
+        ids.add(id);
+      }
+    }
+  }
+
+  return ids;
 }
 
 function assertHuaweiBaselineManifest(manifest: Record<string, unknown>): void {
@@ -128,7 +161,12 @@ function assertHuaweiBaselineManifest(manifest: Record<string, unknown>): void {
 
   const operatorSupportCategory = `${BASE_FLAVOR_IDS.settingsPrefix}.operatorSupport`;
 
-  if (!configuration.some((category) => category.id === operatorSupportCategory)) {
+  // A flavor tree that filtered gated content out (e.g. ascend-form) is still a valid
+  // baseline as long as apply-flavor can restore the missing categories itself.
+  const restorableCategoryIds = collectRestorableConfigurationCategoryIds();
+
+  if (!configuration.some((category) => category.id === operatorSupportCategory)
+    && !restorableCategoryIds.has(operatorSupportCategory)) {
     throw new Error(`Committed package.json is missing required configuration category "${operatorSupportCategory}". `
       + 'Restore the full Huawei manifest before running apply-flavor.');
   }
@@ -138,6 +176,32 @@ function assertHuaweiBaselineManifest(manifest: Record<string, unknown>): void {
 
     if (categoryId.startsWith(`${BASE_FLAVOR_IDS.commandPrefix}.`)) {
       throw new Error(`Configuration category "${categoryId}" uses commandPrefix; expected "${BASE_FLAVOR_IDS.settingsPrefix}.*".`);
+    }
+  }
+
+  assertWhenClausesFreeOfSettingsPrefix(manifest);
+}
+
+/**
+ * When-clauses only ever reference contexts and views. Finding the settings prefix
+ * there means ID reversal mis-mapped a context usage — usually a context key missing
+ * from CONTEXT_KEYS (flavors/schema.ts) that the generic settings replacement ate.
+ */
+function assertWhenClausesFreeOfSettingsPrefix(manifest: Record<string, unknown>): void {
+  const contributes = manifest.contributes as {
+    menus?: Record<string, Array<{ when?: string }>>;
+  } | undefined;
+  const menus = contributes?.menus ?? [];
+
+  for (const [
+    menuKey,
+    entries,
+  ] of Object.entries(menus)) {
+    for (const entry of entries ?? []) {
+      if (entry.when?.includes(`${BASE_FLAVOR_IDS.settingsPrefix}.`)) {
+        throw new Error(`When-clause in menus."${menuKey}" still contains the settings prefix "${BASE_FLAVOR_IDS.settingsPrefix}." `
+          + `("${entry.when}"). Add the missing context key to CONTEXT_KEYS in flavors/schema.ts.`);
+      }
     }
   }
 }
@@ -150,7 +214,9 @@ function tryNormalizeBaselineManifest(source: Record<string, unknown>): Record<s
 
     return normalized;
   }
-  catch {
+  catch (error) {
+    console.warn(`[apply-flavor] Normalized manifest rejected as Huawei baseline: ${(error as Error).message}`);
+
     return null;
   }
 }
@@ -210,13 +276,27 @@ function loadManifestTemplate(_flavorId: string): Record<string, unknown> {
     + 'Run `pnpm run restore-flavor` or fix the committed Huawei manifest.');
 }
 
+/** Read the flavor committed on git HEAD from the restored generated.ts marker. */
+function readCommittedFlavorId(): string {
+  const generatedPath = path.join(REPO_ROOT, 'shared', 'flavor', 'generated.ts');
+  const match = fs.readFileSync(generatedPath, 'utf8')
+    .match(/^export const FLAVOR_ID = '(.+)';$/m);
+
+  if (!match) {
+    throw new Error(`Cannot determine the committed flavor from ${generatedPath}. `
+      + 'Apply a flavor explicitly, e.g. `pnpm run apply-flavor:ascend-c-toolkit`.');
+  }
+
+  return match[1];
+}
+
 export function restoreCommittedFlavorArtifacts(): void {
   execSync(`git restore ${RESTORE_PATHS.join(' ')}`, {
     cwd: REPO_ROOT,
     stdio: 'inherit',
   });
 
-  applyFlavor(HUAWEI_FLAVOR_ID);
+  applyFlavor(readCommittedFlavorId());
 }
 
 function loadFlavor(flavorId: string): FlavorDefinition {
@@ -232,30 +312,47 @@ function loadFlavor(flavorId: string): FlavorDefinition {
 function reverseSubstituteIdsInString(value: string, flavor: FlavorDefinition): string {
   let result = value;
 
+  // Globally unique prefixes (no other flavor id contains them).
   result = result.replaceAll(flavor.ids.commandPrefix, BASE_FLAVOR_IDS.commandPrefix);
-  result = result.replaceAll(flavor.ids.settingsPrefix, BASE_FLAVOR_IDS.settingsPrefix);
   result = result.replaceAll(flavor.ids.viewContainerId, BASE_FLAVOR_IDS.viewContainerId);
-  result = result.replaceAll(flavor.ids.contextPrefix, BASE_FLAVOR_IDS.contextPrefix);
 
-  result = result.replaceAll(
-    `${flavor.ids.viewPrefix}\\.`,
-    `${BASE_FLAVOR_IDS.viewPrefix}\\.`,
-  );
-  result = result.replaceAll(`${flavor.ids.viewPrefix}.`, `${BASE_FLAVOR_IDS.viewPrefix}.`);
+  // A flavor may reuse one prefix string for settings, views, and contexts
+  // (ascend-c-toolkit uses "ascendCToolkit" for all three), so view, co-install,
+  // and context patterns must be reversed BEFORE the generic settings-prefix
+  // replacement below consumes their occurrences.
+  result = result.replaceAll(`${flavor.ids.viewPrefix}\\.`, `${BASE_FLAVOR_IDS.viewPrefix}\\.`);
+
+  const coInstallFrom = buildCoInstallIds(flavor.ids);
+  const coInstallTo = buildCoInstallIds(BASE_FLAVOR_IDS);
+
+  for (const key of Object.keys(coInstallFrom) as Array<keyof typeof coInstallFrom>) {
+    result = result.replaceAll(coInstallFrom[key], coInstallTo[key]);
+  }
 
   for (const suffix of VIEW_ID_SUFFIXES) {
-    const from = `${flavor.ids.viewPrefix}${suffix}`;
-    const to = `${BASE_FLAVOR_IDS.viewPrefix}${suffix}`;
-
-    result = result.replaceAll(from, to);
+    result = result.replaceAll(`${flavor.ids.viewPrefix}${suffix}`, `${BASE_FLAVOR_IDS.viewPrefix}${suffix}`);
   }
+
+  for (const contextKey of CONTEXT_KEYS) {
+    result = result.replaceAll(
+      `${flavor.ids.contextPrefix}.${contextKey}`,
+      `${BASE_FLAVOR_IDS.contextPrefix}.${contextKey}`,
+    );
+  }
+
+  // Generic settings prefix last: only settings-class occurrences remain.
+  result = result.replaceAll(flavor.ids.settingsPrefix, BASE_FLAVOR_IDS.settingsPrefix);
+
+  // Leftovers for flavors whose context/view prefixes do not collide with settings.
+  result = result.replaceAll(`${flavor.ids.viewPrefix}.`, `${BASE_FLAVOR_IDS.viewPrefix}.`);
+  result = result.replaceAll(flavor.ids.contextPrefix, BASE_FLAVOR_IDS.contextPrefix);
 
   result = result.replaceAll(
     `workbench.view.extension.${flavor.ids.viewContainerId}`,
     `workbench.view.extension.${BASE_FLAVOR_IDS.viewContainerId}`,
   );
 
-  return reverseSubstituteCoInstallIdsInString(result, flavor);
+  return normalizeLegacyCoInstallToken(result);
 }
 
 /** Context keys that were historically unprefixed in package.json when clauses. */
@@ -378,18 +475,6 @@ function normalizeLegacyCoInstallToken(value: string): string {
   };
 
   return legacyMap[value] ?? value;
-}
-
-function reverseSubstituteCoInstallIdsInString(value: string, flavor: FlavorDefinition): string {
-  const from = buildCoInstallIds(flavor.ids);
-  const to = buildCoInstallIds(BASE_FLAVOR_IDS);
-  let result = value;
-
-  for (const key of Object.keys(from) as Array<keyof typeof from>) {
-    result = result.replaceAll(from[key], to[key]);
-  }
-
-  return normalizeLegacyCoInstallToken(result);
 }
 
 function substituteIdsInString(value: string, flavor: FlavorDefinition): string {
@@ -579,6 +664,39 @@ function applyFeatureGates(manifest: Record<string, unknown>, flavor: FlavorDefi
   }
 }
 
+/**
+ * Re-inject gated manifest content that a previously applied flavor filtered out.
+ * Runs on the base-id manifest before ID substitution so fragments stay authored
+ * once in FEATURE_CATALOG; missing categories are appended, existing ones kept.
+ */
+function restoreGatedManifestContent(manifest: Record<string, unknown>, flavor: FlavorDefinition): void {
+  const gates = buildFlavorGates(flavor.features);
+  const contributes = manifest.contributes as {
+    configuration?: Array<{ id?: string }>;
+  } | undefined;
+
+  if (!contributes || !Array.isArray(contributes.configuration)) {
+    return;
+  }
+
+  for (const [
+    featureKey,
+    enabled,
+  ] of Object.entries(gates)) {
+    if (!enabled) {
+      continue;
+    }
+
+    for (const category of FEATURE_CATALOG[featureKey]?.manifestRestore?.configurationCategories ?? []) {
+      const categoryId = (category as { id?: string }).id ?? '';
+
+      if (categoryId && !contributes.configuration.some((entry) => entry.id === categoryId)) {
+        contributes.configuration.push(structuredClone(category));
+      }
+    }
+  }
+}
+
 function applyFeatureDefaults(manifest: Record<string, unknown>, flavor: FlavorDefinition): void {
   const defaults = buildFlavorDefaults(flavor.features);
   const contributes = manifest.contributes as { configuration?: Array<{ properties?: Record<string, { default?: unknown }> }> } | undefined;
@@ -741,9 +859,9 @@ function tsStringRecordObject(record: Record<string, string>): string {
     .map(([
       key,
       value,
-    ]) => `'${key}': ${tsQuotedString(value)}`);
+    ]) => `    '${key}': ${tsQuotedString(value)},`);
 
-  return `{ ${entries.join(', ')} }`;
+  return `{\n${entries.join('\n')}\n  }`;
 }
 
 function tsBrandingObject(branding: Record<string, string>): string {
@@ -760,7 +878,7 @@ function generateFlavorModule(flavor: FlavorDefinition): string {
   const gates = buildFlavorGates(flavor.features);
   const defaults = buildFlavorDefaults(flavor.features);
 
-  return `/** Generated by scripts/apply-flavor.ts — do not edit manually */
+  return `${GENERATED_FILE_HEADER}/** Generated by scripts/apply-flavor.ts — do not edit manually */
 export const FLAVOR_ID = ${tsQuotedString(flavor.id)};
 
 export const COMMAND_PREFIX = ${tsQuotedString(flavor.ids.commandPrefix)};
@@ -819,7 +937,7 @@ function generateI18nOverrides(flavor: FlavorDefinition): string {
   const en = flavor.i18nOverrides?.en ?? {};
   const zhCn = flavor.i18nOverrides?.['zh-cn'] ?? {};
 
-  return `/** Generated by scripts/apply-flavor.ts — do not edit manually */
+  return `${GENERATED_FILE_HEADER}/** Generated by scripts/apply-flavor.ts — do not edit manually */
 export const flavorI18nOverrides = {
   en: ${tsStringRecordObject(en)} as const,
   'zh-cn': ${tsStringRecordObject(zhCn)} as const,
@@ -1105,6 +1223,7 @@ export function applyFlavor(flavorId?: string): FlavorDefinition {
   const manifest = loadManifestTemplate(id);
 
   applyManifestFields(manifest, flavor);
+  restoreGatedManifestContent(manifest, flavor);
   const substituted = substituteIdsDeep(manifest, flavor);
 
   applyFeatureGates(substituted, flavor);

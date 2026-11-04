@@ -164,7 +164,7 @@ describe('HtmlTransformer.fetchHtml', () => {
 
 describe('HtmlTransformer.processDevResourcePaths', () => {
   it('rewrites absolute src and href attributes and injects base after head', () => {
-    const html = '<html><head><script src="/assets/main.js"></script><link href="/css/style.css"></head></html>';
+    const html = '<html><head><script src="/docs/assets/main.js"></script><link href="/css/style.css"></head></html>';
     const result = HtmlTransformer.processDevResourcePaths(
       html,
       'http://localhost:5173',
@@ -360,7 +360,7 @@ describe('HtmlTransformer.transformDistHtml', () => {
       { lang: 'en' },
     );
 
-    response.emit('data', '<html><head><script src="/assets/main.js"></script></head></html>');
+    response.emit('data', '<html><head><script src="/docs/assets/main.js"></script></head></html>');
     response.emit('end');
 
     const result = await promise;

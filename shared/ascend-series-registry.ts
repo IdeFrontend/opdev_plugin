@@ -9,7 +9,7 @@
  */
 /**
  * Chip Name → Ascend series → env defaults.
- * Contract: docs/ascend-env-spec.md (§1, §3–6)
+ * Contract: design-docs/ascend-env-spec.md (§1, §3–6)
  */
 
 import {

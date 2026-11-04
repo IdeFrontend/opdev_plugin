@@ -1,6 +1,6 @@
-# Huawei OP DevTools - VS Code Extension
+# Ascend C Toolkits - VS Code Extension
 
-**Huawei OP DevTools** is a Visual Studio Code extension for Ascend operator development. It supports project creation, build and deploy, run validation, CPU/NPU debug, sanitizer checks, performance profiling, and result visualization inside one editor workflow.
+**Ascend C Toolkits** is a Visual Studio Code extension for Ascend operator development. It supports project creation, build and deploy, run validation, CPU/NPU debug, sanitizer checks, performance profiling, and result visualization inside one editor workflow.
 
 **Current user guide:** this packaged README is the installable guide. When viewing the source repository, additional documentation is available under `docs/`. The previous discussion page at <https://gitcode.com/org/cann/discussions/54> is now marked as outdated; use this README and `docs/` as the current guidance.
 
@@ -22,7 +22,7 @@
 
 ## Quick Start
 
-1. Install **Huawei OP DevTools** from the VS Code Extensions view.
+1. Install **Ascend C Toolkits** from the VS Code Extensions view.
 2. Open an operator repository or a workspace where you want to create a project.
 3. In the **Operator One-Stop Development Panel**, choose **New Operator Project** or **Open Operator Project**.
 4. When creating a project, select the template, target directory, project name, and open mode. **Open in current window** reuses the current VS Code window.
@@ -45,9 +45,9 @@ Older intermediate screens and screenshots from the previous discussion guide ar
 
 ## Configuration And Results
 
-- Workspace settings use `op-devtools.*`; the source repository has additional notes in `docs/workspace-settings.md`.
-- Build, run, debug, and profiling flows are documented in the source repository under `docs/build-integration.md`, `docs/run-integration.md`, `docs/debug-integration.md`, and `docs/performance.md`.
-- Sanitizer behavior is documented in the source repository under `docs/sanitizer.md`.
+- Workspace settings use `op-devtools.*`; the source repository has additional notes in `design-docs/workspace-settings.md`.
+- Build, run, debug, and profiling flows are documented in the source repository under `design-docs/build-integration.md`, `design-docs/run-integration.md`, `design-docs/debug-integration.md`, and `design-docs/performance.md`.
+- Sanitizer behavior is documented in the source repository under `design-docs/sanitizer.md`.
 - `op-devtools.environment.npuArch` overrides the SOC-derived `NPU_ARCH`, and `op-devtools.execution.commandTimeoutSeconds` controls the operator command timeout (default 1800 seconds; `0` disables it).
 - `op-devtools.companion.cannworkAutoInstall` controls the silent background install of the CANNWork companion extension (default `true`).
 - After a profiling or sanitizer run finishes, the report that run produced opens automatically.
